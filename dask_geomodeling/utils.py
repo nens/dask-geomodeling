@@ -147,7 +147,7 @@ class GeoTransform(tuple):
     Wrapper with handy methods for the GeoTransform tuple
     as used by the GDAL library.
 
-    In the raster-store as well as in the GDAL libarary the geo_transform
+    In the dask-geomodeling as well as in the GDAL library the geo_transform
     defines the transformation from array pixel indices to projected
     coordinates. A pair of projected coordinates (x, y) is calculated
     from a pair of array indices (i, j) as follows:

@@ -160,9 +160,7 @@ class MovingMax(BaseSingle):
     :type store: RasterBlock
     :type store: int
 
-    This block can be used for visualization of sparse data. In combination
-    with the 'maximum' aggregation in a raster-store, resulting imagery will
-    give the impression of vectorized dots, with higher values rendered on top.
+    This block can be used for visualization of sparse data.
     """
 
     def __init__(self, store, size):

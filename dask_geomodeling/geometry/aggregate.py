@@ -323,7 +323,7 @@ class AggregateRaster(GeometryBlock):
             'projection': agg_srs,
             'start': request.get('start'),
             'stop': request.get('stop'),
-            'aggregation': None,  # TODO Integrate with RasterStore agg
+            'aggregation': None,  # TODO
             'bbox': (x1, y1, x2, y2),
             'width': width,
             'height': height,

@@ -302,18 +302,16 @@ class MockGeometry(GeometryBlock):
 
 
 def setup_temp_root(**kwargs):
-    """ Setup a temporary rasterstore root for testing purposes. """
+    """ Setup a temporary file root for testing purposes. """
     path = tempfile.mkdtemp(**kwargs)
-    settings['RASTERSTORE_ROOT'] = path
-    settings['GEOJSON_ROOT'] = path
+    settings['FILE_ROOT'] = path
     return path
 
 
 def teardown_temp_root(path):
-    """ Delete the temporary rasterstore root. """
+    """ Delete the temporary file root. """
     shutil.rmtree(path)
-    settings['RASTERSTORE_ROOT'] = defaults['RASTERSTORE_ROOT']
-    settings['GEOJSON_ROOT'] = defaults['GEOJSON_ROOT']
+    settings['FILE_ROOT'] = defaults['FILE_ROOT']
 
 
 def create_tif(

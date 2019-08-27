@@ -92,8 +92,8 @@ following:
 
 The ``get_sources_and_requests`` would respond with the following:
 
-- I need a 256x256 raster at location (138000, 480000) from
-  RasterStoreSource('file:///path/to/store')
+- I need a256x256 raster at location (138000, 480000) from
+  ``RasterFileSource('/path/to/geotiff')``
 - I need the number 2.4
 
 The ``get_compute_graph`` method works recursively, so it also calls the
@@ -103,7 +103,7 @@ dask compute graph.
 When this compute graph is evaluated, the ``process`` method of the ``add``
 geoblock will ultimately receive two arguments:
 
-- the 256x256 raster from  RasterStoreSource('file:///path/to/store')
+- the 256x256 raster from ``RasterFileSource('/path/to/geotiff')``
 - the number 2.4
 
 And the process method produces the end result.

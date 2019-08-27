@@ -21,8 +21,7 @@ class Settings(dict):
 
 
 defaults = Settings({
-    'RASTERSTORE_ROOT': '/',
-    'GEOJSON_ROOT': '/',
+    'FILE_ROOT': '/',
     'RASTER_LIMIT': 12 * (1024 ** 3),  # about 100 MB of float64
     'GEOMETRY_LIMIT': 10000,  # maximum number of geometries in one dataframe
 })

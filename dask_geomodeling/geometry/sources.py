@@ -26,7 +26,7 @@ class GeometryFileSource(GeometryBlock):
     :type id_field: string
     """
     def __init__(self, url, layer=None, id_field='id'):
-        safe_url = utils.safe_file_url(url, settings['GEOJSON_ROOT'])
+        safe_url = utils.safe_file_url(url, settings['FILE_ROOT'])
         super().__init__(safe_url, layer, id_field)
 
     @property
@@ -43,7 +43,7 @@ class GeometryFileSource(GeometryBlock):
 
     @property
     def path(self):
-        return utils.safe_abspath(self.url, settings['GEOJSON_ROOT'])
+        return utils.safe_abspath(self.url, settings['FILE_ROOT'])
 
     @property
     def columns(self):
@@ -70,7 +70,7 @@ class GeometryFileSource(GeometryBlock):
 
     @staticmethod
     def process(url, request):
-        path = utils.safe_abspath(url, settings['GEOJSON_ROOT'])
+        path = utils.safe_abspath(url, settings['FILE_ROOT'])
 
         # convert the requested projection to a fiona CRS
         crs = utils.get_crs(request['projection'])
