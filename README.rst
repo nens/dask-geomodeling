@@ -93,7 +93,7 @@ following:
 The ``get_sources_and_requests`` would respond with the following:
 
 - I need a 256x256 raster at location (138000, 480000) from
- RasterStoreSource('file:///path/to/store')
+  RasterStoreSource('file:///path/to/store')
 - I need the number 2.4
 
 The ``get_compute_graph`` method works recursively, so it also calls the
