@@ -7,6 +7,8 @@ Changelog of dask-geomodeling
 
 - Renamed the package to dask-geomodeling.
 
+- Integrated the settings with dask.config.
+
 
 2.0.0 (2019-08-27)
 ------------------

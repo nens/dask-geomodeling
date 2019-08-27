@@ -10,9 +10,10 @@ from osgeo import osr, gdal
 import geopandas as gpd
 from shapely.geometry import Polygon
 
+from dask import config
+from dask_geomodeling.config import defaults
 from dask_geomodeling.geometry import GeometryBlock
 from dask_geomodeling.raster import RasterBlock
-from dask_geomodeling.settings import settings, defaults
 from dask_geomodeling.utils import (
     get_dtype_max,
     Extent,
@@ -279,14 +280,14 @@ class MockGeometry(GeometryBlock):
 def setup_temp_root(**kwargs):
     """ Setup a temporary file root for testing purposes. """
     path = tempfile.mkdtemp(**kwargs)
-    settings["FILE_ROOT"] = path
+    config.set({"geomodeling.root": path})
     return path
 
 
 def teardown_temp_root(path):
     """ Delete the temporary file root. """
     shutil.rmtree(path)
-    settings["FILE_ROOT"] = defaults["FILE_ROOT"]
+    config.set({"geomodeling.root": defaults["root"]})
 
 
 def create_tif(

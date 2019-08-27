@@ -19,8 +19,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
+from dask import config
 
-from dask_geomodeling.settings import settings, defaults
 from dask_geomodeling.utils import Extent, get_sr, shapely_transform
 from dask_geomodeling.tests.factories import (
     setup_temp_root,
@@ -556,9 +556,10 @@ class TestAggregateRaster(unittest.TestCase):
             geometry=box(0, 0, 10, 10),
             min_size=1.0,
         )
+        self.default_raster_limit = config.get("geomodeling.raster_limit")
 
     def tearDown(self):
-        settings["RASTER_LIMIT"] = defaults["RASTER_LIMIT"]
+        config.set({"geomodeling.raster_limit": self.default_raster_limit})
 
     def test_arg_types(self):
         self.assertRaises(TypeError, geometry.AggregateRaster, self.source, None)
@@ -782,7 +783,7 @@ class TestAggregateRaster(unittest.TestCase):
         )
 
     def test_max_pixels_fallback(self):
-        settings["RASTER_LIMIT"] = 9
+        config.set({"geomodeling.raster_limit": 9})
         self.view = geometry.AggregateRaster(
             source=self.source, raster=self.raster, statistic="sum"
         )
