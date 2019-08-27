@@ -174,10 +174,10 @@ In this example, we see all the essentials of a geoblock implementation.
   through that its request/response schema and its required attributes.
 
 
-Geoblock types
---------------
+Block types
+-----------
 
-A geoblock type sets three things:
+A block type sets three things:
 
 1. the response schema: e.g. "RasterBlock.process returns a dictionary with
    a numpy array and a no data value"
@@ -191,72 +191,33 @@ This is not enforced at the code level, it is up to the developer to stick to
 this specification. The specification is written down in the type baseclass
 "RasterBlock", "GeometryBlock", etc.
 
-Local setup
------------
+Local setup (for development)
+-----------------------------
 
-These instructions assume that ``git``, ``docker``, and ``docker-compose`` are
-installed on your host machine.
+These instructions assume that ``git``, ``python3``, ``pip``, and
+``virtualenv`` are installed on your host machine.
 
-This project makes use of Pipenv. If you are new to pipenv, install it and
-study the output of ``pipenv --help``, especially the commands ``pipenv lock``
-and ``pipenv sync``. Or read the `docs <https://docs.pipenv.org/>`_.
+First make sure you have the GDAL libraries installed. On Ubuntu::
 
-As this project depends on private packages, we will need to setup some
-authentication.  We do this using a `Personal access token
-<https://github.com/settings/tokens>`_. Generate one and put it in your
-`$HOME/.netrc` file, as follows::
+    $ sudo apt install libgdal-dev
 
-    machine github.com
-    login <github username>
-    password <github token>
+Take note the GDAL version::
 
-    machine packages.lizard.net
-    login nens
-    password <packages.lizard.net password (check the internalpackages repo)>
+    $ apt show libgdal-dev
 
-For security reasons, make it readable only by you::
+Create and activate a virtualenv::
 
-    $ chmod 600 ~/.netrc
+    $ virtualenv --python=python3 .venv
+    $ source .venv/bin/activate
 
-The docker-compose file expects the following folders to exist:
+Install PyGDAL with the correct version (example assumes GDAL 2.2.3)::
 
- - ``~/.cache/pip``
- - ``~/.cache/pipenv``
+    $ pip install pygdal==2.2.3.*
 
-Check if they exist and if you are the owner. If they do not exist, create them
-with ``mkdir``, and if they are not owned by you, use ``sudo chown``.
+Install dask-geomodeling::
 
-We like to keep the project virtual environment inside
-``dask-geomodeling/.venv``. This is not the default Pipenv
-behaviour, so we need to set the following environment variable:
-``export PIPENV_VENV_IN_PROJECT=1``. If you add that to your ``.bashrc``, you
-don't need to specify it each time.
+    $ pip install -e .[test]
 
+Run the tests::
 
-Development
------------
-
-Install the environment::
-
-    $ pipenv sync --dev
-
-
-Development with Docker
------------------------
-
-There's a docker file to make it easy for you to get started with the project
-and to run the tests. You can edit files in the current directory and they'll
-be picked up by docker right away.
-
-The docker setup is also used by ``Jenkinsfile``, which means that our jenkins
-instance will automatically pick it up.
-
-First-time usage::
-
-    $ docker-compose build --build-arg uid=`id -u` --build-arg gid=`id -g`
-    $ docker-compose run --rm lib pipenv sync --dev
-    $ docker-compose up
-
-Running the tests::
-
-    $ docker-compose run --rm lib pipenv run nosetests
+    $ nosetests
