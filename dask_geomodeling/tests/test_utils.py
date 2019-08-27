@@ -1,0 +1,370 @@
+# (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+
+from unittest import mock
+import unittest
+
+from osgeo import osr
+from shapely import geometry
+from shapely.geometry import box
+from numpy.testing import assert_almost_equal, assert_array_equal
+
+import numpy as np
+import pandas as pd
+import geopandas as gpd
+
+from dask_geomodeling import utils
+
+
+class TestUtils(unittest.TestCase):
+    def test_get_index(self):
+        index = utils.get_index(values=np.array([0, 1]), no_data_value=1)
+        self.assertTrue((index == np.array([True, False])).all())
+
+    def test_extent(self):
+        sr = utils.get_sr('EPSG:4326')
+        extent = utils.Extent(sr=sr, bbox=(0, 0, 1, 1))
+        geometry = extent.as_geometry()
+        self.assertEqual(str(geometry), 'POLYGON ((0 0,1 0,1 1,0 1,0 0))')
+        self.assertEqual(str(geometry.GetSpatialReference()), str(sr))
+
+    def test_extent_has_repr(self):
+        sr = utils.get_sr('EPSG:4326')
+        extent = utils.Extent(sr=sr, bbox=(0, 0, 1, 1))
+        self.assertTrue(repr(extent))
+
+    def test_get_dtype_max(self):
+        self.assertIsInstance(utils.get_dtype_max('f4'), float)
+        self.assertIsInstance(utils.get_dtype_max('u4'), int)
+
+    def test_get_dtype_min(self):
+        self.assertIsInstance(utils.get_dtype_min('f4'), float)
+        self.assertIsInstance(utils.get_dtype_min('u4'), int)
+
+    def test_get_projection(self):
+        projection_rd = str('EPSG:28992')
+        projection_wgs = str('EPSG:4326')
+        rd = osr.SpatialReference(osr.GetUserInputAsWKT(projection_rd))
+        self.assertEqual(utils.get_projection(rd), projection_rd)
+        wgs = osr.SpatialReference(osr.GetUserInputAsWKT(projection_wgs))
+        self.assertEqual(utils.get_projection(wgs), projection_wgs)
+
+    def test_get_sr(self):
+        wkt = """GEOGCS["GCS_WGS_1984",
+                     DATUM["D_WGS_1984",SPHEROID[
+                         "WGS_1984",6378137,298.257223563]],
+                     PRIMEM["Greenwich",0],
+                     UNIT["Degree",
+                         0.017453292519943295]]"""
+        self.assertTrue(utils.get_sr(wkt).ExportToProj4())
+
+    def test_get_epsg_or_wkt(self):
+        # epsg
+        wkt = osr.GetUserInputAsWKT(str('EPSG:3857'))
+        out = utils.get_epsg_or_wkt(wkt)
+        self.assertEqual(out, 'EPSG:3857')
+        # no epsg
+        wkt = """GEOGCS["GCS_WGS_1984",
+                     DATUM["D_WGS_1984",SPHEROID[
+                         "WGS_1984",6378137,298.257223563]],
+                     PRIMEM["Greenwich",0],
+                     UNIT["Degree",
+                         0.017453292519943295]]"""
+        out = utils.get_epsg_or_wkt(wkt)
+        self.assertEqual(out, wkt.replace(' ', '').replace('\n', ''))
+
+    def test_get_footprint(self):
+        output = utils.get_footprint(size=5)
+        reference = np.array(
+            [
+                [0, 1, 1, 1, 0],
+                [1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1],
+                [0, 1, 1, 1, 0],
+            ],
+            dtype='b1',
+        )
+        self.assertTrue(np.equal(output, reference).all())
+
+    def test_safe_file_url(self):
+        # prepends file:// if necessary
+        self.assertEqual(utils.safe_file_url('/tmp'), 'file:///tmp')
+        self.assertEqual(utils.safe_file_url('/tmp', '/'), 'file:///tmp')
+
+        # absolute input
+        self.assertEqual(utils.safe_file_url('file:///tmp'), 'file:///tmp')
+        self.assertEqual(
+            utils.safe_file_url('file:///tmp', '/'), 'file:///tmp'
+        )
+        self.assertEqual(utils.safe_file_url('file://tmp', '/'), 'file:///tmp')
+
+        # relative input
+        self.assertEqual(
+            utils.safe_file_url('path', '/tmp/abs'), 'file:///tmp/abs/path'
+        )
+        self.assertEqual(
+            utils.safe_file_url('../abs/path', '/tmp/abs'),
+            'file:///tmp/abs/path'
+        )
+
+        # raise on relative path without start provided
+        self.assertRaises(IOError, utils.safe_file_url, 'file://tmp')
+
+        # raise on unknown protocol
+        self.assertRaises(
+            NotImplementedError, utils.safe_file_url, 'unknown://tmp'
+        )
+
+        # raise on path outside start (tested more thorough in safe_relpath)
+        self.assertRaises(IOError, utils.safe_file_url, 'file://../x', '/tmp')
+        self.assertRaises(IOError, utils.safe_file_url, '/etc/abs', '/tmp')
+        self.assertRaises(IOError, utils.safe_file_url, '../', '/tmp')
+
+    def test_get_crs(self):
+        # from EPSG
+        epsg = 'EPSG:28992'
+        crs = utils.get_crs(epsg)
+        self.assertIsInstance(crs, dict)
+
+        # from proj4
+        proj4 = """
+            +proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889
+            +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel
+            +towgs84=565.2369,50.0087,465.658,-0.406857,0.350733,-1.87035,4.0812
+            +units=m +no_defs
+        """
+        crs = utils.get_crs(proj4)
+        self.assertIsInstance(crs, dict)
+
+    def test_shapely_transform(self):
+        src_srs = 'EPSG:28992'
+        dst_srs = 'EPSG:4326'
+        box28992 = geometry.box(100000, 400000, 200000, 500000)
+        box4326 = utils.shapely_transform(
+            box28992, src_srs=src_srs, dst_srs=dst_srs,
+        )
+        assert_almost_equal(
+            (5.4, 52.0), list(box4326.centroid.coords)[0], decimal=1,
+        )
+
+    @mock.patch('dask_geomodeling.utils.shapely_transform')
+    def test_min_size_transform(self, shapely_transform):
+        min_size = 100
+        src_srs = 'some_srs'
+        dst_srs = 'another_srs'
+        box = geometry.box(0, 0, 100, 200)
+        shapely_transform.return_value = box
+        result = utils.transform_min_size(
+            min_size=min_size,
+            geometry=box,
+            src_srs=src_srs,
+            dst_srs=dst_srs,
+        )
+        shapely_transform.assert_called_with(
+            box.centroid.buffer(min_size / 2),
+            src_srs=src_srs,
+            dst_srs=dst_srs,
+        )
+        self.assertEqual(200, result)
+
+    @mock.patch('dask_geomodeling.utils.shapely_transform')
+    def test_transform_extent(self, shapely_transform):
+        src_srs = 'some_fiona_crs'
+        dst_srs = 'another_fiona_crs'
+        extent = 0, 0, 1, 1
+        expected = 2, 2, 3, 3
+        shapely_transform.return_value = geometry.box(*expected)
+        result = utils.transform_extent(
+            extent,
+            src_srs=src_srs,
+            dst_srs=dst_srs,
+        )
+        shapely_transform.assert_called_with(
+            geometry.box(*extent),
+            src_srs=src_srs,
+            dst_srs=dst_srs,
+        )
+        self.assertEqual(expected, result)
+
+
+class TestGeoTransform(unittest.TestCase):
+    def setUp(self):
+        self.geotransform = utils.GeoTransform((190000, 1, 0, 450000, 0, -1))
+
+    def test_get_indices_for_bbox(self):
+        indices = self.geotransform.get_indices_for_bbox(
+            (190001, 449996, 190006, 450000)
+        )
+
+        # X ranges between 1 and 6, measured from 190000
+        # Y ranges between 0 and -4, measured from 450000, but note
+        # that dy in the geotransform is -1 so this comes out as 1 in
+        # indices.
+
+        # indices must be of the form ((y1, y2), (x1, x2))
+        self.assertEqual(indices, ((0, 4), (1, 6)))
+
+    def test_invalid_raises(self):
+        # with zero pixel size
+        self.assertRaises(ValueError, utils.GeoTransform, (0, 1, 0, 0, 0, 0))
+        self.assertRaises(ValueError, utils.GeoTransform, (0, 0, 0, 0, 0, 1))
+        # with a tilt
+        self.assertRaises(ValueError, utils.GeoTransform, (0, 1, 1, 0, 0, 1))
+        self.assertRaises(ValueError, utils.GeoTransform, (0, 1, 0, 0, 1, 1))
+
+    def test_compare(self):
+        for matching in (
+                self.geotransform,
+                (0, 1, 0, 0, 0, -1),
+                (0, 1, 0, 0, 0, 1),
+                (251, 1, 0, -4926, 0, -1)
+        ):
+            self.assertTrue(self.geotransform.aligns_with(matching))
+
+        for non_matching in (
+                (0, 2, 0, 0, 0, -1),
+                (0, 1, 0, 0, 0, 2),
+                (251.1, 1, 0, 0, 0, -1),
+                (251.1, 1, 0, 1.6, 0, -1)
+        ):
+            self.assertFalse(self.geotransform.aligns_with(non_matching))
+
+
+class TestRasterize(unittest.TestCase):
+    def setUp(self):
+        self.geoseries = gpd.GeoSeries([box(2, 2, 4, 4), box(6, 6, 8, 8)])
+        self.box = dict(
+            bbox=(0, 0, 10, 10),
+            projection='EPSG:28992',
+            width=10,
+            height=10,
+        )
+        self.point_in = dict(
+            bbox=(3, 3, 3, 3),
+            projection='EPSG:28992',
+            width=1,
+            height=1,
+        )
+        self.point_out = dict(
+            bbox=(5, 5, 5, 5),
+            projection='EPSG:28992',
+            width=1,
+            height=1,
+        )
+
+    def test_rasterize(self):
+        raster = utils.rasterize_geoseries(self.geoseries, **self.box)
+        values = raster['values']
+        self.assertEqual(np.bool, values.dtype)
+        assert_array_equal(values[2:4, 2:4], True)
+        assert_array_equal(values[6:8, 6:8], True)
+        self.assertEqual(2 * 2 * 2, values.sum())
+
+    def test_rasterize_point_true(self):
+        raster = utils.rasterize_geoseries(self.geoseries, **self.point_in)
+        self.assertTupleEqual(raster['values'].shape, (1, 1, 1))
+        assert_array_equal(raster['values'], True)
+
+    def test_rasterize_point_false(self):
+        raster = utils.rasterize_geoseries(self.geoseries, **self.point_out)
+        self.assertTupleEqual(raster['values'].shape, (1, 1, 1))
+        assert_array_equal(raster['values'], False)
+
+    def test_rasterize_none_geometry(self):
+        self.geoseries.iloc[1] = None
+        raster = utils.rasterize_geoseries(self.geoseries, **self.box)
+        self.assertEqual(2 * 2, raster['values'].sum())
+
+    def test_rasterize_int(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1, 2]), **self.box
+        )
+        values = raster['values']
+        self.assertEqual(np.int32, values.dtype)
+        assert_array_equal(values[2:4, 2:4], 1)
+        assert_array_equal(values[6:8, 6:8], 2)
+        self.assertEqual(2 * 2 * 2, (values != raster['no_data_value']).sum())
+
+    def test_rasterize_int_point(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1, 2]), **self.point_in
+        )
+        self.assertTupleEqual(raster['values'].shape, (1, 1, 1))
+        assert_array_equal(raster['values'], 1)
+
+    def test_rasterize_int_point_nodata(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1, 2]), **self.point_out
+        )
+        self.assertTupleEqual(raster['values'].shape, (1, 1, 1))
+        assert_array_equal(raster['values'], raster['no_data_value'])
+
+    def test_rasterize_float(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1.2, 2.4]), **self.box
+        )
+        values = raster['values']
+        self.assertEqual(np.float64, values.dtype)
+        assert_array_equal(values[2:4, 2:4], 1.2)
+        assert_array_equal(values[6:8, 6:8], 2.4)
+        self.assertEqual(2 * 2 * 2, (values != raster['no_data_value']).sum())
+
+    def test_rasterize_float_point(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1.2, 2.4]), **self.point_in
+        )
+        self.assertTupleEqual(raster['values'].shape, (1, 1, 1))
+        assert_array_equal(raster['values'], 1.2)
+
+    def test_rasterize_float_point_nodata(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1.2, 2.4]), **self.point_out
+        )
+        self.assertTupleEqual(raster['values'].shape, (1, 1, 1))
+        assert_array_equal(raster['values'], raster['no_data_value'])
+
+    def test_rasterize_float_nan_inf(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([np.nan, np.inf]), **self.box
+        )
+        values = raster['values']
+        self.assertEqual(np.float64, values.dtype)
+        self.assertEqual(0, (values != raster['no_data_value']).sum())
+
+    def test_rasterize_bool(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([True, False]), **self.box
+        )
+        values = raster['values']
+        self.assertEqual(np.bool, values.dtype)
+        assert_array_equal(values[2:4, 2:4], True)
+        assert_array_equal(values[6:8, 6:8], False)
+        self.assertEqual(2 * 2, values.sum())
+
+    def test_rasterize_bool_empty(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([False, False]), **self.box
+        )
+        values = raster['values']
+        self.assertEqual(np.bool, values.dtype)
+        self.assertEqual(0, values.sum())
+
+    def test_rasterize_categorical_int(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1, 2], dtype='category'),
+            **self.box
+        )
+        self.assertEqual(np.int32, raster['values'].dtype)
+
+    def test_rasterize_categorical_float(self):
+        raster = utils.rasterize_geoseries(
+            self.geoseries, values=pd.Series([1.2, 2.4], dtype='category'),
+            **self.box
+        )
+        self.assertEqual(np.float64, raster['values'].dtype)
