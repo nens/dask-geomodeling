@@ -7,8 +7,8 @@ import numpy as np
 
 import shapely
 
+from dask import config
 from dask_geomodeling.geometry import GeometryBlock
-from dask_geomodeling.settings import settings
 from dask_geomodeling.utils import (
     get_uint_dtype,
     get_dtype_max,
@@ -488,12 +488,16 @@ class Rasterize(RasterBlock):
         else:
             raise ValueError("Invalid bbox ({})".format(request["bbox"]))
 
+        limit = self.limit
+        if self.limit is None:
+            limit = config.get("geomodeling.geometry_limit")
+
         geom_request = {
             "mode": "intersects",
             "geometry": shapely.geometry.box(*request["bbox"]),
             "projection": request["projection"],
             "min_size": min_size,
-            "limit": self.limit or settings.get("GEOMETRY_LIMIT"),
+            "limit": limit,
             "start": request.get("start"),
             "stop": request.get("stop"),
         }

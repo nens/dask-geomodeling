@@ -12,10 +12,10 @@ from scipy import ndimage
 import numpy as np
 import geopandas as gpd
 
+from dask import config
 from dask_geomodeling import measurements
 from dask_geomodeling import utils
 from dask_geomodeling.raster import RasterBlock
-from dask_geomodeling.settings import settings
 
 from .base import GeometryBlock
 
@@ -289,7 +289,9 @@ class AggregateRaster(GeometryBlock):
         required_pixels = int(((x2 - x1) * (y2 - y1)) / (self.pixel_size ** 2))
 
         # in case this request is too large, we adapt pixel size
-        max_pixels = self.max_pixels or settings["RASTER_LIMIT"]
+        max_pixels = self.max_pixels
+        if max_pixels is None:
+            max_pixels = config.get("geomodeling.raster_limit")
         pixel_size = self.pixel_size
 
         if required_pixels > max_pixels and self.auto_pixel_size:

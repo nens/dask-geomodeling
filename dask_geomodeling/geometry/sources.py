@@ -5,9 +5,8 @@ Module containing geometry sources.
 """
 import geopandas as gpd
 
+from dask import config
 from dask_geomodeling import utils
-from dask_geomodeling.settings import settings
-
 from .base import GeometryBlock
 
 __all__ = ["GeometryFileSource"]
@@ -27,7 +26,7 @@ class GeometryFileSource(GeometryBlock):
     """
 
     def __init__(self, url, layer=None, id_field="id"):
-        safe_url = utils.safe_file_url(url, settings["FILE_ROOT"])
+        safe_url = utils.safe_file_url(url, config.get("geomodeling.root"))
         super().__init__(safe_url, layer, id_field)
 
     @property
@@ -44,7 +43,7 @@ class GeometryFileSource(GeometryBlock):
 
     @property
     def path(self):
-        return utils.safe_abspath(self.url, settings["FILE_ROOT"])
+        return utils.safe_abspath(self.url, config.get("geomodeling.root"))
 
     @property
     def columns(self):
@@ -69,7 +68,7 @@ class GeometryFileSource(GeometryBlock):
 
     @staticmethod
     def process(url, request):
-        path = utils.safe_abspath(url, settings["FILE_ROOT"])
+        path = utils.safe_abspath(url, config.get("geomodeling.root"))
 
         # convert the requested projection to a fiona CRS
         crs = utils.get_crs(request["projection"])
@@ -134,7 +133,7 @@ class GeometryFileSource(GeometryBlock):
             if request.get("limit") and len(f) > request["limit"]:
                 f = f.iloc[: request["limit"]]
             elif request.get("limit") is None:
-                global_limit = settings["GEOMETRY_LIMIT"]
+                global_limit = config.get("geomodeling.geometry_limit")
                 if len(f) > global_limit:
                     raise RuntimeError(
                         f"The amount of returned geometries exceeded "
