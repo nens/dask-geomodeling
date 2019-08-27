@@ -15,7 +15,7 @@ Constructing a view
 
 A dask-geomodeling view can be constructed by creating a Block instance:
 
-.. codeblock:: python
+.. code:: python
 
    from dask_geomodeling.raster import RasterFileSource
    source = RasterFileSource('/path/to/geotiff')
@@ -24,7 +24,7 @@ A dask-geomodeling view can be constructed by creating a Block instance:
 The view can now be used to obtain data from the specified file. More
 complex views can be created by nesting block instances:
 
-.. codeblock:: python
+.. code:: python
 
    from dask_geomodeling.raster import Add, Multiply
    add = Add(source, 2.4)
@@ -45,7 +45,7 @@ docs_:
 
 We use the previous example to demonstrate how this works:
 
-.. codeblock:: python
+.. code:: python
 
    import dask
    request = {
@@ -88,13 +88,13 @@ supplied to the ``process`` function.
 An example in words. We ask the ``add`` block from the previous example to do the
 following:
 
-   give me a 256x256 raster at location (138000, 480000)
+- give me a 256x256 raster at location (138000, 480000)
 
 The ``get_sources_and_requests`` would respond with the following:
 
-   - I need a 256x256 raster at location (138000, 480000) from
-     RasterStoreSource('file:///path/to/store')
-   - I need the number 2.4
+- I need a 256x256 raster at location (138000, 480000) from
+ RasterStoreSource('file:///path/to/store')
+- I need the number 2.4
 
 The ``get_compute_graph`` method works recursively, so it also calls the
 ``get_sources_and_requests`` of the ``RasterStoreSource``. The result is a
@@ -103,8 +103,8 @@ dask compute graph.
 When this compute graph is evaluated, the ``process`` method of the ``add``
 geoblock will ultimately receive two arguments:
 
-   - the 256x256 raster from  RasterStoreSource('file:///path/to/store')
-   - the number 2.4
+- the 256x256 raster from  RasterStoreSource('file:///path/to/store')
+- the number 2.4
 
 And the process method produces the end result.
 
@@ -114,7 +114,7 @@ Implementation example
 As an example, we use a simplified Dilate geoblock, which adds a buffer of 1
 pixel around all pixels of given value:
 
-.. codeblock:: python
+.. code:: python
 
     class Dilate(RasterBlock):
         def __init__(self, store, values):
