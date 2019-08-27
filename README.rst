@@ -220,4 +220,8 @@ Install dask-geomodeling::
 
 Run the tests::
 
-    $ nosetests
+    $ pytest
+
+Or optionally, with coverage and code style checking::
+
+    $ pytest --cov=dask_geomodeling --black

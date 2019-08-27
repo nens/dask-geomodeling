@@ -54,19 +54,16 @@ class BaseElementwise(RasterBlock):
         return [arg for arg in self.args if isinstance(arg, RasterBlock)]
 
     def get_sources_and_requests(self, **request):
-        start = request.get('start', None)
-        stop = request.get('stop', None)
+        start = request.get("start", None)
+        stop = request.get("stop", None)
 
         if start is not None and stop is not None:
             # limit request to self.period so that resulting data is aligned
             period = self.period
-            request['start'] = max(start, period[0])
-            request['stop'] = min(stop, period[1])
+            request["start"] = max(start, period[0])
+            request["stop"] = min(stop, period[1])
 
-        process_kwargs = {
-            "dtype": self.dtype.name,
-            "fillvalue": self.fillvalue,
-        }
+        process_kwargs = {"dtype": self.dtype.name, "fillvalue": self.fillvalue}
         sources_and_requests = [(source, request) for source in self.args]
 
         return [(process_kwargs, None)] + sources_and_requests
@@ -197,7 +194,7 @@ class BaseComparison(BaseMath):
 
     @property
     def dtype(self):
-        return np.dtype('bool')
+        return np.dtype("bool")
 
 
 class BaseLogic(BaseElementwise):
@@ -208,7 +205,7 @@ class BaseLogic(BaseElementwise):
         for x in (a, b):
             if isinstance(x, (RasterBlock, np.ndarray)):
                 dtype = x.dtype
-                if dtype != np.dtype('bool'):
+                if dtype != np.dtype("bool"):
                     raise TypeError("inputs must have boolean dtypes")
             elif not isinstance(x, bool):
                 raise TypeError("'{}' object is not allowed".format(type(x)))
@@ -216,7 +213,7 @@ class BaseLogic(BaseElementwise):
 
     @property
     def dtype(self):
-        return np.dtype('bool')
+        return np.dtype("bool")
 
     @property
     def fillvalue(self):
@@ -244,24 +241,24 @@ def wrap_math_process_func(func):
                 return None
             if not isinstance(data, dict):
                 compute_args.append(data)
-            elif 'time' in data or 'meta' in data:
+            elif "time" in data or "meta" in data:
                 # return the time / meta right away. assumes there are no
                 # mixed requests and that time is aligned
                 return data
-            elif 'values' in data:
-                compute_args.append(data['values'])
+            elif "values" in data:
+                compute_args.append(data["values"])
                 # update the nodata mask
-                if data['values'].dtype == np.dtype('bool'):
+                if data["values"].dtype == np.dtype("bool"):
                     continue  # boolean data does not contain nodata values.
-                if 'no_data_value' not in data:
+                if "no_data_value" not in data:
                     continue
-                _nodata_mask = data['values'] == data['no_data_value']
+                _nodata_mask = data["values"] == data["no_data_value"]
                 if nodata_mask is None:
                     nodata_mask = _nodata_mask
                 else:
                     nodata_mask |= _nodata_mask
 
-        if dtype == np.dtype('bool'):
+        if dtype == np.dtype("bool"):
             no_data_value = None
             if func is np.not_equal:
                 fillvalue = True
@@ -272,12 +269,12 @@ def wrap_math_process_func(func):
             func_kwargs = {"dtype": dtype}
             no_data_value = fillvalue
 
-        with np.errstate(all='ignore'):  # suppresses warnings
+        with np.errstate(all="ignore"):  # suppresses warnings
             result_values = func(*compute_args, **func_kwargs)
 
         if nodata_mask is not None:
             result_values[nodata_mask] = fillvalue
-        return {'no_data_value': no_data_value, 'values': result_values}
+        return {"no_data_value": no_data_value, "values": result_values}
 
     return math_process_func
 
@@ -511,9 +508,10 @@ class Invert(BaseSingle):
     :param x: raster data to invert
     :type x: RasterBlock
     """
+
     def __init__(self, x):
         super(Invert, self).__init__(x)
-        if x.dtype != np.dtype('bool'):
+        if x.dtype != np.dtype("bool"):
             raise TypeError("input block must have boolean dtype")
 
     @staticmethod
@@ -525,7 +523,7 @@ class Invert(BaseSingle):
 
     @property
     def dtype(self):
-        return np.dtype('bool')
+        return np.dtype("bool")
 
 
 class IsData(BaseSingle):
@@ -534,22 +532,23 @@ class IsData(BaseSingle):
     :param store:
     :type store: RasterBlock
     """
+
     def __init__(self, store):
-        if store.dtype == np.dtype('bool'):
+        if store.dtype == np.dtype("bool"):
             raise TypeError("input block must not have boolean dtype")
         super(IsData, self).__init__(store)
 
     @staticmethod
     def process(data):
-        if data is None or 'values' not in data:
+        if data is None or "values" not in data:
             return data
-        values = data['values']
-        no_data_value = data['no_data_value']
-        return {'values': values != no_data_value, 'no_data_value': None}
+        values = data["values"]
+        no_data_value = data["no_data_value"]
+        return {"values": values != no_data_value, "no_data_value": None}
 
     @property
     def dtype(self):
-        return np.dtype('bool')
+        return np.dtype("bool")
 
     @property
     def fillvalue(self):
@@ -565,11 +564,11 @@ class IsNoData(IsData):
 
     @staticmethod
     def process(data):
-        if data is None or 'values' not in data:
+        if data is None or "values" not in data:
             return data
-        values = data['values']
-        no_data_value = data['no_data_value']
-        return {'values': values == no_data_value, 'no_data_value': None}
+        values = data["values"]
+        no_data_value = data["no_data_value"]
+        return {"values": values == no_data_value, "no_data_value": None}
 
 
 class And(BaseLogic):
@@ -641,6 +640,7 @@ class FillNoData(BaseElementwise):
     shadowed by values from rasters more 'to the right'. However, 'no data'
     values are transparent and do not shadow underlying data values.
     """
+
     def __init__(self, *args):
         # TODO Expand this block so that it takes ndarrays and scalars.
         for arg in args:
@@ -656,13 +656,13 @@ class FillNoData(BaseElementwise):
         for data in args:
             if data is None:
                 continue
-            elif 'time' in data or 'meta' in data:
+            elif "time" in data or "meta" in data:
                 # return the time / meta right away. assumes there are no
                 # mixed requests and that time is aligned
                 return data
-            elif 'values' in data and 'no_data_value' in data:
-                data_list.append(data['values'])
-                no_data_values.append(data['no_data_value'])
+            elif "values" in data and "no_data_value" in data:
+                data_list.append(data["values"])
+                no_data_values.append(data["no_data_value"])
 
         dtype = np.result_type(*data_list)
         fillvalue = get_dtype_max(dtype)
@@ -676,4 +676,4 @@ class FillNoData(BaseElementwise):
             index = get_index(data, no_data_value)
             values[index] = data[index]
 
-        return {'values': values, 'no_data_value': fillvalue}
+        return {"values": values, "no_data_value": fillvalue}

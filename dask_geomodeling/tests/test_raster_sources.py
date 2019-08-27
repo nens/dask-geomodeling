@@ -10,8 +10,11 @@ from numpy.testing import assert_equal, assert_allclose
 from dask_geomodeling import utils
 from dask_geomodeling.raster import MemorySource, RasterFileSource
 
-from dask_geomodeling.tests.factories import \
-    setup_temp_root, teardown_temp_root, create_tif
+from dask_geomodeling.tests.factories import (
+    setup_temp_root,
+    teardown_temp_root,
+    create_tif,
+)
 
 
 class TstRasterSourceBase:
@@ -35,15 +38,19 @@ class TstRasterSourceBase:
         self.assertEqual(np.uint8(255), self.source.fillvalue)
 
     def test_extent(self):
-        expected = utils.Extent(
-            (136700, 455795, 136705, 455800), utils.get_sr("EPSG:28992")
-        ).transformed(utils.get_sr("EPSG:4326")).bbox
-        assert_allclose(self.source.extent, expected, atol=1E-10)
+        expected = (
+            utils.Extent((136700, 455795, 136705, 455800), utils.get_sr("EPSG:28992"))
+            .transformed(utils.get_sr("EPSG:4326"))
+            .bbox
+        )
+        assert_allclose(self.source.extent, expected, atol=1e-10)
 
     def test_geometry(self):
-        expected = utils.Extent(
-            (136700, 455795, 136705, 455800), utils.get_sr("EPSG:28992")
-        ).as_geometry().ExportToWkt()
+        expected = (
+            utils.Extent((136700, 455795, 136705, 455800), utils.get_sr("EPSG:28992"))
+            .as_geometry()
+            .ExportToWkt()
+        )
         self.assertEqual(expected, self.source.geometry.ExportToWkt())
 
     def test_point_single_pixel(self):
@@ -135,7 +142,7 @@ class TstRasterSourceBase:
         for start, expected in [
             (datetime(1970, 1, 1), datetime(2000, 1, 1)),
             (datetime(2000, 1, 1), datetime(2000, 1, 1)),
-            (datetime(2000, 1, 1, 12,), datetime(2000, 1, 1)),
+            (datetime(2000, 1, 1, 12), datetime(2000, 1, 1)),
             (datetime(2000, 1, 1, 12, 1), datetime(2000, 1, 2)),
             (datetime(2000, 1, 2), datetime(2000, 1, 2)),
             (datetime(2018, 1, 1), datetime(2000, 1, 2)),
@@ -148,9 +155,7 @@ class TstRasterSourceBase:
             (datetime(1970, 1, 1), datetime(1999, 12, 31, 12, 59)),
             (datetime(2000, 1, 2, 0, 1), datetime(2018, 1, 1)),
         ]:
-            data = self.source.get_data(
-                mode="time", start=start, stop=stop
-            )
+            data = self.source.get_data(mode="time", start=start, stop=stop)
             self.assertEqual(data["time"], [])
 
         for start, stop in [
@@ -158,21 +163,15 @@ class TstRasterSourceBase:
             (datetime(2000, 1, 1), datetime(2000, 1, 1)),
             (datetime(2000, 1, 1), datetime(2000, 1, 1, 23, 59)),
         ]:
-            data = self.source.get_data(
-                mode="time", start=start, stop=stop
-            )
+            data = self.source.get_data(mode="time", start=start, stop=stop)
             self.assertEqual(data["time"], [datetime(2000, 1, 1)])
 
         for start, stop in [
             (datetime(1970, 1, 1), datetime(2010, 1, 1)),
             (datetime(2000, 1, 1), datetime(2000, 1, 2)),
         ]:
-            data = self.source.get_data(
-                mode="time", start=start, stop=stop
-            )
-            self.assertEqual(
-                data["time"], [datetime(2000, 1, 1), datetime(2000, 1, 2)]
-            )
+            data = self.source.get_data(mode="time", start=start, stop=stop)
+            self.assertEqual(data["time"], [datetime(2000, 1, 1), datetime(2000, 1, 2)])
 
 
 class TestMemorySource(TstRasterSourceBase, unittest.TestCase):
@@ -185,41 +184,34 @@ class TestMemorySource(TstRasterSourceBase, unittest.TestCase):
             pixel_origin=(136700, 455800),
             time_first=datetime(2000, 1, 1),
             time_delta=timedelta(days=1),
-            metadata=["meta 1", "meta 2"]
+            metadata=["meta 1", "meta 2"],
         )
 
     def test_get_meta_last(self):
         self.assertListEqual(
-            self.source.get_data(mode="meta")["meta"],
-            self.source.metadata[1:]
+            self.source.get_data(mode="meta")["meta"], self.source.metadata[1:]
         )
 
     def test_get_meta_first(self):
         self.assertListEqual(
-            self.source.get_data(
-                mode="meta", start=datetime(1970, 1, 1)
-            )["meta"],
-            self.source.metadata[:1]
+            self.source.get_data(mode="meta", start=datetime(1970, 1, 1))["meta"],
+            self.source.metadata[:1],
         )
 
     def test_get_meta_all(self):
         self.assertListEqual(
             self.source.get_data(
-                mode="meta",
-                start=datetime(1970, 1, 1),
-                stop=datetime(2010, 1, 1)
+                mode="meta", start=datetime(1970, 1, 1), stop=datetime(2010, 1, 1)
             )["meta"],
-            self.source.metadata
+            self.source.metadata,
         )
 
     def test_get_meta_empty(self):
         self.assertListEqual(
             self.source.get_data(
-                mode="meta",
-                start=datetime(1970, 1, 1),
-                stop=datetime(1971, 1, 1)
+                mode="meta", start=datetime(1970, 1, 1), stop=datetime(1971, 1, 1)
             )["meta"],
-            []
+            [],
         )
 
 
@@ -227,15 +219,15 @@ class TestGeoTIFFSource(TstRasterSourceBase, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.path = setup_temp_root()
-        cls.single_pixel_tif = os.path.join(cls.path, 'test01.tiff')
+        cls.single_pixel_tif = os.path.join(cls.path, "test01.tiff")
         create_tif(
             cls.single_pixel_tif,
             bands=2,
             base_level=5,
             dtype="u1",
             no_data_value=255,
-            projection='EPSG:28992',
-            geo_transform=(136700., 5., 0., 455800., 0., -5.),
+            projection="EPSG:28992",
+            geo_transform=(136700.0, 5.0, 0.0, 455800.0, 0.0, -5.0),
             shape=(1, 1),
         )
 

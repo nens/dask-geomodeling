@@ -31,11 +31,10 @@ class GeometryTiler(BaseSingle):
 
     Only supports 'centroid' and 'extent' request modes.
     """
+
     def __init__(self, source, size, projection):
         if not isinstance(projection, str):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(projection))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(projection)))
         super().__init__(source, float(size), projection)
 
     @property
@@ -47,16 +46,16 @@ class GeometryTiler(BaseSingle):
         return self.args[2]
 
     def get_sources_and_requests(self, **request):
-        mode = request['mode']
-        if mode == 'extent':
+        mode = request["mode"]
+        if mode == "extent":
             return [(self.source, request)]
-        if mode != 'centroid':
+        if mode != "centroid":
             raise NotImplementedError(f"Cannot process '{mode}' mode")
 
         # tile the requested geometry in boxes that have a maximum size
-        req_geometry = request['geometry']
+        req_geometry = request["geometry"]
         tile_srs = self.projection
-        request_srs = request['projection']
+        request_srs = request["projection"]
 
         # transform the requested geometry into the tile geometry
         geometry = utils.shapely_transform(req_geometry, request_srs, tile_srs)
@@ -76,8 +75,9 @@ class GeometryTiler(BaseSingle):
                 x1 + i * size_x,
                 y1 + j * size_y,
                 x1 + (i + 1) * size_x,
-                y1 + (j + 1) * size_y
-            ) for i, j in product(range(ncols), range(nrows))
+                y1 + (j + 1) * size_y,
+            )
+            for i, j in product(range(ncols), range(nrows))
         ]
 
         # intersect the tiles with the requested geometry
@@ -87,18 +87,19 @@ class GeometryTiler(BaseSingle):
         series = series[~series.is_empty]
 
         source = self.source
-        request['projection'] = tile_srs
-        return [(source, {**request, 'geometry': tile}) for tile in series]
+        request["projection"] = tile_srs
+        return [(source, {**request, "geometry": tile}) for tile in series]
 
     @staticmethod
     def process(*all_data):
         if len(all_data) == 0:
-            return {'features': gpd.GeoDataFrame([]), 'projection': None}
+            return {"features": gpd.GeoDataFrame([]), "projection": None}
         if len(all_data) == 1:
             return all_data[0]  # for non-tiled or extent requests
         features_lst = [
-            data['features'] for data in all_data
-            if data is not None and len(data.get('features')) != 0
+            data["features"]
+            for data in all_data
+            if data is not None and len(data.get("features")) != 0
         ]
         if len(features_lst) == 0:
             features = gpd.GeoDataFrame([])
@@ -107,5 +108,5 @@ class GeometryTiler(BaseSingle):
         else:
             features = pd.concat(features_lst)
 
-        projection = all_data[0]['projection']
-        return {'features': features, 'projection': projection}
+        projection = all_data[0]["projection"]
+        return {"features": features, "projection": projection}

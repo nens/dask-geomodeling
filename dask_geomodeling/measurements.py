@@ -11,9 +11,8 @@ import numpy as np
 def _safely_castable_to_int(dt):
     """Test whether the numpy data type `dt` can be safely cast to an int."""
     int_size = np.dtype(int).itemsize
-    safe = (
-        (np.issubdtype(dt, np.signedinteger) and dt.itemsize <= int_size)
-        or (np.issubdtype(dt, np.unsignedinteger) and dt.itemsize < int_size)
+    safe = (np.issubdtype(dt, np.signedinteger) and dt.itemsize <= int_size) or (
+        np.issubdtype(dt, np.unsignedinteger) and dt.itemsize < int_size
     )
     return safe
 
@@ -86,18 +85,19 @@ def percentile(data, qval, labels=None, index=None):
     data, labels = np.broadcast_arrays(data, labels)
 
     if index is None:
-        mask = (labels > 0)
+        mask = labels > 0
         return single_group(data[mask])
 
     if np.isscalar(index):
-        mask = (labels == index)
+        mask = labels == index
         return single_group(data[mask])
 
     # remap labels to unique integers if necessary, or if the largest
     # label is larger than the number of values.
     if (
         not _safely_castable_to_int(labels.dtype)
-        or labels.min() < 0 or labels.max() > labels.size
+        or labels.min() < 0
+        or labels.max() > labels.size
     ):
         # remap labels, and indexes
         unique_labels, labels = np.unique(labels, return_inverse=True)
@@ -105,13 +105,13 @@ def percentile(data, qval, labels=None, index=None):
 
         # make all of idxs valid
         idxs[idxs >= unique_labels.size] = 0
-        found = (unique_labels[idxs] == index)
+        found = unique_labels[idxs] == index
     else:
         # labels are an integer type, and there aren't too many.
         idxs = np.asanyarray(index, np.int).copy()
         found = (idxs >= 0) & (idxs <= labels.max())
 
-    idxs[~ found] = labels.max() + 1
+    idxs[~found] = labels.max() + 1
 
     # reorder data and labels, first by labels, then by data
     order = np.lexsort((data.ravel(), labels.ravel()))
@@ -131,9 +131,9 @@ def percentile(data, qval, labels=None, index=None):
     # here starts the part that really diverts from scipy's median finder; the
     # linear interpolation method used corresponds to the default behaviour of
     # np.percentile().
-    size = hi - lo + 1                # size of the group
+    size = hi - lo + 1  # size of the group
     frac = (size - 1) * (qval / 100)  # fractional index relative to lo
-    hi = lo - np.int64(-frac // 1)    # ceiled absolute index to data
-    lo = lo + np.int64(frac // 1)     # floored absolute index to data
-    part = frac % 1                   # fractional part of index
+    hi = lo - np.int64(-frac // 1)  # ceiled absolute index to data
+    lo = lo + np.int64(frac // 1)  # floored absolute index to data
+    part = frac % 1  # fractional part of index
     return (data[lo] + part * (data[hi] - data[lo])).tolist()

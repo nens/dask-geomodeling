@@ -11,8 +11,11 @@ from pandas.tseries.frequencies import to_offset
 import numpy as np
 import pandas as pd
 
-from dask_geomodeling.utils import \
-    get_dtype_max, parse_percentile_statistic, dtype_for_statistic
+from dask_geomodeling.utils import (
+    get_dtype_max,
+    parse_percentile_statistic,
+    dtype_for_statistic,
+)
 
 from .base import RasterBlock, BaseSingle
 
@@ -96,39 +99,39 @@ class Snap(RasterBlock):
 
         # if any store is empty, Snap will be empty
         if store_period is None or index_period is None:
-            return [(dict(snap_mode='noop'), None)]
+            return [(dict(snap_mode="noop"), None)]
 
         # time requests are easy: just pass them to self.index
-        if request['mode'] == 'time':
-            return [(dict(snap_mode='noop'), None), (self.index, request)]
+        if request["mode"] == "time":
+            return [(dict(snap_mode="noop"), None), (self.index, request)]
 
-        start = request.get('start', index_period[1])
-        stop = request.get('stop', None)
+        start = request.get("start", index_period[1])
+        stop = request.get("stop", None)
 
         # query the index time
-        index_result = self.index.get_data(mode='time', start=start, stop=stop)
+        index_result = self.index.get_data(mode="time", start=start, stop=stop)
         if index_result is None:
-            return [(dict(snap_mode='noop'), None)]
-        index_time = index_result['time']
+            return [(dict(snap_mode="noop"), None)]
+        index_time = index_result["time"]
 
         # special case: the store has only one frame. repeat it.
         if store_period[0] == store_period[1]:
             # new request only gets the last frame
-            request['start'] = store_period[0]
-            request['stop'] = None
+            request["start"] = store_period[0]
+            request["stop"] = None
             return [
-                (dict(snap_mode='repeat', repeats=len(index_time)), None),
+                (dict(snap_mode="repeat", repeats=len(index_time)), None),
                 (self.store, request),
             ]
 
         # Return a list of requests with snapped times. Times that occur more
         # than once will not be evaluated multiple times due to caching.
-        requests = [(dict(snap_mode='concat'), None)]
-        request['stop'] = None
+        requests = [(dict(snap_mode="concat"), None)]
+        request["stop"] = None
         for time in index_time:
-            store_time = self.store.get_data(mode='time', start=time)['time']
+            store_time = self.store.get_data(mode="time", start=time)["time"]
             _request = request.copy()
-            _request['start'] = store_time[0]
+            _request["start"] = store_time[0]
             requests.append((self.store, _request))
         return requests
 
@@ -137,36 +140,33 @@ class Snap(RasterBlock):
         if len(args) == 0:
             return None
 
-        snap_mode = process_kwargs['snap_mode']
+        snap_mode = process_kwargs["snap_mode"]
 
-        if snap_mode == 'noop':
+        if snap_mode == "noop":
             return args[0]
 
-        if snap_mode == 'repeat':
+        if snap_mode == "repeat":
             data = args[0]
-            repeats = process_kwargs['repeats']
-            if 'values' in data:
+            repeats = process_kwargs["repeats"]
+            if "values" in data:
                 return {
-                    'values': np.repeat(data['values'], repeats, axis=0),
-                    'no_data_value': data['no_data_value'],
+                    "values": np.repeat(data["values"], repeats, axis=0),
+                    "no_data_value": data["no_data_value"],
                 }
-            elif 'meta' in data:
-                return {'meta': data['meta'] * repeats}
+            elif "meta" in data:
+                return {"meta": data["meta"] * repeats}
 
         # we have a bunch of single frame results that need to be concatenated
-        if snap_mode == 'concat':
+        if snap_mode == "concat":
             if any((arg is None for arg in args)):
                 return None
 
             # combine the args
-            if 'values' in args[0]:
-                values = np.concatenate([x['values'] for x in args], 0)
-                return {
-                    'values': values,
-                    'no_data_value': args[0]['no_data_value'],
-                }
-            elif 'meta' in args[0]:
-                return {'meta': [x['meta'][0] for x in args]}
+            if "values" in args[0]:
+                values = np.concatenate([x["values"] for x in args], 0)
+                return {"values": values, "no_data_value": args[0]["no_data_value"]}
+            elif "meta" in args[0]:
+                return {"meta": [x["meta"][0] for x in args]}
 
 
 class Shift(BaseSingle):
@@ -183,6 +183,7 @@ class Shift(BaseSingle):
     appears to be shifted towards the future in case of a positive time
     parameter.
     """
+
     def __init__(self, store, time):
         if isinstance(time, Timedelta):
             time = int(time.total_seconds() * 1000)
@@ -201,13 +202,13 @@ class Shift(BaseSingle):
 
     def get_sources_and_requests(self, **request):
         # shift request
-        start = request.get('start', None)
-        stop = request.get('stop', None)
+        start = request.get("start", None)
+        stop = request.get("stop", None)
 
         if start is not None:
-            request['start'] = start - self.time
+            request["start"] = start - self.time
         if stop is not None:
-            request['stop'] = stop - self.time
+            request["stop"] = stop - self.time
 
         return [(self.store, request), (self.time, None)]
 
@@ -216,8 +217,8 @@ class Shift(BaseSingle):
         if data is None:
             return None
         # shift result if necessary
-        if 'time' in data:
-            data['time'] = [t + time for t in data['time']]
+        if "time" in data:
+            data["time"] = [t + time for t in data["time"]]
 
         return data
 
@@ -228,16 +229,16 @@ class TemporalSum(BaseSingle):
         if data is None:
             return data
 
-        if 'time' in data:
-            return {'time': data['time'][-1:]}
+        if "time" in data:
+            return {"time": data["time"][-1:]}
 
-        if 'meta' in data:
-            return {'meta': data['meta'][-1:]}
+        if "meta" in data:
+            return {"meta": data["meta"][-1:]}
 
-        if 'values' in data:
+        if "values" in data:
             return {
-                'values': data['values'].sum(axis=0)[np.newaxis, ...],
-                'no_data_value': data['no_data_value'],
+                "values": data["values"].sum(axis=0)[np.newaxis, ...],
+                "no_data_value": data["no_data_value"],
             }
 
 
@@ -252,9 +253,7 @@ def _ts_to_dt(timestamp, timezone):
         timestamp = timestamp.tz_localize(timezone)
     except TypeError:
         pass
-    return timestamp.tz_convert("UTC")\
-                    .tz_localize(None)\
-                    .to_pydatetime()
+    return timestamp.tz_convert("UTC").tz_localize(None).to_pydatetime()
 
 
 def _get_bin_label(dt, frequency, closed, label, timezone):
@@ -264,9 +263,7 @@ def _get_bin_label(dt, frequency, closed, label, timezone):
     """
     # go through resample, this is the only function that supports 'closed'
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    resampled = series.resample(
-        frequency, closed=closed, label=label, kind="timestamp"
-    )
+    resampled = series.resample(frequency, closed=closed, label=label, kind="timestamp")
     snapped = resampled.first().index[0]
     return _ts_to_dt(snapped, timezone)
 
@@ -278,9 +275,7 @@ def _get_bin_period(dt, frequency, closed, label, timezone):
     """
     # go through resample, this is the only function that supports 'closed'
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    resampled = series.resample(
-        frequency, closed=closed, label=label, kind="period"
-    )
+    resampled = series.resample(frequency, closed=closed, label=label, kind="period")
     return resampled.first().index[0]
 
 
@@ -297,9 +292,7 @@ def _get_closest_label(dt, frequency, closed, label, timezone, side="both"):
     # some custom logic that finds the closest label
     freq = to_offset(frequency)
     # generate the labels around it
-    candidates = pd.date_range(
-        candidate - freq, candidate + freq, freq=freq
-    )
+    candidates = pd.date_range(candidate - freq, candidate + freq, freq=freq)
     # get the candidate that is closest
     differences = (candidates - ts).to_series()
     differences.index = candidates  # so that argmin returns the candidate
@@ -316,9 +309,11 @@ def _label_to_period(dt, frequency, closed, label, timezone):
     label_ts = _dt_to_ts(dt, timezone)
     # translate that back to the period
     series = pd.Series([0], index=[label_ts])
-    label_candidate = series.resample(
-        frequency, closed=closed, label=label, kind="timestamp"
-    ).first().index[0]
+    label_candidate = (
+        series.resample(frequency, closed=closed, label=label, kind="timestamp")
+        .first()
+        .index[0]
+    )
     # in most cases the label_candidate == label, but sometimes it doesnt work
     # because the label actually falls outside of the bin
     if label_candidate < label_ts:
@@ -326,9 +321,11 @@ def _label_to_period(dt, frequency, closed, label, timezone):
     elif label_candidate > label_ts:
         series.index -= to_offset(frequency)
     # now retrieve the period
-    period = series.resample(
-        frequency, closed=closed, label=label, kind="period"
-    ).first().index[0]
+    period = (
+        series.resample(frequency, closed=closed, label=label, kind="period")
+        .first()
+        .index[0]
+    )
     return period
 
 
@@ -364,14 +361,15 @@ class TemporalAggregate(BaseSingle):
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.resample.html
       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
     """
+
     # extensive (opposite: intensive) means: additive, proportional to size
     STATISTICS = {
-        'sum': {'func': np.nansum, 'extensive': True},
-        'count': {'func': count_not_nan, 'extensive': True},
-        'min': {'func': np.nanmin, 'extensive': False},
-        'max': {'func': np.nanmax, 'extensive': False},
-        'mean': {'func': np.nanmean, 'extensive': False},
-        'median': {'func': np.nanmedian, 'extensive': False},
+        "sum": {"func": np.nansum, "extensive": True},
+        "count": {"func": count_not_nan, "extensive": True},
+        "min": {"func": np.nanmin, "extensive": False},
+        "max": {"func": np.nanmax, "extensive": False},
+        "mean": {"func": np.nanmean, "extensive": False},
+        "median": {"func": np.nanmedian, "extensive": False},
         # 'percentile' is hardcoded to np.nanpercentile
     }
 
@@ -406,16 +404,11 @@ class TemporalAggregate(BaseSingle):
         # interpret percentile statistic
         percentile = parse_percentile_statistic(statistic)
         if percentile:
-            statistic = 'p{0}'.format(percentile)
+            statistic = "p{0}".format(percentile)
         elif statistic not in self.STATISTICS:
             raise ValueError("Unknown statistic '{}'".format(statistic))
         super(TemporalAggregate, self).__init__(
-            source,
-            frequency,
-            statistic,
-            closed,
-            label,
-            timezone,
+            source, frequency, statistic, closed, label, timezone
         )
 
     @property
@@ -541,14 +534,10 @@ class TemporalAggregate(BaseSingle):
                 stop_period = _label_to_period(stop, **kwargs)
 
             # snap request 'start' to the start of the first period
-            request["start"] = _ts_to_dt(
-                start_period.start_time, self.timezone
-            )
+            request["start"] = _ts_to_dt(start_period.start_time, self.timezone)
             # snap request 'stop' to the end of the last period
-            request["stop"] = _ts_to_dt(
-                stop_period.end_time, self.timezone
-            )
-            if kwargs["closed"] != 'left':
+            request["stop"] = _ts_to_dt(stop_period.end_time, self.timezone)
+            if kwargs["closed"] != "left":
                 request["stop"] += Timedelta(microseconds=1)
 
         # return sources and requests depending on the mode
@@ -560,13 +549,11 @@ class TemporalAggregate(BaseSingle):
             kwargs["statistic"] = self.statistic
 
         time_request = {
-            "mode": "time", "start": request["start"], "stop": request["stop"]
+            "mode": "time",
+            "start": request["start"],
+            "stop": request["stop"],
         }
-        return [
-            (kwargs, None),
-            (self.source, time_request),
-            (self.source, request)
-        ]
+        return [(kwargs, None), (self.source, time_request), (self.source, request)]
 
     @staticmethod
     def process(process_kwargs, time_data=None, data=None):
@@ -593,8 +580,7 @@ class TemporalAggregate(BaseSingle):
         times = time_data["time"]
 
         # convert times to a pandas series
-        series = pd.Series(index=times).tz_localize("UTC")\
-                                       .tz_convert(timezone)
+        series = pd.Series(index=times).tz_localize("UTC").tz_convert(timezone)
 
         # localize the labels so we can use it as an index
         labels = labels.tz_localize("UTC").tz_convert(timezone)
@@ -620,17 +606,15 @@ class TemporalAggregate(BaseSingle):
 
         values = data["values"]
         if values.shape[0] != len(times):
-            raise RuntimeError(
-                "Shape of raster does not match number of timestamps"
-            )
+            raise RuntimeError("Shape of raster does not match number of timestamps")
         statistic = process_kwargs["statistic"]
         percentile = parse_percentile_statistic(statistic)
         if percentile:
             extensive = False
             agg_func = partial(np.nanpercentile, q=percentile)
         else:
-            extensive = TemporalAggregate.STATISTICS[statistic]['extensive']
-            agg_func = TemporalAggregate.STATISTICS[statistic]['func']
+            extensive = TemporalAggregate.STATISTICS[statistic]["extensive"]
+            agg_func = TemporalAggregate.STATISTICS[statistic]["func"]
 
         dtype = process_kwargs["dtype"]
         fillvalue = 0 if extensive else get_dtype_max(dtype)
@@ -686,19 +670,14 @@ class Cumulative(BaseSingle):
     See also:
       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
     """
+
     # extensive (opposite: intensive) means: additive, proportional to size
     STATISTICS = {
-        'sum': {'func': np.nancumsum, 'extensive': True},
-        'count': {'func': accumulate_count_not_nan, 'extensive': True},
+        "sum": {"func": np.nancumsum, "extensive": True},
+        "count": {"func": accumulate_count_not_nan, "extensive": True},
     }
 
-    def __init__(
-        self,
-        source,
-        statistic="sum",
-        frequency=None,
-        timezone="UTC",
-    ):
+    def __init__(self, source, statistic="sum", frequency=None, timezone="UTC"):
         if not isinstance(source, RasterBlock):
             raise TypeError(f"'{type(source)}' object is not allowed.")
         if not isinstance(statistic, str):
@@ -706,7 +685,7 @@ class Cumulative(BaseSingle):
         # interpret percentile statistic
         percentile = parse_percentile_statistic(statistic)
         if percentile:
-            statistic = 'p{0}'.format(percentile)
+            statistic = "p{0}".format(percentile)
         elif statistic not in self.STATISTICS:
             raise ValueError("Unknown statistic '{}'".format(statistic))
         if frequency is not None:
@@ -781,12 +760,10 @@ class Cumulative(BaseSingle):
             start_period = _get_bin_period(start, **kwargs)
 
             # snap request 'start' to the start of the first period
-            request["start"] = _ts_to_dt(
-                start_period.start_time, self.timezone
-            )
+            request["start"] = _ts_to_dt(start_period.start_time, self.timezone)
             # snap request 'stop' to the last requested time
             request["stop"] = stop
-            if kwargs["closed"] != 'left':
+            if kwargs["closed"] != "left":
                 request["stop"] += Timedelta(microseconds=1)
 
         # return sources and requests depending on the mode
@@ -798,13 +775,11 @@ class Cumulative(BaseSingle):
             kwargs["statistic"] = self.statistic
 
         time_request = {
-            "mode": "time", "start": request["start"], "stop": request["stop"]
+            "mode": "time",
+            "start": request["start"],
+            "stop": request["stop"],
         }
-        return [
-            (kwargs, None),
-            (self.source, time_request),
-            (self.source, request)
-        ]
+        return [(kwargs, None), (self.source, time_request), (self.source, request)]
 
     @staticmethod
     def process(process_kwargs, time_data=None, data=None):
@@ -823,8 +798,9 @@ class Cumulative(BaseSingle):
         timezone = process_kwargs["timezone"]
         closed = process_kwargs["closed"]
         label = process_kwargs["label"]
-        times = pd.Series(index=time_data["time"]).tz_localize("UTC")\
-            .tz_convert(timezone)
+        times = (
+            pd.Series(index=time_data["time"]).tz_localize("UTC").tz_convert(timezone)
+        )
 
         if frequency is None:
             # the first (and only label) will be the statistic of all frames
@@ -858,17 +834,15 @@ class Cumulative(BaseSingle):
 
         values = data["values"]
         if values.shape[0] != len(times):
-            raise RuntimeError(
-                "Shape of raster does not match number of timestamps"
-            )
+            raise RuntimeError("Shape of raster does not match number of timestamps")
         statistic = process_kwargs["statistic"]
         percentile = parse_percentile_statistic(statistic)
         if percentile:
             extensive = False
             agg_func = partial(np.nanpercentile, q=percentile)
         else:
-            extensive = Cumulative.STATISTICS[statistic]['extensive']
-            agg_func = Cumulative.STATISTICS[statistic]['func']
+            extensive = Cumulative.STATISTICS[statistic]["extensive"]
+            agg_func = Cumulative.STATISTICS[statistic]["func"]
 
         dtype = process_kwargs["dtype"]
         fillvalue = 0 if extensive else get_dtype_max(dtype)

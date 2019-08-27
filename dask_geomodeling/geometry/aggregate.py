@@ -26,6 +26,7 @@ class Bucket:
     """
     Track objects in an imaginary grid that may span up to 4 cells.
     """
+
     def __init__(self):
         self.cells = set()
         self.indices = []
@@ -107,8 +108,9 @@ def bucketize(bboxes):
         # add the item to the bucket
         bucket.add(index=index, cells=cells)
 
-    return [bucket.indices
-            for bucket_list in bucket_dict.values() for bucket in bucket_list]
+    return [
+        bucket.indices for bucket_list in bucket_dict.values() for bucket in bucket_list
+    ]
 
 
 class AggregateRaster(GeometryBlock):
@@ -154,50 +156,47 @@ class AggregateRaster(GeometryBlock):
     pixel_size is adjusted automatically if ``auto_pixel_size = True``, else
     a RuntimeError is raised.
     """
+
     # extensive (opposite: intensive) means: additive, proportional to size
     STATISTICS = {
-        'sum': {'func': ndimage.sum, 'extensive': True},
-        'count': {'func': ndimage.sum, 'extensive': True},
-        'min': {'func': ndimage.minimum, 'extensive': False},
-        'max': {'func': ndimage.maximum, 'extensive': False},
-        'mean': {'func': ndimage.mean, 'extensive': False},
-        'median': {'func': ndimage.median, 'extensive': False},
-        'percentile': {'func': measurements.percentile, 'extensive': False},
+        "sum": {"func": ndimage.sum, "extensive": True},
+        "count": {"func": ndimage.sum, "extensive": True},
+        "min": {"func": ndimage.minimum, "extensive": False},
+        "max": {"func": ndimage.maximum, "extensive": False},
+        "mean": {"func": ndimage.mean, "extensive": False},
+        "median": {"func": ndimage.median, "extensive": False},
+        "percentile": {"func": measurements.percentile, "extensive": False},
     }
 
     def __init__(
         self,
         source,
         raster,
-        statistic='sum',
+        statistic="sum",
         projection=None,
         pixel_size=None,
         max_pixels=None,
-        column_name='agg',
+        column_name="agg",
         auto_pixel_size=False,
-        *args
+        *args,
     ):
         if not isinstance(source, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))
         if not isinstance(raster, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(raster)))
         if not isinstance(statistic, str):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(statistic))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(statistic)))
         statistic = statistic.lower()
         percentile = utils.parse_percentile_statistic(statistic)
         if percentile:
-            statistic = 'p{0}'.format(percentile)
-        elif statistic not in self.STATISTICS or statistic == 'percentile':
+            statistic = "p{0}".format(percentile)
+        elif statistic not in self.STATISTICS or statistic == "percentile":
             raise ValueError("Unknown statistic '{}'".format(statistic))
 
         if projection is None:
             projection = raster.projection
         if not isinstance(projection, str):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(projection))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(projection)))
         if pixel_size is None:
             # get the pixel_size from the raster geo_transform
             geo_transform = raster.geo_transform
@@ -206,18 +205,15 @@ class AggregateRaster(GeometryBlock):
                     "Cannot get the pixel_size from the source "
                     "raster. Please provide a pixel_size."
                 )
-            pixel_size = \
-                min(abs(float(geo_transform[1])), abs(float(geo_transform[5])))
+            pixel_size = min(abs(float(geo_transform[1])), abs(float(geo_transform[5])))
         else:
             pixel_size = abs(float(pixel_size))
-        if pixel_size == 0.:
+        if pixel_size == 0.0:
             raise ValueError("Pixel size cannot be 0")
         if max_pixels is not None:
             max_pixels = int(max_pixels)
         if not isinstance(auto_pixel_size, bool):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(auto_pixel_size))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(auto_pixel_size)))
 
         super(AggregateRaster, self).__init__(
             source,
@@ -228,7 +224,7 @@ class AggregateRaster(GeometryBlock):
             max_pixels,
             column_name,
             auto_pixel_size,
-            *args
+            *args,
         )
 
     @property
@@ -268,25 +264,22 @@ class AggregateRaster(GeometryBlock):
         return self.source.columns | {self.column_name}
 
     def get_sources_and_requests(self, **request):
-        if request.get('mode') == 'extent':
-            return [
-                (self.source, request),
-                (None, None),
-                ({'mode': 'extent'}, None)
-            ]
+        if request.get("mode") == "extent":
+            return [(self.source, request), (None, None), ({"mode": "extent"}, None)]
 
-        req_srs = request['projection']
+        req_srs = request["projection"]
         agg_srs = self.projection
 
         # acquire the extent of the geometry data
-        extent_request = {**request, 'mode': 'extent'}
-        extent = self.source.get_data(**extent_request)['extent']
+        extent_request = {**request, "mode": "extent"}
+        extent = self.source.get_data(**extent_request)["extent"]
 
         if extent is None:
             # make sources_and_request so that we get an empty result
             return [
-                (None, None), (None, None),
-                ({'empty': True, 'projection': req_srs}, None)
+                (None, None),
+                (None, None),
+                ({"empty": True, "projection": req_srs}, None),
             ]
 
         # transform the extent into the projection in which we aggregate
@@ -296,7 +289,7 @@ class AggregateRaster(GeometryBlock):
         required_pixels = int(((x2 - x1) * (y2 - y1)) / (self.pixel_size ** 2))
 
         # in case this request is too large, we adapt pixel size
-        max_pixels = self.max_pixels or settings['RASTER_LIMIT']
+        max_pixels = self.max_pixels or settings["RASTER_LIMIT"]
         pixel_size = self.pixel_size
 
         if required_pixels > max_pixels and self.auto_pixel_size:
@@ -319,25 +312,25 @@ class AggregateRaster(GeometryBlock):
         height = max(int((y2 - y1) / pixel_size), 1)
 
         raster_request = {
-            'mode': 'vals',
-            'projection': agg_srs,
-            'start': request.get('start'),
-            'stop': request.get('stop'),
-            'aggregation': None,  # TODO
-            'bbox': (x1, y1, x2, y2),
-            'width': width,
-            'height': height,
+            "mode": "vals",
+            "projection": agg_srs,
+            "start": request.get("start"),
+            "stop": request.get("stop"),
+            "aggregation": None,  # TODO
+            "bbox": (x1, y1, x2, y2),
+            "width": width,
+            "height": height,
         }
 
         process_kwargs = {
-            'mode': request.get('mode', 'intersects'),
-            'pixel_size': self.pixel_size,
-            'agg_srs': agg_srs,
-            'req_srs': req_srs,
-            'actual_pixel_size': pixel_size,
-            'statistic': self.statistic,
-            'result_column': self.column_name,
-            'agg_bbox': (x1, y1, x2, y2),
+            "mode": request.get("mode", "intersects"),
+            "pixel_size": self.pixel_size,
+            "agg_srs": agg_srs,
+            "req_srs": req_srs,
+            "actual_pixel_size": pixel_size,
+            "statistic": self.statistic,
+            "result_column": self.column_name,
+            "agg_bbox": (x1, y1, x2, y2),
         }
 
         return [
@@ -348,89 +341,90 @@ class AggregateRaster(GeometryBlock):
 
     @staticmethod
     def process(geom_data, raster_data, process_kwargs):
-        if process_kwargs.get('empty'):
+        if process_kwargs.get("empty"):
             return {
-                'features': gpd.GeoDataFrame([]),
-                'projection': process_kwargs['projection']
+                "features": gpd.GeoDataFrame([]),
+                "projection": process_kwargs["projection"],
             }
-        elif process_kwargs['mode'] == 'extent':
+        elif process_kwargs["mode"] == "extent":
             return geom_data
 
-        features = geom_data['features']
+        features = geom_data["features"]
         if len(features) == 0:
             return geom_data
 
         result = features.copy()
 
         # transform the features into the aggregation projection
-        req_srs = process_kwargs['req_srs']
-        agg_srs = process_kwargs['agg_srs']
+        req_srs = process_kwargs["req_srs"]
+        agg_srs = process_kwargs["agg_srs"]
 
-        agg_geometries = features['geometry'].apply(
+        agg_geometries = features["geometry"].apply(
             utils.shapely_transform, args=(req_srs, agg_srs)
         )
 
-        statistic = process_kwargs['statistic']
+        statistic = process_kwargs["statistic"]
         percentile = utils.parse_percentile_statistic(statistic)
         if percentile:
-            statistic = 'percentile'
+            statistic = "percentile"
             agg_func = partial(
-                AggregateRaster.STATISTICS[statistic]['func'], qval=percentile
+                AggregateRaster.STATISTICS[statistic]["func"], qval=percentile
             )
         else:
-            agg_func = AggregateRaster.STATISTICS[statistic]['func']
+            agg_func = AggregateRaster.STATISTICS[statistic]["func"]
 
-        extensive = AggregateRaster.STATISTICS[statistic]['extensive']
-        result_column = process_kwargs['result_column']
+        extensive = AggregateRaster.STATISTICS[statistic]["extensive"]
+        result_column = process_kwargs["result_column"]
 
         # this is only there for the AggregateRasterAboveThreshold
-        threshold_name = process_kwargs.get('threshold_name')
+        threshold_name = process_kwargs.get("threshold_name")
 
         # investigate the raster data
         if raster_data is None:
             values = no_data_value = None
         else:
-            values = raster_data['values']
-            no_data_value = raster_data['no_data_value']
+            values = raster_data["values"]
+            no_data_value = raster_data["no_data_value"]
         if values is None or np.all(values == no_data_value):  # skip the rest
             result[result_column] = 0 if extensive else np.nan
-            return {'features': result, 'projection': req_srs}
+            return {"features": result, "projection": req_srs}
         depth, height, width = values.shape
 
-        pixel_size = process_kwargs['pixel_size']
-        actual_pixel_size = process_kwargs['actual_pixel_size']
+        pixel_size = process_kwargs["pixel_size"]
+        actual_pixel_size = process_kwargs["actual_pixel_size"]
 
         # process in groups of disjoint subsets of the features
-        agg = np.full((depth, len(features)), np.nan, dtype='f4')
+        agg = np.full((depth, len(features)), np.nan, dtype="f4")
         for select in bucketize(features.bounds.values):
             agg_geometries_bucket = agg_geometries.iloc[select]
             index = features.index[select]
 
             rasterize_result = utils.rasterize_geoseries(
                 agg_geometries_bucket,
-                process_kwargs['agg_bbox'],
+                process_kwargs["agg_bbox"],
                 agg_srs,
                 height,
                 width,
-                values=index
+                values=index,
             )
-            labels = rasterize_result['values'][0]
+            labels = rasterize_result["values"][0]
 
             # if there is a threshold, generate a raster with thresholds
             if threshold_name:
-                thresholds = features.loc[labels.ravel(), threshold_name]\
-                    .values.reshape(labels.shape)
+                thresholds = features.loc[
+                    labels.ravel(), threshold_name
+                ].values.reshape(labels.shape)
             else:
                 thresholds = None
 
             for frame_no, frame in enumerate(values):
                 # limit statistics to active pixels
-                active = (frame != no_data_value)
+                active = frame != no_data_value
                 # if there is a threshold, mask the frame
                 if threshold_name:
                     valid = ~np.isnan(thresholds)  # to suppress warnings
                     active[~valid] = False  # no threshold -> no aggregation
-                    active[valid] &= (frame[valid] >= thresholds[valid])
+                    active[valid] &= frame[valid] >= thresholds[valid]
 
                 # if there is no single active value: do not aggregate
                 if not active.any():
@@ -441,7 +435,7 @@ class AggregateRaster(GeometryBlock):
                     # any 'active' values
                     warnings.simplefilter("ignore")
                     agg[frame_no][select] = agg_func(
-                        1 if statistic == 'count' else frame[active],
+                        1 if statistic == "count" else frame[active],
                         labels=labels[active],
                         index=index,
                     )
@@ -460,7 +454,7 @@ class AggregateRaster(GeometryBlock):
             # store an array in a dataframe cell: set each cell with [np.array]
             result[result_column] = [[x] for x in agg.T]
 
-        return {'features': result, 'projection': req_srs}
+        return {"features": result, "projection": req_srs}
 
 
 class AggregateRasterAboveThreshold(AggregateRaster):
@@ -494,15 +488,16 @@ class AggregateRasterAboveThreshold(AggregateRaster):
     See also:
       :class:`geoblocks.geometry.aggregate.AggregateRaster`
     """
+
     def __init__(
         self,
         source,
         raster,
-        statistic='sum',
+        statistic="sum",
         projection=None,
         pixel_size=None,
         max_pixels=None,
-        column_name='agg',
+        column_name="agg",
         auto_pixel_size=False,
         threshold_name=None,
     ):
@@ -529,5 +524,5 @@ class AggregateRasterAboveThreshold(AggregateRaster):
     def get_sources_and_requests(self, **request):
         src_and_req = super().get_sources_and_requests(**request)
         process_kwargs = src_and_req[2][0]
-        process_kwargs['threshold_name'] = self.threshold_name
+        process_kwargs["threshold_name"] = self.threshold_name
         return src_and_req

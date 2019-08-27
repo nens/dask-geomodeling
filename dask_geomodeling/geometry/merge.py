@@ -35,9 +35,10 @@ class MergeGeometryBlocks(GeometryBlock):
     See also merge:
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.merge.html
     """
-    allow_how_joins = ('left', 'right', 'outer', 'inner')
 
-    def __init__(self, left, right, how='inner', suffixes=('', '_right')):
+    allow_how_joins = ("left", "right", "outer", "inner")
+
+    def __init__(self, left, right, how="inner", suffixes=("", "_right")):
         if not isinstance(left, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(left)))
         if not isinstance(right, GeometryBlock):
@@ -45,12 +46,14 @@ class MergeGeometryBlocks(GeometryBlock):
         if how not in self.allow_how_joins:
             raise KeyError(
                 "'{}' is not part of the list of operations: "
-                "{}".format(how, self.allow_how_joins))
-        if not isinstance(suffixes[0], str) \
-                or not isinstance(suffixes[1], str) \
-                or len(suffixes) != 2:
-            raise TypeError("'{}' object is not "
-                            "allowed".format(type(suffixes)))
+                "{}".format(how, self.allow_how_joins)
+            )
+        if (
+            not isinstance(suffixes[0], str)
+            or not isinstance(suffixes[1], str)
+            or len(suffixes) != 2
+        ):
+            raise TypeError("'{}' object is not " "allowed".format(type(suffixes)))
         super().__init__(left, right, how, suffixes)
 
     @property
@@ -81,53 +84,53 @@ class MergeGeometryBlocks(GeometryBlock):
 
     def get_sources_and_requests(self, **request):
         process_kwargs = {
-            'how': self.how,
-            'suffixes': self.suffixes,
-            'mode': request['mode']
+            "how": self.how,
+            "suffixes": self.suffixes,
+            "mode": request["mode"],
         }
-        return [(self.left, request), (self.right, request),
-                (process_kwargs, None)]
+        return [(self.left, request), (self.right, request), (process_kwargs, None)]
 
     @staticmethod
     def process(left, right, kwargs):
-        mode = kwargs['mode']
-        how = kwargs['how']
-        projection = left['projection']
+        mode = kwargs["mode"]
+        how = kwargs["how"]
+        projection = left["projection"]
 
-        if mode == 'intersects' or mode == 'centroid':
+        if mode == "intersects" or mode == "centroid":
             merged = pd.merge(
-                left['features'],
-                right['features'],
-                how=kwargs.get('how'),
-                suffixes=kwargs.get('suffixes'),
+                left["features"],
+                right["features"],
+                how=kwargs.get("how"),
+                suffixes=kwargs.get("suffixes"),
                 left_index=True,  # we merge by index, left and right.
-                right_index=True)
-            return {'features': merged, 'projection': projection}
-        elif mode == 'extent':
-            if how == 'left':
+                right_index=True,
+            )
+            return {"features": merged, "projection": projection}
+        elif mode == "extent":
+            if how == "left":
                 return left
 
-            elif how == 'right':
+            elif how == "right":
                 return right
 
-            elif how == 'inner':
+            elif how == "inner":
                 values = None
-                if left['extent'] and right['extent']:
-                    left_shape = box(*left['extent'])
-                    right_shape = box(*right['extent'])
+                if left["extent"] and right["extent"]:
+                    left_shape = box(*left["extent"])
+                    right_shape = box(*right["extent"])
                     extent = left_shape.intersection(right_shape)
                     if not extent.is_empty:
                         values = extent.bounds
-                return {'extent': values, 'projection': projection}
+                return {"extent": values, "projection": projection}
 
-            elif how == 'outer':
+            elif how == "outer":
                 values = None
-                if left['extent'] and right['extent']:
-                    left_shape = box(*left['extent'])
-                    right_shape = box(*right['extent'])
+                if left["extent"] and right["extent"]:
+                    left_shape = box(*left["extent"])
+                    right_shape = box(*right["extent"])
                     values = left_shape.union(right_shape).bounds
-                elif left['extent']:
-                    values = left['extent']
-                elif right['extent']:
-                    values = right['extent']
-                return {'extent': values, 'projection': projection}
+                elif left["extent"]:
+                    values = left["extent"]
+                elif right["extent"]:
+                    values = right["extent"]
+                return {"extent": values, "projection": projection}

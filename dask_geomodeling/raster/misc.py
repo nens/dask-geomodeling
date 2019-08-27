@@ -10,20 +10,16 @@ import shapely
 from dask_geomodeling.geometry import GeometryBlock
 from dask_geomodeling.settings import settings
 from dask_geomodeling.utils import (
-    get_uint_dtype, get_dtype_max, get_index, rasterize_geoseries)
+    get_uint_dtype,
+    get_dtype_max,
+    get_index,
+    rasterize_geoseries,
+)
 
 from .base import RasterBlock, BaseSingle
 
 
-__all__ = [
-    "Clip",
-    "Classify",
-    "Reclassify",
-    "Mask",
-    "MaskBelow",
-    "Step",
-    "Rasterize"
-]
+__all__ = ["Clip", "Classify", "Reclassify", "Mask", "MaskBelow", "Step", "Rasterize"]
 
 
 class Clip(BaseSingle):
@@ -37,6 +33,7 @@ class Clip(BaseSingle):
     :type store: RasterBlock
     :type source: RasterBlock
     """
+
     def __init__(self, store, source):
         if not isinstance(source, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
@@ -52,26 +49,26 @@ class Clip(BaseSingle):
         if data is None:
             return None
 
-        if 'values' not in data:
+        if "values" not in data:
             return data
 
         # check if values contain data
-        if np.all(data['values'] == data['no_data_value']):
+        if np.all(data["values"] == data["no_data_value"]):
             return data
 
         # make the boolean mask
         if source_data is None:
             return None
 
-        if source_data['values'].dtype == np.dtype('bool'):
-            mask = ~source_data['values']
+        if source_data["values"].dtype == np.dtype("bool"):
+            mask = ~source_data["values"]
         else:
-            mask = source_data['values'] == source_data['no_data_value']
+            mask = source_data["values"] == source_data["no_data_value"]
 
         # adjust values
-        values = data['values'].copy()
-        values[mask] = data['no_data_value']
-        return {'values': values, 'no_data_value': data['no_data_value']}
+        values = data["values"].copy()
+        values[mask] = data["no_data_value"]
+        return {"values": values, "no_data_value": data["no_data_value"]}
 
     @property
     def geometry(self):
@@ -104,23 +101,21 @@ class Mask(BaseSingle):
 
     @property
     def dtype(self):
-        return 'float32' if isinstance(self.value, float) else 'uint8'
+        return "float32" if isinstance(self.value, float) else "uint8"
 
     @staticmethod
     def process(data, value):
-        if data is None or 'values' not in data:
+        if data is None or "values" not in data:
             return data
 
-        index = get_index(
-            values=data['values'], no_data_value=data['no_data_value']
-        )
+        index = get_index(values=data["values"], no_data_value=data["no_data_value"])
 
         fillvalue = 1 if value == 0 else 0
-        dtype = 'float32' if isinstance(value, float) else 'uint8'
+        dtype = "float32" if isinstance(value, float) else "uint8"
 
-        values = np.full_like(data['values'], fillvalue, dtype=dtype)
+        values = np.full_like(data["values"], fillvalue, dtype=dtype)
         values[index] = value
-        return {'values': values, 'no_data_value': fillvalue}
+        return {"values": values, "no_data_value": fillvalue}
 
 
 class MaskBelow(BaseSingle):
@@ -141,11 +136,11 @@ class MaskBelow(BaseSingle):
 
     @staticmethod
     def process(data, value):
-        if data is None or 'values' not in data:
+        if data is None or "values" not in data:
             return data
-        values, no_data_value = data['values'].copy(), data['no_data_value']
+        values, no_data_value = data["values"].copy(), data["no_data_value"]
         values[values < value] = no_data_value
-        return {'values': values, 'no_data_value': no_data_value}
+        return {"values": values, "no_data_value": no_data_value}
 
 
 class Step(BaseSingle):
@@ -168,6 +163,7 @@ class Step(BaseSingle):
     :type location: number
     :type at: number
     """
+
     def __init__(self, store, left=0, right=1, location=0, at=None):
         """Constructor.
 
@@ -199,10 +195,10 @@ class Step(BaseSingle):
 
     @staticmethod
     def process(data, left, right, location, at):
-        if data is None or 'values' not in data:
+        if data is None or "values" not in data:
             return data
 
-        values, no_data_value = data['values'].copy(), data['no_data_value']
+        values, no_data_value = data["values"].copy(), data["no_data_value"]
 
         # determine boolean index arrays
         mask = values == no_data_value
@@ -216,7 +212,7 @@ class Step(BaseSingle):
         # put no data values back
         values[mask] = no_data_value
 
-        return {'values': values, 'no_data_value': no_data_value}
+        return {"values": values, "no_data_value": no_data_value}
 
 
 class Classify(BaseSingle):
@@ -234,10 +230,11 @@ class Classify(BaseSingle):
     See also:
       https://docs.scipy.org/doc/numpy/reference/generated/numpy.digitize.html
     """
+
     def __init__(self, store, bins, right=False):
         if not isinstance(store, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
-        if not hasattr(bins, '__iter__'):
+        if not hasattr(bins, "__iter__"):
             raise TypeError("'{}' object is not allowed".format(type(bins)))
         bins_arr = np.asarray(bins)
         if bins_arr.ndim != 1:
@@ -269,17 +266,17 @@ class Classify(BaseSingle):
 
     @staticmethod
     def process(data, bins, right):
-        if data is None or 'values' not in data:
+        if data is None or "values" not in data:
             return data
 
-        values = data['values']
+        values = data["values"]
         dtype = get_uint_dtype(len(bins) + 2)
         fillvalue = get_dtype_max(dtype)
 
         result_values = np.digitize(values, bins, right).astype(dtype)
-        result_values[values == data['no_data_value']] = fillvalue
+        result_values[values == data["no_data_value"]] = fillvalue
 
-        return {'values': result_values, 'no_data_value': fillvalue}
+        return {"values": result_values, "no_data_value": fillvalue}
 
 
 class Reclassify(BaseSingle):
@@ -319,7 +316,7 @@ class Reclassify(BaseSingle):
     def __init__(self, store, data, select=False):
         if not np.issubdtype(store.dtype, np.integer):
             raise TypeError("The store must be of integer datatype")
-        if not hasattr(data, '__iter__'):
+        if not hasattr(data, "__iter__"):
             raise TypeError("'{}' object is not allowed".format(type(data)))
         if select is not True and select is not False:
             raise TypeError("'{}' object is not allowed".format(type(select)))
@@ -334,12 +331,10 @@ class Reclassify(BaseSingle):
         source, target = map(np.asarray, zip(*self.data))
 
         if np.issubdtype(target.dtype, np.floating):
-            dtype = np.dtype('f4')
+            dtype = np.dtype("f4")
         else:
             # integer mapping
-            fillvalue = max(
-                source.max() + 1, target.max() + 1, self.store.fillvalue
-            )
+            fillvalue = max(source.max() + 1, target.max() + 1, self.store.fillvalue)
             for dtype in np.uint8, np.uint16, np.uint32, np.uint64:
                 if fillvalue <= dtype(-1):
                     break
@@ -350,24 +345,22 @@ class Reclassify(BaseSingle):
         source, target = map(np.asarray, zip(*self.data))
 
         if np.issubdtype(target.dtype, np.floating):
-            fillvalue = np.finfo('f4').max
+            fillvalue = np.finfo("f4").max
         else:
-            fillvalue = max(
-                source.max() + 1, target.max() + 1, self.store.fillvalue
-            )
+            fillvalue = max(source.max() + 1, target.max() + 1, self.store.fillvalue)
         return fillvalue
 
     @staticmethod
     def process(store_data, mapping_data, select):
-        if store_data is None or 'values' not in store_data:
+        if store_data is None or "values" not in store_data:
             return store_data
 
-        no_data_value = store_data['no_data_value']
+        no_data_value = store_data["no_data_value"]
         source, target = map(np.asarray, zip(*mapping_data))
 
         if np.issubdtype(target.dtype, np.floating):
-            dtype = np.dtype('f4')
-            fillvalue = np.finfo('f4').max
+            dtype = np.dtype("f4")
+            fillvalue = np.finfo("f4").max
         else:
             # integer mapping
             fillvalue = max(source.max() + 1, target.max() + 1, no_data_value)
@@ -387,8 +380,8 @@ class Reclassify(BaseSingle):
         # modify mapping using provided data
         mapping[source] = target
 
-        values = mapping[store_data['values']]
-        return {'values': values, 'no_data_value': fillvalue}
+        values = mapping[store_data["values"]]
+        return {"values": values, "no_data_value": fillvalue}
 
 
 class Rasterize(RasterBlock):
@@ -413,15 +406,14 @@ class Rasterize(RasterBlock):
     See also:
       https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html
     """
+
     def __init__(self, source, column_name=None, dtype=None, limit=None):
         if not isinstance(source, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))
         if column_name is not None and not isinstance(column_name, str):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(column_name))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(column_name)))
         if dtype is None:  # set default values
-            dtype = 'bool' if column_name is None else 'int32'
+            dtype = "bool" if column_name is None else "int32"
         else:  # parse to numpy dtype and back to string
             dtype = str(np.dtype(dtype))
         if limit and not isinstance(limit, int):
@@ -476,17 +468,17 @@ class Rasterize(RasterBlock):
 
     def get_sources_and_requests(self, **request):
         # first handle the 'time' and 'meta' requests
-        mode = request['mode']
-        if mode == 'time':
-            return [(self.period[-1], None), ({'mode': 'time'}, None)]
-        elif mode == 'meta':
-            return [(None, None), ({'mode': 'meta'}, None)]
-        elif mode != 'vals':
+        mode = request["mode"]
+        if mode == "time":
+            return [(self.period[-1], None), ({"mode": "time"}, None)]
+        elif mode == "meta":
+            return [(None, None), ({"mode": "meta"}, None)]
+        elif mode != "vals":
             raise ValueError("Unknown mode '{}'".format(mode))
 
         # build the request to be sent to the geometry source
-        x1, y1, x2, y2 = request['bbox']
-        width, height = request['width'], request['height']
+        x1, y1, x2, y2 = request["bbox"]
+        width, height = request["width"], request["height"]
 
         # be strict about the bbox, it may lead to segfaults else
         if x2 == x1 and y2 == y1:  # point
@@ -494,44 +486,44 @@ class Rasterize(RasterBlock):
         elif x1 < x2 and y1 < y2:
             min_size = min((x2 - x1) / width, (y2 - y1) / height)
         else:
-            raise ValueError("Invalid bbox ({})".format(request['bbox']))
+            raise ValueError("Invalid bbox ({})".format(request["bbox"]))
 
         geom_request = {
-            'mode': 'intersects',
-            'geometry': shapely.geometry.box(*request['bbox']),
-            'projection': request['projection'],
-            'min_size': min_size,
-            'limit': self.limit or settings.get('GEOMETRY_LIMIT'),
-            'start': request.get('start'),
-            'stop': request.get('stop'),
+            "mode": "intersects",
+            "geometry": shapely.geometry.box(*request["bbox"]),
+            "projection": request["projection"],
+            "min_size": min_size,
+            "limit": self.limit or settings.get("GEOMETRY_LIMIT"),
+            "start": request.get("start"),
+            "stop": request.get("stop"),
         }
         # keep some variables for use in process()
         process_kwargs = {
-            'mode': 'vals',
-            'column_name': self.column_name,
-            'dtype': self.dtype,
-            'no_data_value': self.fillvalue,
-            'width': width,
-            'height': height,
-            'bbox': request['bbox'],
+            "mode": "vals",
+            "column_name": self.column_name,
+            "dtype": self.dtype,
+            "no_data_value": self.fillvalue,
+            "width": width,
+            "height": height,
+            "bbox": request["bbox"],
         }
         return [(self.source, geom_request), (process_kwargs, None)]
 
     @staticmethod
     def process(data, process_kwargs):
         # first handle the time and meta requests
-        mode = process_kwargs['mode']
-        if mode == 'time':
-            return {'time': [data]}
-        elif mode == 'meta':
-            return {'meta': [None]}
+        mode = process_kwargs["mode"]
+        if mode == "time":
+            return {"time": [data]}
+        elif mode == "meta":
+            return {"meta": [None]}
 
-        column_name = process_kwargs['column_name']
-        height = process_kwargs['height']
-        width = process_kwargs['width']
-        no_data_value = process_kwargs['no_data_value']
-        dtype = process_kwargs['dtype']
-        f = data['features']
+        column_name = process_kwargs["column_name"]
+        height = process_kwargs["height"]
+        width = process_kwargs["width"]
+        no_data_value = process_kwargs["no_data_value"]
+        dtype = process_kwargs["dtype"]
+        f = data["features"]
 
         # get the value column to rasterize
         if column_name is None:
@@ -547,24 +539,24 @@ class Rasterize(RasterBlock):
 
         if len(f) == 0 or values is False:  # there is no data to rasterize
             values = np.full((1, height, width), no_data_value, dtype=dtype)
-            return {'values': values, 'no_data_value': no_data_value}
+            return {"values": values, "no_data_value": no_data_value}
 
         result = rasterize_geoseries(
-            geoseries=f['geometry'] if 'geometry' in f else None,
+            geoseries=f["geometry"] if "geometry" in f else None,
             values=values,
-            bbox=process_kwargs['bbox'],
-            projection=data['projection'],
+            bbox=process_kwargs["bbox"],
+            projection=data["projection"],
             height=height,
             width=width,
         )
 
-        values = result['values']
+        values = result["values"]
 
         # cast to the expected dtype if necessary
-        cast_values = values.astype(process_kwargs['dtype'])
+        cast_values = values.astype(process_kwargs["dtype"])
 
         # replace the nodata value if necessary
-        if result['no_data_value'] != no_data_value:
-            cast_values[values == result['no_data_value']] = no_data_value
+        if result["no_data_value"] != no_data_value:
+            cast_values[values == result["no_data_value"]] = no_data_value
 
-        return {'values': cast_values, 'no_data_value': no_data_value}
+        return {"values": cast_values, "no_data_value": no_data_value}

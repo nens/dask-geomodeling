@@ -17,15 +17,12 @@ from scipy import ndimage
 from dask_geomodeling import raster
 from dask_geomodeling.utils import EPSG4326, EPSG3857, Extent, get_epsg_or_wkt
 from dask_geomodeling.raster import RasterBlock
-from dask_geomodeling.tests.factories import (
-    MockRaster,
-    MockGeometry,
-)
+from dask_geomodeling.tests.factories import MockRaster, MockGeometry
 
 
 class MockRasterWithGeotransform(MockRaster):
     def __init__(self, *args, **kwargs):
-        self._geo_transform = kwargs.pop('geo_transform')
+        self._geo_transform = kwargs.pop("geo_transform")
         super().__init__(*args, **kwargs)
 
     @property
@@ -48,15 +45,15 @@ class TestRasterBlockAttrs(unittest.TestCase):
             except TypeError:
                 continue  # also skip non-classes
             for attr in (
-                'period',
-                'timedelta',
-                'extent',
-                'check',
-                'dtype',
-                'fillvalue',
-                'geometry',
-                'projection',
-                'geo_transform',
+                "period",
+                "timedelta",
+                "extent",
+                "check",
+                "dtype",
+                "fillvalue",
+                "geometry",
+                "projection",
+                "geo_transform",
             ):
                 if not hasattr(klass, attr):
                     print(name, attr)
@@ -85,8 +82,8 @@ class TestElementwise(unittest.TestCase):
         storage1 = MockRaster(timedelta=Timedelta(hours=1))
 
         for args in [
-            (storage1, 'something'),
-            ('something', storage1),
+            (storage1, "something"),
+            ("something", storage1),
             (storage1, storage1),
         ]:
             elemwise = self.klass(*args)
@@ -106,14 +103,12 @@ class TestElementwise(unittest.TestCase):
             origin=Datetime(2018, 4, 1), timedelta=Timedelta(hours=1), bands=6
         )
         storage2 = MockRaster(
-            origin=Datetime(2018, 4, 1, 2),
-            timedelta=Timedelta(hours=1),
-            bands=6,
+            origin=Datetime(2018, 4, 1, 2), timedelta=Timedelta(hours=1), bands=6
         )
 
         for args in [
-            (storage1, 'something'),
-            ('something', storage1),
+            (storage1, "something"),
+            ("something", storage1),
             (storage1, storage1),
         ]:
             elemwise = self.klass(*args)
@@ -138,8 +133,8 @@ class TestElementwise(unittest.TestCase):
         )
 
         for args in [
-            (storage1, 'something'),
-            ('something', storage1),
+            (storage1, "something"),
+            ("something", storage1),
             (storage1, storage1),
         ]:
             elemwise = self.klass(*args)
@@ -155,8 +150,8 @@ class TestElementwise(unittest.TestCase):
         storage2 = MockRaster(value=np.empty((3, 4)))
 
         for args in [
-            (storage1, 'something'),
-            ('something', storage1),
+            (storage1, "something"),
+            ("something", storage1),
             (storage1, storage1),
         ]:
             elemwise = self.klass(*args)
@@ -171,8 +166,8 @@ class TestElementwise(unittest.TestCase):
         storage2 = MockRaster(value=np.empty((1, 2)))
 
         for args in [
-            (storage1, 'something'),
-            ('something', storage1),
+            (storage1, "something"),
+            ("something", storage1),
             (storage1, storage1),
         ]:
             elemwise = self.klass(*args)
@@ -191,18 +186,17 @@ class TestElementwise(unittest.TestCase):
         for args in [(storage1, storage2), (storage2, storage1)]:
             combined = self.klass(*args)
             x1, x2, y1, y2 = combined.geometry.GetEnvelope()
-            self.assertEqual((x1, y1, x2, y2), (0., 0., 2., 1.))
+            self.assertEqual((x1, y1, x2, y2), (0.0, 0.0, 2.0, 1.0))
 
     def test_propagate_geometry_different_projection(self):
-        storage1 = MockRaster(projection='EPSG:3857')
-        storage2 = MockRaster(projection='EPSG:4326')
+        storage1 = MockRaster(projection="EPSG:3857")
+        storage2 = MockRaster(projection="EPSG:4326")
 
         # the combined extent equals the joined bbox in the first store proj
         for args in [(storage1, storage2), (storage2, storage1)]:
             geometry = self.klass(*args).geometry
             self.assertEqual(
-                args[0].projection,
-                get_epsg_or_wkt(geometry.GetSpatialReference()),
+                args[0].projection, get_epsg_or_wkt(geometry.GetSpatialReference())
             )
 
 
@@ -220,218 +214,193 @@ class TestMath(unittest.TestCase):
             value=[[1, 1], [7, 7], [255, 255]],  # 2x3 shape. 255 is nodata
         )
         self.vals_request = dict(
-            mode='vals',
+            mode="vals",
             start=Datetime(2000, 1, 1),
             stop=Datetime(2010, 1, 1, 2),
             width=2,
             height=3,
         )
         self.time_request = dict(
-            mode='time', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+            mode="time", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
         )
         self.expected_time = [
             Datetime(2000, 1, 1) + i * Timedelta(hours=1) for i in range(3)
         ]
         self.meta_request = dict(
-            mode='meta', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+            mode="meta", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
         )
-        self.expected_meta = [
-            'Testmeta for band {}'.format(i) for i in range(3)
-        ]
-        self.all_requests = (
-            self.vals_request,
-            self.time_request,
-            self.meta_request,
-        )
+        self.expected_meta = ["Testmeta for band {}".format(i) for i in range(3)]
+        self.all_requests = (self.vals_request, self.time_request, self.meta_request)
 
     def test_math_init(self):
         # we can't init with a non-number
-        self.assertRaises(TypeError, self.klass, self.storage, 'not-a-number')
+        self.assertRaises(TypeError, self.klass, self.storage, "not-a-number")
 
     def test_add_dtype(self):
         for dtype, expected in [
-            ('bool', 'i4'),
-            ('u1', 'i4'),
-            ('i8', 'i8'),
-            ('f2', 'f4'),
-            ('f8', 'f8'),
+            ("bool", "i4"),
+            ("u1", "i4"),
+            ("i8", "i8"),
+            ("f2", "f4"),
+            ("f8", "f8"),
         ]:
             view = self.storage + np.ones(1, dtype=dtype)
             self.assertEqual(np.dtype(expected), view.dtype)
-            data = view.get_data(**self.vals_request)['values']
+            data = view.get_data(**self.vals_request)["values"]
             self.assertEqual(np.dtype(expected), data.dtype)
 
     def test_divide_dtype(self):
         for dtype, expected in [
-            ('bool', 'f4'),
-            ('u1', 'f4'),
-            ('i8', 'f8'),
-            ('f2', 'f4'),
-            ('f8', 'f8'),
+            ("bool", "f4"),
+            ("u1", "f4"),
+            ("i8", "f8"),
+            ("f2", "f4"),
+            ("f8", "f8"),
         ]:
             view = self.storage / np.ones(1, dtype=dtype)
             self.assertEqual(np.dtype(expected), view.dtype)
-            data = view.get_data(**self.vals_request)['values']
+            data = view.get_data(**self.vals_request)["values"]
             self.assertEqual(np.dtype(expected), data.dtype)
 
     def test_add(self):
         view = self.storage + 5
-        assert_equal(view.get_data(**self.vals_request)['values'], 6)
+        assert_equal(view.get_data(**self.vals_request)["values"], 6)
 
     def test_subtract(self):
         view = self.storage - 1
-        assert_equal(view.get_data(**self.vals_request)['values'], 0)
+        assert_equal(view.get_data(**self.vals_request)["values"], 0)
 
     def test_multiply(self):
         view = self.storage * 10
-        assert_equal(view.get_data(**self.vals_request)['values'], 10)
+        assert_equal(view.get_data(**self.vals_request)["values"], 10)
 
     def test_negate(self):
         view = -self.storage
-        assert_equal(view.get_data(**self.vals_request)['values'], -1)
+        assert_equal(view.get_data(**self.vals_request)["values"], -1)
 
     def test_divide(self):
         view = self.storage / 10
-        assert_equal(view.get_data(**self.vals_request)['values'], 0.1)
+        assert_equal(view.get_data(**self.vals_request)["values"], 0.1)
 
     def test_power(self):
         storage7 = self.storage * 7
         view = storage7 ** 1
-        assert_equal(view.get_data(**self.vals_request)['values'], 7)
+        assert_equal(view.get_data(**self.vals_request)["values"], 7)
         view = storage7 ** 2
-        assert_equal(view.get_data(**self.vals_request)['values'], 49)
+        assert_equal(view.get_data(**self.vals_request)["values"], 49)
         view = storage7 ** 0.5
-        assert_equal(view.get_data(**self.vals_request)['values'], np.sqrt(7))
+        assert_equal(view.get_data(**self.vals_request)["values"], np.sqrt(7))
         view = storage7 ** -1
-        assert_equal(view.get_data(**self.vals_request)['values'], 1 / 7)
+        assert_equal(view.get_data(**self.vals_request)["values"], 1 / 7)
         view = storage7 ** 0
-        assert_equal(view.get_data(**self.vals_request)['values'], 1)
+        assert_equal(view.get_data(**self.vals_request)["values"], 1)
 
     def test_equal(self):
         view = self.bool_storage == 7
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [False, True, False],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [False, True, False]
         )
 
         # nodata == nodata evaluates to False
         view = self.bool_storage == 255
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [False, False, False],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [False, False, False]
         )
 
     def test_notequal(self):
         view = self.bool_storage != 7
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [True, False, True],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [True, False, True]
         )
 
         # nodata != nodata evaluates to True
         view = self.bool_storage != 255
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [True, True, True],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [True, True, True]
         )
 
     def test_greater(self):
         view = self.bool_storage > 1
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [False, True, False],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [False, True, False]
         )
 
     def test_greater_equal(self):
         view = self.bool_storage >= 7
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [False, True, False],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [False, True, False]
         )
 
     def test_less(self):
         view = self.bool_storage < 7
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [True, False, False],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [True, False, False]
         )
 
     def test_less_equal(self):
         view = self.bool_storage <= 1
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :, 0],
-            [True, False, False],
+            view.get_data(**self.vals_request)["values"][0, :, 0], [True, False, False]
         )
 
     def test_invert(self):
         view = ~(self.bool_storage == 7)  # == 7 gives [False, True]
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [True, False],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [True, False]
         )
 
     def test_and(self):
         view = (self.bool_storage == 7) & True  # [False, True] & True
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [False, True],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [False, True]
         )
         # [False, True] & [False, True]
         view = (self.bool_storage == 7) & (self.bool_storage == 7)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [False, True],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [False, True]
         )
         # [False, True] & [True, False]
         view = (self.bool_storage == 7) & (self.bool_storage != 7)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [False, False],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [False, False]
         )
 
     def test_or(self):
         view = (self.bool_storage == 7) | True  # [False, True] | True
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [True, True],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [True, True]
         )
         # [False, True] | [False, True]
         view = (self.bool_storage == 7) | (self.bool_storage == 7)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [False, True],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [False, True]
         )
         # [False, True] | [True, False]
         view = (self.bool_storage == 7) | (self.bool_storage != 7)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [True, True],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [True, True]
         )
 
     def test_xor(self):
         view = (self.bool_storage == 7) ^ True  # [False, True] ^ True
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [True, False],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [True, False]
         )
         # [False, True] ^ [False, True]
         view = (self.bool_storage == 7) ^ (self.bool_storage == 7)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [False, False],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [False, False]
         )
         # [False, True] ^ [True, False]
         view = (self.bool_storage == 7) ^ (self.bool_storage != 7)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :2, 0],
-            [True, True],
+            view.get_data(**self.vals_request)["values"][0, :2, 0], [True, True]
         )
 
     def test_isdata(self):
         view = raster.IsData(self.bool_storage)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :3, 0],
-            [True, True, False],
+            view.get_data(**self.vals_request)["values"][0, :3, 0], [True, True, False]
         )
 
         # cannot take IsData from boolean storage
@@ -440,8 +409,7 @@ class TestMath(unittest.TestCase):
     def test_isnodata(self):
         view = raster.IsNoData(self.bool_storage)
         assert_equal(
-            view.get_data(**self.vals_request)['values'][0, :3, 0],
-            [False, False, True],
+            view.get_data(**self.vals_request)["values"][0, :3, 0], [False, False, True]
         )
 
         # cannot take IsData from boolean storage
@@ -450,32 +418,30 @@ class TestMath(unittest.TestCase):
     def test_math_vals(self):
         view = raster.Add(self.storage, 2)
         vals = view.get_data(**self.vals_request)
-        assert_equal(vals['values'], 3)
-        assert_equal(vals['no_data_value'], view.fillvalue)
+        assert_equal(vals["values"], 3)
+        assert_equal(vals["no_data_value"], view.fillvalue)
 
         view = raster.Add(self.storage, self.storage)
         vals = view.get_data(**self.vals_request)
-        assert_equal(vals['values'], 2)
-        assert_equal(vals['no_data_value'], view.fillvalue)
+        assert_equal(vals["values"], 2)
+        assert_equal(vals["no_data_value"], view.fillvalue)
 
     def test_math_time(self):
         view = raster.Add(self.storage, 2)
         time = view.get_data(**self.time_request)
-        self.assertEqual(time['time'], self.expected_time)
+        self.assertEqual(time["time"], self.expected_time)
 
     def test_math_meta(self):
         view = raster.Add(self.storage, 2)
         meta = view.get_data(**self.meta_request)
-        self.assertEqual(meta['meta'], self.expected_meta)
+        self.assertEqual(meta["meta"], self.expected_meta)
 
     def test_math_none(self):
         view = raster.Add(self.storage, 2)
-        for mode in ['vals', 'meta', 'time']:
+        for mode in ["vals", "meta", "time"]:
             self.assertIsNone(
                 view.get_data(
-                    mode=mode,
-                    start=Datetime(2018, 1, 1),
-                    stop=Datetime(2018, 2, 2),
+                    mode=mode, start=Datetime(2018, 1, 1), stop=Datetime(2018, 2, 2)
                 )
             )
 
@@ -488,14 +454,10 @@ class TestMath(unittest.TestCase):
         )
 
         # nodata should propagate always
-        for args in [
-            (nodata, 2),
-            (nodata, self.storage),
-            (self.storage, nodata),
-        ]:
+        for args in [(nodata, 2), (nodata, self.storage), (self.storage, nodata)]:
             view = raster.Divide(*args)
             result = view.get_data(**self.vals_request)
-            assert_equal(result['values'], result['no_data_value'])
+            assert_equal(result["values"], result["no_data_value"])
 
 
 class TestFillNoData(unittest.TestCase):
@@ -506,7 +468,7 @@ class TestFillNoData(unittest.TestCase):
             origin=Datetime(2000, 1, 1), timedelta=Timedelta(hours=1), bands=3
         )
         self.vals_request = dict(
-            mode='vals',
+            mode="vals",
             start=Datetime(2000, 1, 1),
             stop=Datetime(2010, 1, 1, 2),
             width=2,
@@ -521,7 +483,7 @@ class TestFillNoData(unittest.TestCase):
         for args in [(nodata, storage), (storage, nodata)]:
             view = self.klass(*args)
             result = view.get_data(**self.vals_request)
-            assert_equal(result['values'], 1)
+            assert_equal(result["values"], 1)
 
     def test_fill_priority(self):
         storage1 = MockRaster(value=1, **self.storage_kwargs)
@@ -531,12 +493,12 @@ class TestFillNoData(unittest.TestCase):
         # the highest priority is on the right
         view = self.klass(storage2, storage1)
         result = view.get_data(**self.vals_request)
-        assert_equal(result['values'], 1)
+        assert_equal(result["values"], 1)
 
         # the highest priority is on the right
         view = self.klass(storage1, storage2)
         result = view.get_data(**self.vals_request)
-        assert_equal(result['values'], 2)
+        assert_equal(result["values"], 2)
 
 
 class TestCombine(unittest.TestCase):
@@ -546,7 +508,7 @@ class TestCombine(unittest.TestCase):
         storage1 = MockRaster(timedelta=Timedelta(hours=1))
 
         self.assertRaises(TypeError, self.klass, storage1, 1)
-        self.assertRaises(TypeError, self.klass, storage1, 'no storage')
+        self.assertRaises(TypeError, self.klass, storage1, "no storage")
         self.assertRaises(TypeError, self.klass, storage1, np.zeros(1))
 
     def test_propagate_timedelta(self):
@@ -576,9 +538,7 @@ class TestCombine(unittest.TestCase):
         # equal timedeltas are not propagated if origins are not aligned
         # an integer number of timedelta apart
         storage5 = MockRaster(
-            origin=Datetime(2018, 4, 1, 0, 10),
-            timedelta=Timedelta(hours=1),
-            bands=3,
+            origin=Datetime(2018, 4, 1, 0, 10), timedelta=Timedelta(hours=1), bands=3
         )
 
         combined = self.klass(storage1, storage5)
@@ -589,9 +549,7 @@ class TestCombine(unittest.TestCase):
             origin=Datetime(2018, 4, 1), timedelta=Timedelta(hours=1), bands=6
         )
         storage2 = MockRaster(
-            origin=Datetime(2018, 4, 1, 2),
-            timedelta=Timedelta(hours=1),
-            bands=6,
+            origin=Datetime(2018, 4, 1, 2), timedelta=Timedelta(hours=1), bands=6
         )
 
         combined = self.klass(storage1, storage1)
@@ -636,42 +594,40 @@ class TestCombine(unittest.TestCase):
         for args in [(storage1, storage2), (storage2, storage1)]:
             combined = self.klass(*args)
             x1, x2, y1, y2 = combined.geometry.GetEnvelope()
-            self.assertEqual((x1, y1, x2, y2), (0., 0., 4., 3.))
+            self.assertEqual((x1, y1, x2, y2), (0.0, 0.0, 4.0, 3.0))
 
     def test_propagate_geometry_different_projection(self):
-        storage1 = MockRaster(projection='EPSG:3857')
-        storage2 = MockRaster(projection='EPSG:4326')
+        storage1 = MockRaster(projection="EPSG:3857")
+        storage2 = MockRaster(projection="EPSG:4326")
 
         # the combined extent equals the joined bbox in the first store proj
         for args in [(storage1, storage2), (storage2, storage1)]:
             geometry = self.klass(*args).geometry
             self.assertEqual(
-                args[0].projection,
-                get_epsg_or_wkt(geometry.GetSpatialReference()),
+                args[0].projection, get_epsg_or_wkt(geometry.GetSpatialReference())
             )
 
     def test_propagate_projection(self):
         combined = self.klass(
-            MockRaster(value=1, projection='EPSG:3857'),
-            MockRaster(value=2, projection='EPSG:3857')
+            MockRaster(value=1, projection="EPSG:3857"),
+            MockRaster(value=2, projection="EPSG:3857"),
         )
-        self.assertEqual(combined.projection, 'EPSG:3857')
+        self.assertEqual(combined.projection, "EPSG:3857")
 
         combined = self.klass(
-            MockRaster(value=1, projection='EPSG:3857'),
-            MockRaster(value=2, projection='EPSG:4326')
-        )
-        self.assertIsNone(combined.projection)
-
-        combined = self.klass(
-            MockRaster(value=1, projection='EPSG:3857'),
-            MockRaster(value=2, projection=None)
+            MockRaster(value=1, projection="EPSG:3857"),
+            MockRaster(value=2, projection="EPSG:4326"),
         )
         self.assertIsNone(combined.projection)
 
         combined = self.klass(
-            MockRaster(value=1, projection=None),
-            MockRaster(value=2, projection=None)
+            MockRaster(value=1, projection="EPSG:3857"),
+            MockRaster(value=2, projection=None),
+        )
+        self.assertIsNone(combined.projection)
+
+        combined = self.klass(
+            MockRaster(value=1, projection=None), MockRaster(value=2, projection=None)
         )
         self.assertIsNone(combined.projection)
 
@@ -680,16 +636,16 @@ class TestCombine(unittest.TestCase):
         self.assertTupleEqual(
             self.klass(
                 MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
-                MockRasterWithGeotransform(geo_transform=(5, 1, 0, -8, 0, -1))
+                MockRasterWithGeotransform(geo_transform=(5, 1, 0, -8, 0, -1)),
             ).geo_transform,
-            (0, 1, 0, 1, 0, -1)
+            (0, 1, 0, 1, 0, -1),
         )
 
         # non-matching results in None
         self.assertIsNone(
             self.klass(
                 MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
-                MockRasterWithGeotransform(geo_transform=(0, 2, 0, 1, 0, -2))
+                MockRasterWithGeotransform(geo_transform=(0, 2, 0, 1, 0, -2)),
             ).geo_transform
         )
 
@@ -697,14 +653,14 @@ class TestCombine(unittest.TestCase):
         self.assertIsNone(
             self.klass(
                 MockRasterWithGeotransform(geo_transform=None),
-                MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1))
+                MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
             ).geo_transform
         )
 
         self.assertIsNone(
             self.klass(
                 MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
-                MockRasterWithGeotransform(geo_transform=None)
+                MockRasterWithGeotransform(geo_transform=None),
             ).geo_transform
         )
 
@@ -729,19 +685,13 @@ class TestGroup(TestCombine, unittest.TestCase):
 
     def setUp(self):
         self.storage1 = MockRaster(
-            origin=Datetime(2000, 1, 1),
-            timedelta=Timedelta(minutes=5),
-            bands=3,
+            origin=Datetime(2000, 1, 1), timedelta=Timedelta(minutes=5), bands=3
         )
         self.storage2 = MockRaster(
-            origin=Datetime(2000, 1, 1),
-            timedelta=Timedelta(minutes=3),
-            bands=6,
+            origin=Datetime(2000, 1, 1), timedelta=Timedelta(minutes=3), bands=6
         )
         self.storage3 = MockRaster(
-            origin=Datetime(2000, 1, 1),
-            timedelta=Timedelta(minutes=5),
-            bands=3,
+            origin=Datetime(2000, 1, 1), timedelta=Timedelta(minutes=5), bands=3
         )
         self.storage4 = MockRaster(origin=None)
 
@@ -752,7 +702,7 @@ class TestGroup(TestCombine, unittest.TestCase):
             value=255,
         )
         self.vals_request = dict(
-            mode='vals',
+            mode="vals",
             start=Datetime(2000, 1, 1),
             width=2,
             stop=Datetime(2010, 1, 1, 2),
@@ -762,12 +712,10 @@ class TestGroup(TestCombine, unittest.TestCase):
         super(TestGroup, self).setUp()
 
     def test_group_by_time(self):
-        view = self.klass(
-            self.storage1, self.storage2, self.storage3, self.storage4
-        )
+        view = self.klass(self.storage1, self.storage2, self.storage3, self.storage4)
         time = view.get_data(
-            mode='time', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
-        )['time']
+            mode="time", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+        )["time"]
         self.assertEqual(
             time,
             [
@@ -783,15 +731,13 @@ class TestGroup(TestCombine, unittest.TestCase):
         )
 
         meta = view.get_data(
-            mode='meta', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
-        )['meta']
-        expected = [
-            'Testmeta for band {}'.format(i) for i in (0, 1, 1, 2, 3, 2, 4, 5)
-        ]
+            mode="meta", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+        )["meta"]
+        expected = ["Testmeta for band {}".format(i) for i in (0, 1, 1, 2, 3, 2, 4, 5)]
         self.assertEqual(meta, expected)
 
         view.get_data(
-            mode='vals',
+            mode="vals",
             start=Datetime(2000, 1, 1),
             stop=Datetime(2001, 1, 1),
             width=1,
@@ -807,14 +753,12 @@ class TestGroup(TestCombine, unittest.TestCase):
             value=7,
         )
         # equal periods
-        view = self.klass(
-            self.storage1, self.storage4, storage5, self.nodatastorage
-        )
+        view = self.klass(self.storage1, self.storage4, storage5, self.nodatastorage)
         request = dict(start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1))
-        _requests = view.get_sources_and_requests(mode='meta', **request)
-        self.assertEqual(_requests[0][0]['combine_mode'], 'by_bands')
+        _requests = view.get_sources_and_requests(mode="meta", **request)
+        self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
 
-        time = view.get_data(mode='time', **request)['time']
+        time = view.get_data(mode="time", **request)["time"]
         self.assertEqual(
             time,
             [
@@ -823,27 +767,27 @@ class TestGroup(TestCombine, unittest.TestCase):
                 Datetime(2000, 1, 1, 0, 10),
             ],
         )
-        meta = view.get_data(mode='meta', **request)['meta']
-        expected = ['Testmeta for band {}'.format(i) for i in range(3)]
+        meta = view.get_data(mode="meta", **request)["meta"]
+        expected = ["Testmeta for band {}".format(i) for i in range(3)]
         self.assertEqual(meta, expected)
 
-        data = view.get_data(mode='vals', width=1, height=1, **request)
-        self.assertEqual(data['values'].tolist(), [[[1]], [[7]], [[7]]])
+        data = view.get_data(mode="vals", width=1, height=1, **request)
+        self.assertEqual(data["values"].tolist(), [[[1]], [[7]], [[7]]])
 
     def test_group_no_start(self):
         """Picks the lastmost frame"""
         view = self.klass(self.storage1, self.storage2, self.storage2)
 
         # data
-        data = view.get_data(mode='vals', width=1, height=1)
-        self.assertEqual(data['values'].tolist(), [[[1]]])
+        data = view.get_data(mode="vals", width=1, height=1)
+        self.assertEqual(data["values"].tolist(), [[[1]]])
 
         # meta
-        meta = view.get_data(mode='meta')['meta']
-        self.assertEqual(meta, ['Testmeta for band 5'])
+        meta = view.get_data(mode="meta")["meta"]
+        self.assertEqual(meta, ["Testmeta for band 5"])
 
         # time
-        time = view.get_data(mode='time')['time']
+        time = view.get_data(mode="time")["time"]
         self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15)])
 
     def test_group_no_stop(self):
@@ -852,43 +796,35 @@ class TestGroup(TestCombine, unittest.TestCase):
 
         # data
         data = view.get_data(
-            mode='vals', width=1, height=1, start=Datetime(2000, 1, 1, 0, 4)
+            mode="vals", width=1, height=1, start=Datetime(2000, 1, 1, 0, 4)
         )
-        self.assertEqual(data['values'].tolist(), [[[1]]])
+        self.assertEqual(data["values"].tolist(), [[[1]]])
 
         # data outside
-        data = view.get_data(
-            mode='vals', width=1, height=1, start=Datetime(2012, 1, 1)
-        )
-        self.assertEqual(data['values'].tolist(), [[[1]]])
+        data = view.get_data(mode="vals", width=1, height=1, start=Datetime(2012, 1, 1))
+        self.assertEqual(data["values"].tolist(), [[[1]]])
 
         # meta
-        meta = view.get_data(mode='meta', start=Datetime(2000, 1, 1, 0, 13))[
-            'meta'
-        ]
-        self.assertEqual(meta, ['Testmeta for band 4'])
+        meta = view.get_data(mode="meta", start=Datetime(2000, 1, 1, 0, 13))["meta"]
+        self.assertEqual(meta, ["Testmeta for band 4"])
 
-        meta = view.get_data(mode='meta', start=Datetime(2012, 1, 1))['meta']
-        self.assertEqual(meta, ['Testmeta for band 5'])
+        meta = view.get_data(mode="meta", start=Datetime(2012, 1, 1))["meta"]
+        self.assertEqual(meta, ["Testmeta for band 5"])
 
         # time
-        time = view.get_data(mode='time', start=Datetime(2000, 1, 1, 0, 7))[
-            'time'
-        ]
+        time = view.get_data(mode="time", start=Datetime(2000, 1, 1, 0, 7))["time"]
         self.assertEqual(time, [Datetime(2000, 1, 1, 0, 6)])
 
         # time outside
-        time = view.get_data(mode='time', start=Datetime(2012, 1, 1))['time']
+        time = view.get_data(mode="time", start=Datetime(2012, 1, 1))["time"]
         self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15)])
 
     def test_group_no_result(self):
-        view = self.klass(
-            self.storage1, self.storage2, self.storage3, self.storage4
-        )
+        view = self.klass(self.storage1, self.storage2, self.storage3, self.storage4)
 
         # data
         data = view.get_data(
-            mode='vals',
+            mode="vals",
             width=1,
             height=1,
             start=Datetime(2001, 1, 1),
@@ -901,7 +837,7 @@ class TestGroup(TestCombine, unittest.TestCase):
 
         # data
         data = view.get_data(
-            mode='vals',
+            mode="vals",
             width=1,
             height=1,
             start=Datetime(2001, 1, 1),
@@ -917,7 +853,7 @@ class TestGroup(TestCombine, unittest.TestCase):
         for args in [(nodata, storage), (storage, nodata)]:
             view = self.klass(*args)
             result = view.get_data(**self.vals_request)
-            assert_equal(result['values'], 1)
+            assert_equal(result["values"], 1)
 
     def test_fill_priority(self):
         storage1 = self.storage1  # value=1
@@ -931,12 +867,12 @@ class TestGroup(TestCombine, unittest.TestCase):
         # the highest priority is on the right
         view = self.klass(storage2, storage1)
         result = view.get_data(**self.vals_request)
-        assert_equal(result['values'], 1)
+        assert_equal(result["values"], 1)
 
         # the highest priority is on the right
         view = self.klass(storage1, storage2)
         result = view.get_data(**self.vals_request)
-        assert_equal(result['values'], 2)
+        assert_equal(result["values"], 2)
 
 
 class TestSnap(unittest.TestCase):
@@ -950,31 +886,27 @@ class TestSnap(unittest.TestCase):
             bands=3,
         )
         self.index = MockRaster(
-            origin=Datetime(2000, 1, 1),
-            timedelta=Timedelta(minutes=3),
-            bands=6,
+            origin=Datetime(2000, 1, 1), timedelta=Timedelta(minutes=3), bands=6
         )
         self.empty = MockRaster(origin=None)
 
         self.vals_request = dict(
-            mode='vals',
+            mode="vals",
             start=Datetime(2000, 1, 1),
             stop=Datetime(2010, 1, 1, 2),
             width=2,
             height=3,
         )
         self.time_request = dict(
-            mode='time', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+            mode="time", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
         )
         self.expected_time = [
             Datetime(2000, 1, 1) + i * Timedelta(hours=1) for i in range(3)
         ]
         self.meta_request = dict(
-            mode='meta', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+            mode="meta", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
         )
-        self.expected_meta = [
-            'Testmeta for band {}'.format(i) for i in range(3)
-        ]
+        self.expected_meta = ["Testmeta for band {}".format(i) for i in range(3)]
 
         self.view = self.klass(self.raster, self.index)
 
@@ -990,26 +922,24 @@ class TestSnap(unittest.TestCase):
         self.assertIsNone(data)
 
     def test_snap_no_result(self):
-        for mode in ['vals', 'meta', 'time']:
+        for mode in ["vals", "meta", "time"]:
             data = self.view.get_data(
-                mode=mode,
-                start=Datetime(2001, 1, 1),
-                stop=Datetime(2002, 1, 1),
+                mode=mode, start=Datetime(2001, 1, 1), stop=Datetime(2002, 1, 1)
             )
             self.assertIsNone(data)
 
     def test_snap_single_band(self):
         # data
-        data = self.view.get_data(mode='vals', width=1, height=1)
-        self.assertEqual(data['values'].tolist(), [[[7]]])
+        data = self.view.get_data(mode="vals", width=1, height=1)
+        self.assertEqual(data["values"].tolist(), [[[7]]])
 
         # meta
-        data = self.view.get_data(mode='meta')
-        self.assertEqual(data['meta'], ['Testmeta for band 2'])
+        data = self.view.get_data(mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 2"])
 
         # time
-        data = self.view.get_data(mode='time')
-        self.assertEqual(data['time'], [Datetime(2000, 1, 1, 0, 15)])
+        data = self.view.get_data(mode="time")
+        self.assertEqual(data["time"], [Datetime(2000, 1, 1, 0, 15)])
 
     def test_snap_multiband_data(self):
         view = self.view
@@ -1018,53 +948,46 @@ class TestSnap(unittest.TestCase):
             return Datetime(2000, 1, 1, 0, x)
 
         # dig deep in one case
-        data = view.get_data(mode='time', start=t(6), stop=t(9))
+        data = view.get_data(mode="time", start=t(6), stop=t(9))
         self.assertEqual(
-            data['time'],
-            [Datetime(2000, 1, 1, 0, 6), Datetime(2000, 1, 1, 0, 9)],
+            data["time"], [Datetime(2000, 1, 1, 0, 6), Datetime(2000, 1, 1, 0, 9)]
         )
-        data = view.get_data(mode='vals', start=t(6), stop=t(9))
-        self.assertEqual(data['values'].tolist(), [[[7]], [[7]]])
+        data = view.get_data(mode="vals", start=t(6), stop=t(9))
+        self.assertEqual(data["values"].tolist(), [[[7]], [[7]]])
 
-        data = view.get_data(mode='meta', start=t(6), stop=t(9))
-        self.assertEqual(
-            data['meta'], ['Testmeta for band 1', 'Testmeta for band 2']
-        )
+        data = view.get_data(mode="meta", start=t(6), stop=t(9))
+        self.assertEqual(data["meta"], ["Testmeta for band 1", "Testmeta for band 2"])
 
         # test only meta in the other cases
         # expand left
-        data = view.get_data(start=t(6), stop=t(7), mode='meta')
-        self.assertEqual(data['meta'], ['Testmeta for band 1'])
+        data = view.get_data(start=t(6), stop=t(7), mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 1"])
 
         # expand right
-        data = view.get_data(start=t(8), stop=t(9), mode='meta')
-        self.assertEqual(data['meta'], ['Testmeta for band 2'])
+        data = view.get_data(start=t(8), stop=t(9), mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 2"])
 
         # expand left repeat
-        data = view.get_data(start=t(12), stop=t(15), mode='meta')
-        self.assertEqual(
-            data['meta'], ['Testmeta for band 2', 'Testmeta for band 2']
-        )
+        data = view.get_data(start=t(12), stop=t(15), mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 2", "Testmeta for band 2"])
 
         # both right and left
-        data = view.get_data(start=t(5), stop=t(10), mode='meta')
-        self.assertEqual(
-            data['meta'], ['Testmeta for band 1', 'Testmeta for band 2']
-        )
+        data = view.get_data(start=t(5), stop=t(10), mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 1", "Testmeta for band 2"])
 
         # left time, no data
-        data = view.get_data(start=t(7), stop=t(9), mode='meta')
-        self.assertEqual(data['meta'], ['Testmeta for band 2'])
+        data = view.get_data(start=t(7), stop=t(9), mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 2"])
 
         # right time, no data
-        data = view.get_data(start=t(6), stop=t(8), mode='meta')
-        self.assertEqual(data['meta'], ['Testmeta for band 1'])
+        data = view.get_data(start=t(6), stop=t(8), mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 1"])
 
         # inner time, no data
         # needs view inversed
         view = self.klass(self.index, self.raster)
-        data = view.get_data(start=t(3), stop=t(5), mode='meta')
-        self.assertEqual(data['meta'], ['Testmeta for band 2'])
+        data = view.get_data(start=t(3), stop=t(5), mode="meta")
+        self.assertEqual(data["meta"], ["Testmeta for band 2"])
 
     def test_snap_repeat(self):
         origin1 = Datetime(2000, 1, 1)
@@ -1075,9 +998,9 @@ class TestSnap(unittest.TestCase):
         store2 = MockRaster(origin=origin1, timedelta=timedelta, bands=3)
         view = self.klass(store1, store2)
         data = view.get_data(
-            mode='meta', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+            mode="meta", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
         )
-        self.assertEqual(data['meta'], ['Testmeta for band 0'] * 3)
+        self.assertEqual(data["meta"], ["Testmeta for band 0"] * 3)
 
 
 class TestTemporalAggregate(unittest.TestCase):
@@ -1086,15 +1009,12 @@ class TestTemporalAggregate(unittest.TestCase):
     def setUp(self):
         self.raster = MockRaster(
             origin=Datetime(2000, 1, 1),
-            value=np.array([[1., 0., np.nan]]),
+            value=np.array([[1.0, 0.0, np.nan]]),
             timedelta=Timedelta(days=1),
             bands=3,
         )
         self.raster_uint8 = MockRaster(
-            origin=Datetime(2000, 1, 1),
-            value=7,
-            timedelta=Timedelta(days=1),
-            bands=3,
+            origin=Datetime(2000, 1, 1), value=7, timedelta=Timedelta(days=1), bands=3
         )
         self.request = {
             "mode": "vals",
@@ -1106,19 +1026,17 @@ class TestTemporalAggregate(unittest.TestCase):
         self.request_all = {
             "start": Datetime(1970, 1, 1),
             "stop": Datetime(2020, 1, 1),
-            **self.request
+            **self.request,
         }
 
     def test_period_day_agg(self):
         self.assertEqual(
             (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
             self.klass(self.raster, "D", closed="left", label="left").period,
-
         )
         self.assertEqual(
             (Datetime(2000, 1, 2), Datetime(2000, 1, 4)),
             self.klass(self.raster, "D", closed="left", label="right").period,
-
         )
         self.assertEqual(
             (Datetime(1999, 12, 31), Datetime(2000, 1, 2)),
@@ -1134,7 +1052,7 @@ class TestTemporalAggregate(unittest.TestCase):
         # the 2000-01-01 bin corresponds to 1999-12-31 23:00 UTC
         self.assertEqual(
             (Datetime(1999, 12, 31, 23), Datetime(2000, 1, 2, 23)),
-            self.klass(self.raster, "D", timezone="Europe/Amsterdam").period
+            self.klass(self.raster, "D", timezone="Europe/Amsterdam").period,
         )
         # 2000-01-01 00:00 UTC is 1999-12-31 19:00 in New York
         # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
@@ -1152,7 +1070,6 @@ class TestTemporalAggregate(unittest.TestCase):
         self.assertEqual(
             (Datetime(2000, 1, 1, 1), Datetime(2000, 1, 3, 1)),
             self.klass(self.raster, "H", closed="left", label="right").period,
-
         )
         self.assertEqual(
             (Datetime(1999, 12, 31, 23), Datetime(2000, 1, 2, 23)),
@@ -1168,7 +1085,7 @@ class TestTemporalAggregate(unittest.TestCase):
         # you don't notice the timezone here
         self.assertEqual(
             (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
-            self.klass(self.raster, "H", timezone="Europe/Amsterdam").period
+            self.klass(self.raster, "H", timezone="Europe/Amsterdam").period,
         )
         self.assertEqual(
             (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
@@ -1176,11 +1093,11 @@ class TestTemporalAggregate(unittest.TestCase):
         )
 
     def test_period_none(self):
-        view = self.klass(self.raster, frequency=None, statistic='sum')
+        view = self.klass(self.raster, frequency=None, statistic="sum")
 
         # test period
         self.assertEqual(
-            (Datetime(2000, 1, 3, 0), Datetime(2000, 1, 3, 0)), view.period,
+            (Datetime(2000, 1, 3, 0), Datetime(2000, 1, 3, 0)), view.period
         )
 
         # test timedelta
@@ -1193,20 +1110,16 @@ class TestTemporalAggregate(unittest.TestCase):
 
         # get data
         result = view.get_data(**self.request_all)["values"]
-        assert_equal(result, [[[3., 0., 0.]]])
+        assert_equal(result, [[[3.0, 0.0, 0.0]]])
 
     def test_timedelta(self):
-        self.assertEqual(
-            Timedelta(seconds=1), self.klass(self.raster, "S").timedelta
-        )
-        self.assertEqual(
-            Timedelta(hours=1), self.klass(self.raster, "H").timedelta
-        )
+        self.assertEqual(Timedelta(seconds=1), self.klass(self.raster, "S").timedelta)
+        self.assertEqual(Timedelta(hours=1), self.klass(self.raster, "H").timedelta)
         # months are nonequidistant
         self.assertIsNone(self.klass(self.raster, "M").timedelta)
 
     def test_get_data_time_request(self):
-        self.view = self.klass(self.raster, "H", closed='left', label='right')
+        self.view = self.klass(self.raster, "H", closed="left", label="right")
         self.request["mode"] = "time"
 
         # no start and stop produces the last element
@@ -1214,53 +1127,39 @@ class TestTemporalAggregate(unittest.TestCase):
         self.assertEqual([Datetime(2000, 1, 3, 1)], result)
 
         # only start produces the closest bin (which could be empty)
-        result = self.view.get_data(
-            start=Datetime(1980, 1, 1), **self.request
-        )["time"]
+        result = self.view.get_data(start=Datetime(1980, 1, 1), **self.request)["time"]
         self.assertEqual([Datetime(2000, 1, 1, 1)], result)
-        result = self.view.get_data(
-            start=Datetime(2030, 1, 1), **self.request
-        )["time"]
+        result = self.view.get_data(start=Datetime(2030, 1, 1), **self.request)["time"]
         self.assertEqual([Datetime(2000, 1, 3, 1)], result)
 
-        result = self.view.get_data(
-            start=Datetime(2000, 1, 1, 1), **self.request
-        )["time"]
+        result = self.view.get_data(start=Datetime(2000, 1, 1, 1), **self.request)[
+            "time"
+        ]
         self.assertEqual([Datetime(2000, 1, 1, 1)], result)
-        result = self.view.get_data(
-            start=Datetime(2000, 1, 1, 1, 29), **self.request
-        )["time"]
+        result = self.view.get_data(start=Datetime(2000, 1, 1, 1, 29), **self.request)[
+            "time"
+        ]
         self.assertEqual([Datetime(2000, 1, 1, 1)], result)
-        result = self.view.get_data(
-            start=Datetime(2000, 1, 1, 1, 31), **self.request
-        )["time"]
+        result = self.view.get_data(start=Datetime(2000, 1, 1, 1, 31), **self.request)[
+            "time"
+        ]
         self.assertEqual([Datetime(2000, 1, 1, 2)], result)
 
         # start and stop produce all bins that fall in the (closed) interval
         result = self.view.get_data(
-            start=Datetime(1980, 1, 1),
-            stop=Datetime(2000, 1, 1, 2),
-            **self.request,
+            start=Datetime(1980, 1, 1), stop=Datetime(2000, 1, 1, 2), **self.request
         )["time"]
-        self.assertEqual(
-            [Datetime(2000, 1, 1, 1), Datetime(2000, 1, 1, 2)], result
-        )
+        self.assertEqual([Datetime(2000, 1, 1, 1), Datetime(2000, 1, 1, 2)], result)
         result = self.view.get_data(
-            start=Datetime(2000, 1, 3),
-            stop=Datetime(2020, 1, 1),
-            **self.request,
+            start=Datetime(2000, 1, 3), stop=Datetime(2020, 1, 1), **self.request
         )["time"]
-        self.assertEqual(
-            [Datetime(2000, 1, 3), Datetime(2000, 1, 3, 1)], result
-        )
+        self.assertEqual([Datetime(2000, 1, 3), Datetime(2000, 1, 3, 1)], result)
         result = self.view.get_data(
             start=Datetime(2000, 1, 2, 10),
             stop=Datetime(2000, 1, 2, 11),
             **self.request,
         )["time"]
-        self.assertEqual(
-            [Datetime(2000, 1, 2, 10), Datetime(2000, 1, 2, 11)], result
-        )
+        self.assertEqual([Datetime(2000, 1, 2, 10), Datetime(2000, 1, 2, 11)], result)
 
     def test_get_data_meta_request(self):
         # first two frames fall into a different frame than the last one
@@ -1269,40 +1168,26 @@ class TestTemporalAggregate(unittest.TestCase):
 
         # only last
         result = self.view.get_data(**self.request)["meta"]
-        self.assertEqual(
-            [['Testmeta for band 2']], result,
-        )
+        self.assertEqual([["Testmeta for band 2"]], result)
 
         # only first
-        result = self.view.get_data(
-            start=Datetime(1970, 1, 1),
-            **self.request
-        )["meta"]
-        self.assertEqual(
-            [['Testmeta for band 0', 'Testmeta for band 1']], result,
-        )
+        result = self.view.get_data(start=Datetime(1970, 1, 1), **self.request)["meta"]
+        self.assertEqual([["Testmeta for band 0", "Testmeta for band 1"]], result)
 
         # complete range
         result = self.view.get_data(
-            start=Datetime(1970, 1, 1),
-            stop=Datetime(2020, 1, 1),
-            **self.request
+            start=Datetime(1970, 1, 1), stop=Datetime(2020, 1, 1), **self.request
         )["meta"]
         self.assertEqual(
-            [
-                ['Testmeta for band 0', 'Testmeta for band 1'],
-                ['Testmeta for band 2']
-            ],
+            [["Testmeta for band 0", "Testmeta for band 1"], ["Testmeta for band 2"]],
             result,
         )
 
         # only last
         result = self.view.get_data(
-            start=Datetime(2000, 1, 3),
-            stop=Datetime(2020, 1, 4),
-            **self.request
+            start=Datetime(2000, 1, 3), stop=Datetime(2020, 1, 4), **self.request
         )["meta"]
-        self.assertEqual([['Testmeta for band 2']], result)
+        self.assertEqual([["Testmeta for band 2"]], result)
 
     def test_get_data_meta_day_with_timezone(self):
         self.request["mode"] = "meta"
@@ -1312,24 +1197,20 @@ class TestTemporalAggregate(unittest.TestCase):
         result = view.get_data(
             start=Datetime(1999, 12, 31, 23),
             stop=Datetime(1999, 12, 31, 23),
-            **self.request
+            **self.request,
         )
-        self.assertListEqual(result["meta"], [['Testmeta for band 0']])
+        self.assertListEqual(result["meta"], [["Testmeta for band 0"]])
         result = view.get_data(
-            start=Datetime(2000, 1, 1, 0),
-            stop=Datetime(2000, 1, 1, 0),
-            **self.request
+            start=Datetime(2000, 1, 1, 0), stop=Datetime(2000, 1, 1, 0), **self.request
         )
         self.assertListEqual(result["meta"], [])
 
     def test_get_data_sum_hour(self):
         view = self.klass(self.raster, "H", statistic="sum")
         result = view.get_data(
-            start=Datetime(2000, 1, 1, 0),
-            stop=Datetime(2000, 1, 1, 1),
-            **self.request
+            start=Datetime(2000, 1, 1, 0), stop=Datetime(2000, 1, 1, 1), **self.request
         )
-        assert_equal(result["values"], [[[1., 0., 0.]], [[0., 0., 0.]]])
+        assert_equal(result["values"], [[[1.0, 0.0, 0.0]], [[0.0, 0.0, 0.0]]])
 
     def test_get_data_sum_day_with_timezone(self):
         view = self.klass(
@@ -1338,25 +1219,23 @@ class TestTemporalAggregate(unittest.TestCase):
         result = view.get_data(
             start=Datetime(1999, 12, 31, 23),
             stop=Datetime(1999, 12, 31, 23),
-            **self.request
+            **self.request,
         )
-        assert_equal(result["values"], [[[1., 0., 0.]]])
+        assert_equal(result["values"], [[[1.0, 0.0, 0.0]]])
         result = view.get_data(
-            start=Datetime(2000, 1, 1, 0),
-            stop=Datetime(2000, 1, 1, 0),
-            **self.request
+            start=Datetime(2000, 1, 1, 0), stop=Datetime(2000, 1, 1, 0), **self.request
         )
         self.assertIsNone(result)
 
     def test_get_data_sum_week(self):
         view = self.klass(self.raster, "W", statistic="sum")
         result = view.get_data(**self.request_all)
-        assert_equal(result["values"], [[[2., 0., 0.]], [[1., 0., 0.]]])
+        assert_equal(result["values"], [[[2.0, 0.0, 0.0]], [[1.0, 0.0, 0.0]]])
 
     def test_get_data_sum(self):
         view = self.klass(self.raster, "M", statistic="sum")
         result = view.get_data(**self.request_all)
-        assert_equal(result["values"], [[[3., 0., 0.]]])
+        assert_equal(result["values"], [[[3.0, 0.0, 0.0]]])
 
     def test_get_data_count(self):
         view = self.klass(self.raster, "M", statistic="count")
@@ -1366,27 +1245,27 @@ class TestTemporalAggregate(unittest.TestCase):
     def test_get_data_min(self):
         view = self.klass(self.raster, "M", statistic="min")
         result = view.get_data(**self.request_all)
-        assert_equal(result["values"], [[[1., 0., result["no_data_value"]]]])
+        assert_equal(result["values"], [[[1.0, 0.0, result["no_data_value"]]]])
 
     def test_get_data_max(self):
         view = self.klass(self.raster, "M", statistic="max")
         result = view.get_data(**self.request_all)
-        assert_equal(result["values"], [[[1., 0., result["no_data_value"]]]])
+        assert_equal(result["values"], [[[1.0, 0.0, result["no_data_value"]]]])
 
     def test_get_data_mean(self):
         view = self.klass(self.raster, "M", statistic="mean")
         result = view.get_data(**self.request_all)
-        assert_equal(result["values"], [[[1., 0., result["no_data_value"]]]])
+        assert_equal(result["values"], [[[1.0, 0.0, result["no_data_value"]]]])
 
     def test_get_data_median(self):
         view = self.klass(self.raster, "M", statistic="median")
         result = view.get_data(**self.request_all)
-        assert_equal(result["values"], [[[1., 0., result["no_data_value"]]]])
+        assert_equal(result["values"], [[[1.0, 0.0, result["no_data_value"]]]])
 
     def test_get_data_percentile(self):
         view = self.klass(self.raster, "M", statistic="p95")
         result = view.get_data(**self.request_all)
-        assert_equal(result["values"], [[[1., 0., result["no_data_value"]]]])
+        assert_equal(result["values"], [[[1.0, 0.0, result["no_data_value"]]]])
 
     def test_count_dtype(self):
         # count always becomes np.int32
@@ -1425,15 +1304,12 @@ class TestCumulative(unittest.TestCase):
     def setUp(self):
         self.raster = MockRaster(
             origin=Datetime(2000, 1, 1),
-            value=np.array([[1., 0., np.nan]]),
+            value=np.array([[1.0, 0.0, np.nan]]),
             timedelta=Timedelta(days=1),
             bands=3,
         )
         self.raster_uint8 = MockRaster(
-            origin=Datetime(2000, 1, 1),
-            value=7,
-            timedelta=Timedelta(days=1),
-            bands=3,
+            origin=Datetime(2000, 1, 1), value=7, timedelta=Timedelta(days=1), bands=3
         )
         self.request = {
             "mode": "vals",
@@ -1445,17 +1321,14 @@ class TestCumulative(unittest.TestCase):
         self.request_first_two = {
             "start": Datetime(2000, 1, 1),
             "stop": Datetime(2000, 1, 2),
-            **self.request
+            **self.request,
         }
-        self.request_second = {
-            "start": Datetime(2000, 1, 2),
-            **self.request
-        }
+        self.request_second = {"start": Datetime(2000, 1, 2), **self.request}
         self.request_last = self.request
         self.request_all = {
             "start": Datetime(1970, 1, 1),
             "stop": Datetime(2020, 1, 1),
-            **self.request
+            **self.request,
         }
 
     def test_get_data_meta(self):
@@ -1463,10 +1336,11 @@ class TestCumulative(unittest.TestCase):
         self.request_all["mode"] = "meta"
         result = view.get_data(**self.request_all)
         self.assertListEqual(
-            result["meta"], [
-                ['Testmeta for band 0'],
-                ['Testmeta for band 0', 'Testmeta for band 1'],
-                ['Testmeta for band 2']
+            result["meta"],
+            [
+                ["Testmeta for band 0"],
+                ["Testmeta for band 0", "Testmeta for band 1"],
+                ["Testmeta for band 2"],
             ],
         )
 
@@ -1483,63 +1357,62 @@ class TestCumulative(unittest.TestCase):
         self.request_all["mode"] = "meta"
         result = view.get_data(**self.request_all)
         self.assertListEqual(
-            result["meta"], [
-                ['Testmeta for band 0'],
-                [f'Testmeta for band {i}' for i in range(2)],
-                [f'Testmeta for band {i}' for i in range(3)],
+            result["meta"],
+            [
+                ["Testmeta for band 0"],
+                [f"Testmeta for band {i}" for i in range(2)],
+                [f"Testmeta for band {i}" for i in range(3)],
             ],
         )
 
     def test_get_data_sum_day(self):
         view = self.klass(self.raster, frequency="D", statistic="sum")
         result = view.get_data(**self.request_all)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[1., 0., 0.]], [[1., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[1.0, 0.0, 0.0]], [[1.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_first_two)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[1., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[1.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_second)["values"]
-        assert_equal(result, [[[1., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_last)["values"]
-        assert_equal(result, [[[1., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]]])
 
     def test_get_data_sum_week(self):
         view = self.klass(self.raster, frequency="W", statistic="sum")
         result = view.get_data(**self.request_all)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[2., 0., 0.]], [[1., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[2.0, 0.0, 0.0]], [[1.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_first_two)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[2., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[2.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_second)["values"]
-        assert_equal(result, [[[2., 0., 0.]]])
+        assert_equal(result, [[[2.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_last)["values"]
-        assert_equal(result, [[[1., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]]])
 
     def test_get_data_sum_month(self):
         view = self.klass(self.raster, frequency="M", statistic="sum")
         result = view.get_data(**self.request_all)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[2., 0., 0.]], [[3., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[2.0, 0.0, 0.0]], [[3.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_first_two)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[2., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[2.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_second)["values"]
-        assert_equal(result, [[[2., 0., 0.]]])
+        assert_equal(result, [[[2.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_last)["values"]
-        assert_equal(result, [[[3., 0., 0.]]])
+        assert_equal(result, [[[3.0, 0.0, 0.0]]])
 
     def test_get_data_sum_no_freq(self):
-        view = self.klass(self.raster, frequency=None, statistic='sum')
+        view = self.klass(self.raster, frequency=None, statistic="sum")
         result = view.get_data(**self.request_all)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[2., 0., 0.]], [[3., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[2.0, 0.0, 0.0]], [[3.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_first_two)["values"]
-        assert_equal(result, [[[1., 0., 0.]], [[2., 0., 0.]]])
+        assert_equal(result, [[[1.0, 0.0, 0.0]], [[2.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_second)["values"]
-        assert_equal(result, [[[2., 0., 0.]]])
+        assert_equal(result, [[[2.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_last)["values"]
-        assert_equal(result, [[[3., 0., 0.]]])
+        assert_equal(result, [[[3.0, 0.0, 0.0]]])
 
     def test_get_data_count(self):
         view = self.klass(self.raster, frequency="M", statistic="count")
         result = view.get_data(**self.request_all)
-        assert_equal(
-            result["values"], [[[1, 1, 0]], [[2, 2, 0]], [[3, 3, 0]]]
-        )
+        assert_equal(result["values"], [[[1, 1, 0]], [[2, 2, 0]], [[3, 3, 0]]])
 
 
 class TestBase(unittest.TestCase):
@@ -1565,43 +1438,41 @@ class TestBase(unittest.TestCase):
         )
 
         self.point_request = dict(
-            mode='vals',
+            mode="vals",
             start=Datetime(2000, 1, 1),
             stop=Datetime(2000, 1, 1),
             width=1,
             height=1,
             bbox=(0, 0, 0, 0),
-            projection='EPSG:3857',
+            projection="EPSG:3857",
         )
         self.vals_request = dict(
-            mode='vals',
+            mode="vals",
             start=Datetime(2000, 1, 1),
             stop=Datetime(2010, 1, 1, 2),
             width=2,
             height=3,
             bbox=(0, 0, 2, 3),
-            projection='EPSG:3857',
+            projection="EPSG:3857",
         )
         self.none_request = dict(
-            mode='vals',
+            mode="vals",
             start=Datetime(2001, 1, 1),
             stop=Datetime(2001, 1, 1, 2),
             width=2,
             height=3,
-            projection='EPSG:3857',
+            projection="EPSG:3857",
         )
         self.time_request = dict(
-            mode='time', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+            mode="time", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
         )
         self.expected_time = [
             Datetime(2000, 1, 1) + i * Timedelta(minutes=5) for i in range(3)
         ]
         self.meta_request = dict(
-            mode='meta', start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
+            mode="meta", start=Datetime(2000, 1, 1), stop=Datetime(2001, 1, 1)
         )
-        self.expected_meta = [
-            'Testmeta for band {}'.format(i) for i in range(3)
-        ]
+        self.expected_meta = ["Testmeta for band {}".format(i) for i in range(3)]
 
     def test_base_view(self):
         # store and view
@@ -1623,29 +1494,24 @@ class TestBase(unittest.TestCase):
 
         # query original
         start, stop = original.period
-        original_data = original.get_data(mode='vals', start=start, stop=stop)
-        original_meta = original.get_data(mode='meta', start=start, stop=stop)
-        original_time = original.get_data(mode='time', start=start, stop=stop)
+        original_data = original.get_data(mode="vals", start=start, stop=stop)
+        original_meta = original.get_data(mode="meta", start=start, stop=stop)
+        original_time = original.get_data(mode="time", start=start, stop=stop)
 
         # query view
         start, stop = view.period
-        view_data = view.get_data(mode='vals', start=start, stop=stop)
-        view_meta = view.get_data(mode='meta', start=start, stop=stop)
-        view_time = view.get_data(mode='time', start=start, stop=stop)
+        view_data = view.get_data(mode="vals", start=start, stop=stop)
+        view_meta = view.get_data(mode="meta", start=start, stop=stop)
+        view_time = view.get_data(mode="time", start=start, stop=stop)
 
         # check assertions
-        self.assertTrue(
-            np.equal(view_data['values'], original_data['values']).all()
-        )
-        self.assertEqual(view_meta['meta'], original_meta['meta'])
-        self.assertEqual(
-            view_time['time'], [t + time for t in original_time['time']]
-        )
+        self.assertTrue(np.equal(view_data["values"], original_data["values"]).all())
+        self.assertEqual(view_meta["meta"], original_meta["meta"])
+        self.assertEqual(view_time["time"], [t + time for t in original_time["time"]])
 
         # check construction with milliseconds
         view2 = raster.Shift(
-            store=original,
-            time=int(original.timedelta.total_seconds() * 1000)
+            store=original, time=int(original.timedelta.total_seconds() * 1000)
         )
         self.assertEqual(view2.time, view.time)
 
@@ -1656,7 +1522,7 @@ class TestBase(unittest.TestCase):
 
         # store returns no data
         clip = raster.Clip(store=self.raster_nodata, source=self.raster_none)
-        assert_equal(clip.get_data(**self.vals_request)['values'], 255)
+        assert_equal(clip.get_data(**self.vals_request)["values"], 255)
 
         # source returns None
         clip = raster.Clip(store=self.raster, source=self.raster_none)
@@ -1664,59 +1530,51 @@ class TestBase(unittest.TestCase):
 
         # source has nodata everywhere (everything will be masked)
         clip = raster.Clip(store=self.raster, source=self.raster_nodata)
-        assert_equal(clip.get_data(**self.vals_request)['values'], 255)
+        assert_equal(clip.get_data(**self.vals_request)["values"], 255)
 
         # source has data everywhere (nothing will be masked)
         clip = raster.Clip(store=self.raster, source=self.raster)
-        assert_equal(clip.get_data(**self.vals_request)['values'], 7)
+        assert_equal(clip.get_data(**self.vals_request)["values"], 7)
 
-        self.assertEqual(
-            clip.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            clip.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(clip.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(clip.get_data(**self.time_request)["time"], self.expected_time)
 
         # Use a boolean mask with True everywhere, should propagate data
         clip = raster.Clip(self.raster, self.raster == 7)
-        assert_equal(clip.get_data(**self.vals_request)['values'], 7)
+        assert_equal(clip.get_data(**self.vals_request)["values"], 7)
 
         # Use a boolean mask with False everywhere, should propagate nodata
         clip = raster.Clip(self.raster, self.raster != 7)
-        assert_equal(clip.get_data(**self.vals_request)['values'], 255)
+        assert_equal(clip.get_data(**self.vals_request)["values"], 255)
 
     def test_mask(self):
         view = raster.Mask(store=self.raster, value=8)
         data = view.get_data(**self.vals_request)
-        self.assertEqual(str(view.dtype), 'uint8')
-        assert_equal(data['values'], 8)
+        self.assertEqual(str(view.dtype), "uint8")
+        assert_equal(data["values"], 8)
 
         # nodata is not masked to 0
         view = raster.Mask(store=self.raster_nodata, value=8)
         data = view.get_data(**self.vals_request)
         self.assertEqual(view.fillvalue, 0)
-        assert_equal(data['values'], 0)
-        assert_equal(data['no_data_value'], 0)
+        assert_equal(data["values"], 0)
+        assert_equal(data["no_data_value"], 0)
 
         # unless value is 0, then it becomes 1
         view = raster.Mask(store=self.raster_nodata, value=0)
         data = view.get_data(**self.vals_request)
         self.assertEqual(view.fillvalue, 1)
-        assert_equal(data['values'], 1)
-        assert_equal(data['no_data_value'], 1)
+        assert_equal(data["values"], 1)
+        assert_equal(data["no_data_value"], 1)
 
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_mask_below(self):
         # filled result
         view = raster.MaskBelow(store=self.raster, value=0)
         data = view.get_data(**self.vals_request)
-        assert_equal(data['values'], 7)
+        assert_equal(data["values"], 7)
 
         # empty result
         data = view.get_data(**self.none_request)
@@ -1725,14 +1583,10 @@ class TestBase(unittest.TestCase):
         # masked result
         view = raster.MaskBelow(store=self.raster, value=10)
         data = view.get_data(**self.vals_request)
-        assert_equal(data['values'], 255)
+        assert_equal(data["values"], 255)
 
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_step(self):
         view = raster.Step(store=self.raster, location=0)
@@ -1746,62 +1600,46 @@ class TestBase(unittest.TestCase):
         # right value result (store returns 7)
         view = raster.Step(store=self.raster, left=3, right=10, location=6)
         data = view.get_data(**self.vals_request)
-        assert_equal(data['values'], 10)
+        assert_equal(data["values"], 10)
 
         # left value result
         view = raster.Step(store=self.raster, left=3, right=10, location=8)
         data = view.get_data(**self.vals_request)
-        assert_equal(data['values'], 3)
+        assert_equal(data["values"], 3)
 
         # at value result
         view = raster.Step(store=self.raster, at=15, location=7)
         data = view.get_data(**self.vals_request)
-        assert_equal(data['values'], 15)
+        assert_equal(data["values"], 15)
 
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_reclassify_meta_time(self):
         view = raster.Reclassify(store=self.raster, data=[[7, 1000]])
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_reclassify_with_integers(self):
         for select in True, False:
-            view = raster.Reclassify(
-                store=self.raster, data=[[7, 1000]], select=select
-            )
+            view = raster.Reclassify(store=self.raster, data=[[7, 1000]], select=select)
 
             data = view.get_data(**self.vals_request)
             self.assertEqual(view.dtype, np.uint16)
-            assert_equal(data['values'], 1000)
+            assert_equal(data["values"], 1000)
 
     def test_reclassify_with_floats(self):
         for select in True, False:
-            view = raster.Reclassify(
-                store=self.raster, data=[[7, 8.]], select=select
-            )
+            view = raster.Reclassify(store=self.raster, data=[[7, 8.0]], select=select)
             data = view.get_data(**self.vals_request)
             self.assertEqual(view.dtype, np.float32)
-            assert_equal(data['values'], 8.)
-            self.assertEqual(data['no_data_value'], view.fillvalue)
+            assert_equal(data["values"], 8.0)
+            self.assertEqual(data["no_data_value"], view.fillvalue)
 
     def test_classify_meta_time(self):
         view = raster.Classify(store=self.raster, bins=[1, 2, 3])
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_classify(self):
         values = np.array([[1, 5], [7, 10], [255, 255]], dtype=np.uint8)
@@ -1838,35 +1676,31 @@ class TestBase(unittest.TestCase):
 
         # skip dilation
         data = view.get_data(**self.point_request)
-        self.assertEqual(data['values'].tolist(), [[[0]]])
+        self.assertEqual(data["values"].tolist(), [[[0]]])
 
         # perform dilation
         data = view.get_data(**self.vals_request)
-        self.assertEqual(data['values'].shape, (1, 3, 2))
-        self.assertEqual(data['values'].tolist(), [[[2, 2], [0, 2], [0, 0]]])
+        self.assertEqual(data["values"].shape, (1, 3, 2))
+        self.assertEqual(data["values"].tolist(), [[[2, 2], [0, 2], [0, 0]]])
 
         # dilate outside of bbox
         request = self.vals_request.copy()
-        request['bbox'] = (1, 1, 2, 2)
-        request['height'] = 1
-        request['width'] = 1
+        request["bbox"] = (1, 1, 2, 2)
+        request["height"] = 1
+        request["width"] = 1
         data = view.get_data(**request)
-        self.assertEqual(data['values'].shape, (1, 1, 1))
-        self.assertEqual(data['values'].tolist(), [[[2]]])
+        self.assertEqual(data["values"].shape, (1, 1, 1))
+        self.assertEqual(data["values"].tolist(), [[[2]]])
 
         # perform no dilation
         view = raster.Dilate(store=store, values=[1])
         data = view.get_data(**self.vals_request)
-        self.assertEqual(data['values'].tolist(), [store.value.tolist()])
+        self.assertEqual(data["values"].tolist(), [store.value.tolist()])
 
         # meta and time requests
         view = raster.Dilate(self.raster, values=[2])
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_moving_max(self):
         values = np.array([[0, 2], [0, 0], [0, 0]])
@@ -1881,30 +1715,26 @@ class TestBase(unittest.TestCase):
 
         # skip moving max
         data = view.get_data(**self.point_request)
-        self.assertEqual(data['values'].tolist(), [[[0]]])
+        self.assertEqual(data["values"].tolist(), [[[0]]])
 
         # perform moving max
         data = view.get_data(**self.vals_request)
-        self.assertEqual(data['values'].shape, (1, 3, 2))
-        self.assertEqual(data['values'].tolist(), [[[2, 2], [2, 2], [0, 0]]])
+        self.assertEqual(data["values"].shape, (1, 3, 2))
+        self.assertEqual(data["values"].tolist(), [[[2, 2], [2, 2], [0, 0]]])
 
         # moving max outside of bbox
         request = self.vals_request.copy()
-        request['bbox'] = (1, 1, 2, 2)
-        request['height'] = 1
-        request['width'] = 1
+        request["bbox"] = (1, 1, 2, 2)
+        request["height"] = 1
+        request["width"] = 1
         data = view.get_data(**request)
-        self.assertEqual(data['values'].shape, (1, 1, 1))
-        self.assertEqual(data['values'].tolist(), [[[2]]])
+        self.assertEqual(data["values"].shape, (1, 1, 1))
+        self.assertEqual(data["values"].tolist(), [[[2]]])
 
         # meta and time requests
         view = raster.MovingMax(self.raster, size=3)
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_smooth(self):
         values = np.zeros((101, 101), dtype=np.float32)
@@ -1919,81 +1749,69 @@ class TestBase(unittest.TestCase):
             bands=1,
         )
         view = raster.Smooth(store=raster1, size=sigma * 3)
-        expected = ndimage.gaussian_filter(
-            values, sigma=sigma, mode='constant', cval=0
-        )
+        expected = ndimage.gaussian_filter(values, sigma=sigma, mode="constant", cval=0)
 
         request = self.vals_request.copy()
 
         # margins are large: approximate result
-        request['bbox'] = (0, 0, 101, 101)
-        request['height'] = 101
-        request['width'] = 101
+        request["bbox"] = (0, 0, 101, 101)
+        request["height"] = 101
+        request["width"] = 101
         data = view.get_data(**request)
         # Large tolerance for Scipy 0.17. Scipy 1.0 has better results because
         # of a solved rounding issue in zoom and affine_transform.
-        assert_allclose(data['values'][0], expected, atol=peak * 0.1)
+        assert_allclose(data["values"][0], expected, atol=peak * 0.1)
 
         # margins are small: exact result
         sigma = 1
         view = raster.Smooth(store=raster1, size=sigma * 3)
-        expected = ndimage.gaussian_filter(
-            values, sigma=sigma, mode='constant', cval=0
-        )
+        expected = ndimage.gaussian_filter(values, sigma=sigma, mode="constant", cval=0)
         for bbox in (
             (0, 0, 101, 101),
             (0, 0, 48, 48),  # nonzero value is outside of bbox
             (50, 50, 60, 60),
         ):  # partial
-            request['bbox'] = bbox
-            request['height'] = bbox[3] - bbox[1]
-            request['width'] = bbox[2] - bbox[0]
+            request["bbox"] = bbox
+            request["height"] = bbox[3] - bbox[1]
+            request["width"] = bbox[2] - bbox[0]
             data = view.get_data(**request)
             _expected = expected[bbox[1] : bbox[3], bbox[0] : bbox[2]]
-            assert_allclose(data['values'][0], _expected, atol=peak * 0.0001)
+            assert_allclose(data["values"][0], _expected, atol=peak * 0.0001)
 
         # use EPSG4326 boxes
-        request['projection'] = 'EPSG:4326'
+        request["projection"] = "EPSG:4326"
         for bbox in (
             (0, 0, 101, 101),
             (0, 0, 48, 48),  # nonzero value is outside of bbox
             (50, 50, 60, 60),
         ):  # partial
-            request['height'] = bbox[3] - bbox[1]
-            request['width'] = bbox[2] - bbox[0]
+            request["height"] = bbox[3] - bbox[1]
+            request["width"] = bbox[2] - bbox[0]
             extent = Extent(bbox, EPSG3857)
-            request['bbox'] = extent.transformed(EPSG4326).bbox
+            request["bbox"] = extent.transformed(EPSG4326).bbox
             data = view.get_data(**request)
             _expected = expected[bbox[1] : bbox[3], bbox[0] : bbox[2]]
-            assert_allclose(data['values'][0], _expected, atol=peak * 0.0001)
+            assert_allclose(data["values"][0], _expected, atol=peak * 0.0001)
 
         # meta and time requests
         view = raster.Smooth(self.raster, size=10)
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_hill_shade(self):
         view = raster.HillShade(store=self.raster)
-        self.assertEqual(view.dtype, 'u1')
+        self.assertEqual(view.dtype, "u1")
 
         # skip hillshade
         view.get_data(**self.point_request)
 
         # perform hillshade
         data = view.get_data(**self.vals_request)
-        self.assertEqual(data['values'].shape, (3, 3, 2))
+        self.assertEqual(data["values"].shape, (3, 3, 2))
 
         # meta and time requests
-        self.assertEqual(
-            view.get_data(**self.meta_request)['meta'], self.expected_meta
-        )
-        self.assertEqual(
-            view.get_data(**self.time_request)['time'], self.expected_time
-        )
+        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
+        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_temporal_sum(self):
         view = raster.TemporalSum(store=self.raster)
@@ -2002,194 +1820,182 @@ class TestBase(unittest.TestCase):
         self.assertIsNone(data)
 
         data = view.get_data(**self.vals_request)
-        self.assertEqual(data['values'].shape, (1, 3, 2))
-        self.assertEqual(data['values'][0, 0, 0].tolist(), 21)
+        self.assertEqual(data["values"].shape, (1, 3, 2))
+        self.assertEqual(data["values"][0, 0, 0].tolist(), 21)
 
         data = view.get_data(**self.time_request)
-        self.assertEqual(self.expected_time[-1:], data['time'])
+        self.assertEqual(self.expected_time[-1:], data["time"])
 
         data = view.get_data(**self.meta_request)
-        self.assertEqual(self.expected_meta[-1:], data['meta'])
+        self.assertEqual(self.expected_meta[-1:], data["meta"])
 
 
 class TestRasterize(unittest.TestCase):
     def setUp(self):
         self.point_request = dict(
-            mode='vals',
-            width=1,
-            height=1,
-            bbox=(0, 0, 0, 0),
-            projection='EPSG:3857',
+            mode="vals", width=1, height=1, bbox=(0, 0, 0, 0), projection="EPSG:3857"
         )
         self.vals_request = dict(
-            mode='vals',
-            width=2,
-            height=3,
-            bbox=(0, 0, 2, 3),
-            projection='EPSG:3857',
+            mode="vals", width=2, height=3, bbox=(0, 0, 2, 3), projection="EPSG:3857"
         )
         squares = [
-            ((0., 1.), (0., 2.), (1., 2.), (1., 1.)),  # 1 pixel inside
-            ((10., 2.), (10., 3.), (20., 3.), (20., 2.)),  # outside
-            ((1., 2.), (1., 13.), (12., 13.), (12., 2.)),  # partially inside
+            ((0.0, 1.0), (0.0, 2.0), (1.0, 2.0), (1.0, 1.0)),  # 1 pixel inside
+            ((10.0, 2.0), (10.0, 3.0), (20.0, 3.0), (20.0, 2.0)),  # outside
+            ((1.0, 2.0), (1.0, 13.0), (12.0, 13.0), (12.0, 2.0)),  # partially inside
         ]
-        properties = [
-            {'id': x, 'value': x / 3} for x in (51, 212, 512)
-        ]
+        properties = [{"id": x, "value": x / 3} for x in (51, 212, 512)]
         self.geometry_source = MockGeometry(squares, properties)
-        self.view = raster.Rasterize(self.geometry_source, 'id')
+        self.view = raster.Rasterize(self.geometry_source, "id")
 
     def test_vals_request(self):
         data = self.view.get_data(**self.vals_request)
 
         # invert vertical axis so that x, y corresponds to j, i
-        values = data['values'][0, ::-1]
+        values = data["values"][0, ::-1]
 
         self.assertEqual(values[1, 0], 51)
         self.assertEqual(values[2, 1], 512)
-        self.assertEqual(np.sum(values == data['no_data_value']), 4)
+        self.assertEqual(np.sum(values == data["no_data_value"]), 4)
 
     def test_overlapping(self):
         # last polygon is on top
         squares = [
-            ((0., 0.), (2., 0.), (2., 3.), (0., 3.)),  # full bbox
-            ((0., 1.), (0., 2.), (1., 2.), (1., 1.)),  # 1 pixel
+            ((0.0, 0.0), (2.0, 0.0), (2.0, 3.0), (0.0, 3.0)),  # full bbox
+            ((0.0, 1.0), (0.0, 2.0), (1.0, 2.0), (1.0, 1.0)),  # 1 pixel
         ]
-        view = raster.Rasterize(MockGeometry(squares), 'id')
+        view = raster.Rasterize(MockGeometry(squares), "id")
         data = view.get_data(**self.vals_request)
-        values = data['values'][0]
+        values = data["values"][0]
         self.assertEqual(values[1, 0], 1)
         self.assertEqual(np.sum(values == 0), 5)
 
     def test_shifting_pixel(self):
         # we don't test the edge case (edge at 0.5) because it is ill-defined
-        pixel = np.array(((0., 0.), (1., 0.), (1., 1.), (0., 1.)))
+        pixel = np.array(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)))
 
         # horizontal shift
-        for offset in (0., 0.49, 0.51, 1.0):
-            shifted = pixel + [offset, 0.]
-            view = raster.Rasterize(MockGeometry([shifted]), 'id')
+        for offset in (0.0, 0.49, 0.51, 1.0):
+            shifted = pixel + [offset, 0.0]
+            view = raster.Rasterize(MockGeometry([shifted]), "id")
             data = view.get_data(**self.vals_request)
 
             if offset < 0.5:
-                self.assertEqual(0, data['values'][0, 2, 0])
+                self.assertEqual(0, data["values"][0, 2, 0])
             else:
-                self.assertEqual(0, data['values'][0, 2, 1])
-            self.assertEqual(1, np.sum(data['values'] == 0))
+                self.assertEqual(0, data["values"][0, 2, 1])
+            self.assertEqual(1, np.sum(data["values"] == 0))
 
         # vertical shift
-        for offset in (0., 0.49, 0.51, 1.0):
-            shifted = pixel + [0., offset]
-            view = raster.Rasterize(MockGeometry([shifted]), 'id')
+        for offset in (0.0, 0.49, 0.51, 1.0):
+            shifted = pixel + [0.0, offset]
+            view = raster.Rasterize(MockGeometry([shifted]), "id")
             data = view.get_data(**self.vals_request)
 
             if offset < 0.5:
-                self.assertEqual(0, data['values'][0, 2, 0])
+                self.assertEqual(0, data["values"][0, 2, 0])
             else:
-                self.assertEqual(0, data['values'][0, 1, 0])
-            self.assertEqual(1, np.sum(data['values'] == 0))
+                self.assertEqual(0, data["values"][0, 1, 0])
+            self.assertEqual(1, np.sum(data["values"] == 0))
 
     def test_point_request(self):
         # a point requests returns the value of the last geometry that is
         # received by Rasterize from the source
-        pixel = np.array(((0., 0.), (1., 0.), (1., 1.), (0., 1.)))
+        pixel = np.array(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)))
 
         # no geometry
-        view = raster.Rasterize(MockGeometry([]), 'id')
+        view = raster.Rasterize(MockGeometry([]), "id")
         data = view.get_data(**self.point_request)
-        self.assertEqual([[[data['no_data_value']]]], data['values'].tolist())
+        self.assertEqual([[[data["no_data_value"]]]], data["values"].tolist())
 
         # 2 geometries (numbered 0 and 1)
-        view = raster.Rasterize(MockGeometry([pixel, pixel]), 'id')
+        view = raster.Rasterize(MockGeometry([pixel, pixel]), "id")
         data = view.get_data(**self.point_request)
-        self.assertEqual([[[1]]], data['values'].tolist())
+        self.assertEqual([[[1]]], data["values"].tolist())
 
         # 2 geometries, with id_field
         view = raster.Rasterize(
-            MockGeometry([pixel, pixel], [{'id': x} for x in (51, 212)]), 'id'
+            MockGeometry([pixel, pixel], [{"id": x} for x in (51, 212)]), "id"
         )
         data = view.get_data(**self.point_request)
-        self.assertEqual([[[212]]], data['values'].tolist())
+        self.assertEqual([[[212]]], data["values"].tolist())
 
     def test_meta_time(self):
         # meta and time requests
-        data = self.view.get_data(mode='time')
-        self.assertEqual([Datetime(1970, 1, 1)], data['time'])
+        data = self.view.get_data(mode="time")
+        self.assertEqual([Datetime(1970, 1, 1)], data["time"])
 
-        data = self.view.get_data(mode='meta')
-        self.assertEqual([None], data['meta'])
+        data = self.view.get_data(mode="meta")
+        self.assertEqual([None], data["meta"])
 
     def test_limit(self):
         # with limit
-        view = raster.Rasterize(self.geometry_source, 'id', limit=1)
+        view = raster.Rasterize(self.geometry_source, "id", limit=1)
         data = view.get_data(**self.vals_request)
-        self.assertEqual(np.sum(data['values'] == data['no_data_value']), 5)
+        self.assertEqual(np.sum(data["values"] == data["no_data_value"]), 5)
 
     def test_rasterize_id(self):
-        view = raster.Rasterize(self.geometry_source, column_name='id')
+        view = raster.Rasterize(self.geometry_source, column_name="id")
         data = view.get_data(**self.vals_request)
         # invert vertical axis so that x, y corresponds to j, i
-        values = data['values'][0, ::-1]
+        values = data["values"][0, ::-1]
 
         self.assertEqual(values.dtype, np.int32)
         self.assertEqual(values[1, 0], 51)
         self.assertEqual(values[2, 1], 512)
-        self.assertEqual(np.sum(values == data['no_data_value']), 4)
+        self.assertEqual(np.sum(values == data["no_data_value"]), 4)
 
     def test_rasterize_id_as_uint(self):
-        view = raster.Rasterize(
-            self.geometry_source, column_name='id', dtype='uint8'
-        )
+        view = raster.Rasterize(self.geometry_source, column_name="id", dtype="uint8")
         data = view.get_data(**self.vals_request)
         # invert vertical axis so that x, y corresponds to j, i
-        values = data['values'][0, ::-1]
+        values = data["values"][0, ::-1]
 
         self.assertEqual(values.dtype, np.uint8)
-        self.assertEqual(data['no_data_value'], 255)
+        self.assertEqual(data["no_data_value"], 255)
         self.assertEqual(values[1, 0], np.uint8(51))
         self.assertEqual(values[2, 1], np.uint8(512))
-        self.assertEqual(np.sum(values == data['no_data_value']), 4)
+        self.assertEqual(np.sum(values == data["no_data_value"]), 4)
 
     def test_rasterize_value(self):
         view = raster.Rasterize(
-            self.geometry_source, column_name='value', dtype='float'
+            self.geometry_source, column_name="value", dtype="float"
         )
         data = view.get_data(**self.vals_request)
         # invert vertical axis so that x, y corresponds to j, i
-        values = data['values'][0, ::-1]
+        values = data["values"][0, ::-1]
 
         self.assertEqual(values.dtype, np.float64)
         self.assertEqual(values[1, 0], 51 / 3)
         self.assertEqual(values[2, 1], 512 / 3)
-        self.assertEqual(np.sum(values == data['no_data_value']), 4)
+        self.assertEqual(np.sum(values == data["no_data_value"]), 4)
 
     def test_rasterize_value_as_float16(self):
         view = raster.Rasterize(
-            self.geometry_source, column_name='value', dtype='float16'
+            self.geometry_source, column_name="value", dtype="float16"
         )
         data = view.get_data(**self.vals_request)
         # invert vertical axis so that x, y corresponds to j, i
-        values = data['values'][0, ::-1]
+        values = data["values"][0, ::-1]
 
         self.assertEqual(values.dtype, np.float16)
         self.assertEqual(values[1, 0], np.float16(51 / 3))
         self.assertEqual(values[2, 1], np.float16(512 / 3))
-        self.assertEqual(np.sum(values == data['no_data_value']), 4)
+        self.assertEqual(np.sum(values == data["no_data_value"]), 4)
 
     def test_geometry_request(self):
         (_, req), _ = self.view.get_sources_and_requests(
-            mode='vals',
+            mode="vals",
             width=256,
             height=100,
             bbox=(0, 0, 10, 10),
-            projection='EPSG:3857',
+            projection="EPSG:3857",
             start=Datetime(2018, 1, 1),
             stop=Datetime(2019, 1, 1),
         )
 
-        self.assertEqual('intersects', req['mode'])
-        self.assertEqual(100., req['geometry'].area)
-        self.assertEqual('EPSG:3857', req['projection'])
-        self.assertEqual(10 / 256, req['min_size'])
-        self.assertEqual(Datetime(2018, 1, 1), req['start'])
-        self.assertEqual(Datetime(2019, 1, 1), req['stop'])
+        self.assertEqual("intersects", req["mode"])
+        self.assertEqual(100.0, req["geometry"].area)
+        self.assertEqual("EPSG:3857", req["projection"])
+        self.assertEqual(10 / 256, req["min_size"])
+        self.assertEqual(Datetime(2018, 1, 1), req["start"])
+        self.assertEqual(Datetime(2019, 1, 1), req["stop"])

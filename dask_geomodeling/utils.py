@@ -24,12 +24,12 @@ from shapely import wkb as shapely_wkb
 
 import fiona
 
-POLYGON = 'POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))'
+POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
 
 
 def get_index(values, no_data_value):
     """ Return an index to access for data values in values. """
-    equal = np.isclose if values.dtype.kind == 'f' else np.equal
+    equal = np.isclose if values.dtype.kind == "f" else np.equal
     return np.logical_not(equal(values, no_data_value))
 
 
@@ -40,7 +40,7 @@ def get_dtype_max(dtype):
     :param dtype: numpy dtype
     """
     d = np.dtype(dtype)
-    if d.kind == 'f':
+    if d.kind == "f":
         return np.finfo(d).max.item()
     return np.iinfo(d).max
 
@@ -52,20 +52,20 @@ def get_dtype_min(dtype):
     :param dtype: numpy dtype
     """
     d = np.dtype(dtype)
-    if d.kind == 'f':
+    if d.kind == "f":
         return np.finfo(d).min.item()
     return np.iinfo(d).min
 
 
 def get_uint_dtype(n):
     """Get the smallest uint dtype that accomodates 'n' values"""
-    for dtype in ('u1', 'u2', 'u4', 'u8'):
+    for dtype in ("u1", "u2", "u4", "u8"):
         if n - 1 <= np.iinfo(dtype).max:
             return np.dtype(dtype)
     raise ValueError("Too many values for uint dtype ({})".format(n))
 
 
-def get_rounded_repr(obj, significant=4, fmt='{} (rounded)'):
+def get_rounded_repr(obj, significant=4, fmt="{} (rounded)"):
     """
     http://stackoverflow.com/questions/3410976/
     how-to-round-a-number-to-significant-figures-in-python
@@ -74,12 +74,9 @@ def get_rounded_repr(obj, significant=4, fmt='{} (rounded)'):
     :param fmt: template for rounded repr
     """
     digits = (
-        -int(floor(log10(abs(n)))) + (significant - 1) if n else None
-        for n in obj
+        -int(floor(log10(abs(n)))) + (significant - 1) if n else None for n in obj
     )
-    rounded = obj.__class__(
-        round(n, d) if n else n for n, d in zip(obj, digits)
-    )
+    rounded = obj.__class__(round(n, d) if n else n for n, d in zip(obj, digits))
     if obj == rounded:
         return repr(obj)
     return fmt.format(repr(rounded))
@@ -93,7 +90,7 @@ class Extent(object):
         self.sr = sr
 
     def __repr__(self):
-        return '<{}: {} / {}>'.format(
+        return "<{}: {} / {}>".format(
             self.__class__.__name__,
             get_projection(self.sr),
             get_rounded_repr(self.bbox),
@@ -174,9 +171,9 @@ class GeoTransform(tuple):
     def __init__(self, tpl):
         if len(tpl) != 6:
             raise ValueError("GeoTransform expected an iterable of length 6")
-        if tpl[2] != 0. or tpl[4] != 0.:
+        if tpl[2] != 0.0 or tpl[4] != 0.0:
             raise ValueError("Tilted geo_transforms are not supported")
-        if tpl[1] == 0. or tpl[5] == 0.:
+        if tpl[1] == 0.0 or tpl[5] == 0.0:
             raise ValueError("Pixel size should not be zero")
 
     def __repr__(self):
@@ -229,9 +226,7 @@ class GeoTransform(tuple):
         """
         p, a, b, q, c, d = self
         i, j = origin
-        return self.__class__(
-            [p + a * j + b * i, a, b, q + c * j + d * i, c, d]
-        )
+        return self.__class__([p + a * j + b * i, a, b, q + c * j + d * i, c, d])
 
     def get_indices(self, points):
         """
@@ -375,11 +370,9 @@ def shapely_transform(geometry, src_srs, dst_srs):
     Note that we do not use geopandas for the transformation, because this is
     much slower than OGR.
     """
-    return shapely_wkb.loads(wkb_transform(
-        geometry.wkb,
-        src_sr=get_sr(src_srs),
-        dst_sr=get_sr(dst_srs),
-    ))
+    return shapely_wkb.loads(
+        wkb_transform(geometry.wkb, src_sr=get_sr(src_srs), dst_sr=get_sr(dst_srs))
+    )
 
 
 def transform_min_size(min_size, geometry, src_srs, dst_srs):
@@ -395,11 +388,7 @@ def transform_min_size(min_size, geometry, src_srs, dst_srs):
     result in a larger value than the original minimum size.
     """
     source = geometry.centroid.buffer(min_size / 2)
-    target = shapely_transform(
-        source,
-        src_srs=src_srs,
-        dst_srs=dst_srs,
-    )
+    target = shapely_transform(source, src_srs=src_srs, dst_srs=dst_srs)
     x1, y1, x2, y2 = target.bounds
     return max(x2 - x1, y2 - y1)
 
@@ -413,22 +402,18 @@ def transform_extent(extent, src_srs, dst_srs):
     :param dst_srs: destination projection string
     """
     source = box(*extent)
-    target = shapely_transform(
-        source,
-        src_srs=src_srs,
-        dst_srs=dst_srs,
-    )
+    target = shapely_transform(source, src_srs=src_srs, dst_srs=dst_srs)
     return target.bounds
 
 
-EPSG3857 = get_sr('EPSG:3857')
-EPSG4326 = get_sr('EPSG:4326')
+EPSG3857 = get_sr("EPSG:3857")
+EPSG4326 = get_sr("EPSG:4326")
 
 
 def get_projection(sr):
     """ Return simple userinput string for spatial reference, if any. """
-    key = str('GEOGCS') if sr.IsGeographic() else str('PROJCS')
-    return '{name}:{code}'.format(
+    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
+    return "{name}:{code}".format(
         name=sr.GetAuthorityName(key), code=sr.GetAuthorityCode(key)
     )
 
@@ -441,12 +426,12 @@ def get_epsg_or_wkt(text):
     """
     wkt = osr.GetUserInputAsWKT(str(text))
     sr = osr.SpatialReference(wkt)
-    key = str('GEOGCS') if sr.IsGeographic() else str('PROJCS')
+    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
     name = sr.GetAuthorityName(key)
     if name is None:
         return wkt
     code = sr.GetAuthorityCode(key)
-    return '{name}:{code}'.format(name=name, code=code)
+    return "{name}:{code}".format(name=name, code=code)
 
 
 def get_footprint(size):
@@ -463,9 +448,7 @@ def get_footprint(size):
     return (x ** 2 + y ** 2) < (r ** 2)
 
 
-def create_dataset(
-    array, geo_transform=None, projection=None, no_data_value=None
-):
+def create_dataset(array, geo_transform=None, projection=None, no_data_value=None):
     """
     Create and return a gdal dataset.
 
@@ -489,15 +472,15 @@ def create_dataset(
     projection = osr.GetUserInputAsWKT(str(projection))
 
     dataset_name_template = (
-        'MEM:::'
-        'DATAPOINTER={datapointer},'
-        'PIXELS={pixels},'
-        'LINES={lines},'
-        'BANDS={bands},'
-        'DATATYPE={datatype},'
-        'PIXELOFFSET={pixeloffset},'
-        'LINEOFFSET={lineoffset},'
-        'BANDOFFSET={bandoffset}'
+        "MEM:::"
+        "DATAPOINTER={datapointer},"
+        "PIXELS={pixels},"
+        "LINES={lines},"
+        "BANDS={bands},"
+        "DATATYPE={datatype},"
+        "PIXELOFFSET={pixeloffset},"
+        "LINEOFFSET={lineoffset},"
+        "BANDOFFSET={bandoffset}"
     )
     dataset_name = dataset_name_template.format(
         datapointer=datapointer,
@@ -550,12 +533,10 @@ def _finalize_rasterize_result(array, no_data_value):
     if array.dtype == np.uint8:  # cast to bool
         array = array.astype(np.bool)
         no_data_value = None
-    return {'values': array, 'no_data_value': no_data_value}
+    return {"values": array, "no_data_value": no_data_value}
 
 
-def rasterize_geoseries(
-        geoseries, bbox, projection, height, width, values=None
-):
+def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None):
     """Transform a geoseries to a raster, optionally.
 
     :param geoseries: GeoSeries or None
@@ -582,7 +563,7 @@ def rasterize_geoseries(
         if values is not None and geoseries is not None:
             geoseries = geoseries[values]  # values is a boolean mask
             values = None  # discard values
-    elif str(values.dtype) == 'category':
+    elif str(values.dtype) == "category":
         # transform pandas Categorical dtype to normal dtype
         values = pd.Series(values.get_values(), index=values.index)
 
@@ -602,8 +583,8 @@ def rasterize_geoseries(
             ogr_dtype = ogr.OFTInteger
         else:
             raise TypeError(
-                "Unsupported values dtype to rasterize: '{}'".format(
-                    values.dtype))
+                "Unsupported values dtype to rasterize: '{}'".format(values.dtype)
+            )
 
     # initialize the array
     array = np.full((1, height, width), no_data_value, dtype=dtype)
@@ -635,20 +616,21 @@ def rasterize_geoseries(
         return _finalize_rasterize_result(array, no_data_value)
 
     # create an output datasource in memory
-    driver = ogr.GetDriverByName(str('Memory'))
+    driver = ogr.GetDriverByName(str("Memory"))
     burn_attr = str("BURN_IT")
     sr = get_sr(projection)
 
     # prepare in-memory ogr layer
-    ds_ogr = driver.CreateDataSource(str(''))
-    layer = ds_ogr.CreateLayer(str(''), sr)
+    ds_ogr = driver.CreateDataSource(str(""))
+    layer = ds_ogr.CreateLayer(str(""), sr)
     layer_definition = layer.GetLayerDefn()
     if ogr_dtype is not None:
         field_definition = ogr.FieldDefn(burn_attr, ogr_dtype)
         layer.CreateField(field_definition)
 
-    iterable = zip(geoseries, values) if values is not None\
-        else zip(geoseries, repeat(True))
+    iterable = (
+        zip(geoseries, values) if values is not None else zip(geoseries, repeat(True))
+    )
     for geometry, value in iterable:
         feature = ogr.Feature(layer_definition)
         feature.SetGeometry(ogr.CreateGeometryFromWkb(geometry.wkb))
@@ -658,16 +640,16 @@ def rasterize_geoseries(
 
     geo_transform = GeoTransform.from_bbox(bbox, height, width)
     dataset_kwargs = {
-        'no_data_value': no_data_value,
-        'projection': sr.ExportToWkt(),
-        'geo_transform': geo_transform,
+        "no_data_value": no_data_value,
+        "projection": sr.ExportToWkt(),
+        "geo_transform": geo_transform,
     }
 
     # ATTRIBUTE=BURN_ATTR burns the BURN_ATTR value of each feature
     if dtype == np.uint8:  # this is our boolean dtype
         options = []
     else:
-        options = [str('ATTRIBUTE=') + burn_attr]
+        options = [str("ATTRIBUTE=") + burn_attr]
 
     with Dataset(array, **dataset_kwargs) as dataset:
         gdal.RasterizeLayer(dataset, (1,), layer, options=options)
@@ -680,7 +662,7 @@ def safe_abspath(url, start=None):
 
     If start = None, an absolute path is expected in URL."""
     url = safe_file_url(url, start)
-    _, path = url.split('://')
+    _, path = url.split("://")
     return path
 
 
@@ -694,30 +676,27 @@ def safe_file_url(url, start=None):
     If `start` is None, absolute paths are returned.
     """
     try:
-        protocol, path = url.split('://')
+        protocol, path = url.split("://")
     except ValueError:
-        protocol = 'file'
+        protocol = "file"
         path = url
     else:
-        if protocol != 'file':
-            raise NotImplementedError(
-                'Unknown protocol: "{}"'.format(protocol)
-            )
+        if protocol != "file":
+            raise NotImplementedError('Unknown protocol: "{}"'.format(protocol))
     if start is None:
         if not os.path.isabs(path):
             raise IOError(
-                "Relative path '{}' provided but start was not "
-                "given.".format(path)
+                "Relative path '{}' provided but start was not " "given.".format(path)
             )
         abspath = os.path.abspath(path)
     else:
         abspath = os.path.abspath(os.path.join(start, path))
         if not abspath.startswith(start):
             raise IOError("'{}' is not contained in '{}'".format(path, start))
-    return '://'.join([protocol, abspath])
+    return "://".join([protocol, abspath])
 
 
-PERCENTILE_REGEX = re.compile(r'^p([\d.]+)$')  # regex to match e.g. 'p50'
+PERCENTILE_REGEX = re.compile(r"^p([\d.]+)$")  # regex to match e.g. 'p50'
 
 
 def parse_percentile_statistic(statistic):
@@ -727,7 +706,7 @@ def parse_percentile_statistic(statistic):
     if percentile_match:
         percentile = float(percentile_match[0])
         if not 0 <= percentile <= 100:
-            raise ValueError('Percentiles must be in the range [0, 100]')
+            raise ValueError("Percentiles must be in the range [0, 100]")
         return percentile
 
 
@@ -833,7 +812,7 @@ def zoom_raster(data, no_data_value, height, width):
     factor = 1, height / data.shape[1], width / data.shape[2]
 
     # first zoom the nodata mask
-    src_mask = (data == no_data_value)
+    src_mask = data == no_data_value
     dst_mask = ndimage.zoom(src_mask.astype(np.float), factor) > 0.5
 
     # set nodata to 0 and zoom the data

@@ -37,20 +37,13 @@ class MockRaster(RasterBlock):
     """
 
     def __init__(
-            self,
-            origin=None,
-            timedelta=None,
-            bands=None,
-            value=1,
-            projection='EPSG:3857'
+        self, origin=None, timedelta=None, bands=None, value=1, projection="EPSG:3857"
     ):
         self.origin = origin
         self._timedelta = timedelta
         self.bands = bands
         self.value = value
-        super(MockRaster, self).__init__(
-            origin, timedelta, bands, value, projection
-        )
+        super(MockRaster, self).__init__(origin, timedelta, bands, value, projection)
 
     @property
     def dtype(self):
@@ -73,8 +66,8 @@ class MockRaster(RasterBlock):
             return
         td_seconds = timedelta.total_seconds()
         lo = origin
-        start = request.get('start', None)
-        stop = request.get('stop', None)
+        start = request.get("start", None)
+        stop = request.get("stop", None)
 
         if start is None:
             # take the latest
@@ -82,12 +75,12 @@ class MockRaster(RasterBlock):
             bands_hi = bands
         elif stop is None:
             # take the nearest to start
-            start_band = (request['start'] - lo).total_seconds() / td_seconds
+            start_band = (request["start"] - lo).total_seconds() / td_seconds
             bands_lo = min(max(int(round(start_band)), 0), bands - 1)
             bands_hi = bands_lo + 1
         else:
-            bands_lo = (request['start'] - lo).total_seconds() / td_seconds
-            bands_hi = (request['stop'] - lo).total_seconds() / td_seconds
+            bands_lo = (request["start"] - lo).total_seconds() / td_seconds
+            bands_hi = (request["stop"] - lo).total_seconds() / td_seconds
             bands_lo = max(int(math.ceil(bands_lo)), 0)
             bands_hi = min(int(math.floor(bands_hi)) + 1, bands)
 
@@ -96,48 +89,38 @@ class MockRaster(RasterBlock):
         if depth <= 0:
             return
 
-        if request['mode'] == 'time':
+        if request["mode"] == "time":
+            return {"time": [origin + i * timedelta for i in range(bands_lo, bands_hi)]}
+        if request["mode"] == "meta":
             return {
-                'time': [
-                    origin + i * timedelta for i in range(bands_lo, bands_hi)
+                "meta": [
+                    "Testmeta for band {}".format(i) for i in range(bands_lo, bands_hi)
                 ]
             }
-        if request['mode'] == 'meta':
-            return {
-                'meta': [
-                    'Testmeta for band {}'.format(i)
-                    for i in range(bands_lo, bands_hi)
-                ]
-            }
-        if request['mode'] != 'vals':
-            raise ValueError('Invalid mode "{}"'.format(request['mode']))
+        if request["mode"] != "vals":
+            raise ValueError('Invalid mode "{}"'.format(request["mode"]))
 
-        height = request.get('height', 1)
-        width = request.get('width', 1)
+        height = request.get("height", 1)
+        width = request.get("width", 1)
         shape = (depth, height, width)
 
         # simple mode: return a filled value with type uint8
-        if not hasattr(value, 'shape'):
+        if not hasattr(value, "shape"):
             fillvalue = 255
             result = np.full(shape, value, dtype=np.uint8)
-            return {'values': result, 'no_data_value': fillvalue}
+            return {"values": result, "no_data_value": fillvalue}
 
         # there is an actual data array
         fillvalue = get_dtype_max(value.dtype)
-        bbox = request.get('bbox', (0, 0, width, height))
-        projection = request.get('projection', 'EPSG:3857')
+        bbox = request.get("bbox", (0, 0, width, height))
+        projection = request.get("projection", "EPSG:3857")
         if projection != src_projection:
             extent = Extent(bbox, get_sr(projection))
             bbox = extent.transformed(get_sr(src_projection)).bbox
         x1, y1, x2, y2 = [int(round(x)) for x in bbox]
 
         if x1 == x2 or y1 == y2:  # point request
-            if (
-                x1 < 0
-                or x1 >= value.shape[1]
-                or y1 < 0
-                or y1 >= value.shape[0]
-            ):
+            if x1 < 0 or x1 >= value.shape[1] or y1 < 0 or y1 >= value.shape[0]:
                 result = np.array([[255]], dtype=np.uint8)
             else:
                 result = value[y1 : y1 + 1, x1 : x1 + 1]
@@ -150,15 +133,12 @@ class MockRaster(RasterBlock):
             result = np.pad(
                 result,
                 ((_y1 - y1, y2 - _y2), (_x1 - x1, x2 - _x2)),
-                mode=str('constant'),
+                mode=str("constant"),
                 constant_values=fillvalue,
             )
             if result.shape != (height, width):
                 zoom = (height / result.shape[0], width / result.shape[1])
-                mask = (
-                    ndimage.zoom((result == fillvalue).astype(np.float), zoom)
-                    > 0.5
-                )
+                mask = ndimage.zoom((result == fillvalue).astype(np.float), zoom) > 0.5
                 result[result == fillvalue] = 0
                 result = ndimage.zoom(result, zoom)
                 result[mask] = fillvalue
@@ -166,7 +146,7 @@ class MockRaster(RasterBlock):
 
         # fill nan values
         result[~np.isfinite(result)] = fillvalue
-        return {'values': result, 'no_data_value': fillvalue}
+        return {"values": result, "no_data_value": fillvalue}
 
     @property
     def period(self):
@@ -218,7 +198,7 @@ class MockGeometry(GeometryBlock):
     :type properties: list of dicts
     """
 
-    def __init__(self, polygons, properties=None, projection='EPSG:3857'):
+    def __init__(self, polygons, properties=None, projection="EPSG:3857"):
         super(MockGeometry, self).__init__(polygons, properties, projection)
 
     @property
@@ -235,10 +215,10 @@ class MockGeometry(GeometryBlock):
 
     @property
     def columns(self):
-        result = {'geometry'}  # 'geometry' is hardcoded in MockGeometry
+        result = {"geometry"}  # 'geometry' is hardcoded in MockGeometry
         if self.properties:
             result |= set(self.properties[0].keys())
-        result.discard('id')  # 'id' is reserved for the index in MockGeometry
+        result.discard("id")  # 'id' is reserved for the index in MockGeometry
         return result
 
     def get_sources_and_requests(self, **request):
@@ -251,83 +231,84 @@ class MockGeometry(GeometryBlock):
 
     @staticmethod
     def process(polygons, properties, projection, request):
-        if request.get('limit') is not None:
-            polygons = polygons[:request['limit']]
+        if request.get("limit") is not None:
+            polygons = polygons[: request["limit"]]
             if properties is not None:
-                properties = properties[:request['limit']]
-        mode = request.get('mode', 'intersects')
+                properties = properties[: request["limit"]]
+        mode = request.get("mode", "intersects")
 
         geoseries = gpd.GeoSeries(
-            [Polygon(x) for x in polygons],
-            crs=get_crs(projection)
+            [Polygon(x) for x in polygons], crs=get_crs(projection)
         )
 
-        if get_epsg_or_wkt(projection) != \
-                get_epsg_or_wkt(request['projection']):
+        if get_epsg_or_wkt(projection) != get_epsg_or_wkt(request["projection"]):
             geoseries = geoseries.apply(
-                shapely_transform, args=(projection, request['projection'])
+                shapely_transform, args=(projection, request["projection"])
             )
 
-        if mode == 'extent':
+        if mode == "extent":
             if len(geoseries) > 0:
                 extent = tuple(geoseries.total_bounds)
             else:
                 extent = None
-            return {
-                'extent': extent,
-                'projection': request['projection']
-            }
+            return {"extent": extent, "projection": request["projection"]}
 
         if len(geoseries) == 0:
             return {
-                'features': gpd.GeoDataFrame([]),
-                'projection': request['projection']
+                "features": gpd.GeoDataFrame([]),
+                "projection": request["projection"],
             }
 
         if properties is not None:
             df = gpd.GeoDataFrame.from_records(properties)
             df.set_geometry(geoseries, inplace=True)
-            if 'id' in df.columns:
-                df.set_index('id', inplace=True, drop=True)
+            if "id" in df.columns:
+                df.set_index("id", inplace=True, drop=True)
         else:
             df = gpd.GeoDataFrame(geometry=geoseries)
-            df.index.name = 'id'
+            df.index.name = "id"
 
-        if mode == 'centroid':
-            df = df[df['geometry'].centroid.within(request['geometry'])]
-        elif mode == 'intersects':
-            df = df[df['geometry'].intersects(request['geometry'])]
+        if mode == "centroid":
+            df = df[df["geometry"].centroid.within(request["geometry"])]
+        elif mode == "intersects":
+            df = df[df["geometry"].intersects(request["geometry"])]
 
-        return {'features': df, 'projection': request['projection']}
+        return {"features": df, "projection": request["projection"]}
 
 
 def setup_temp_root(**kwargs):
     """ Setup a temporary file root for testing purposes. """
     path = tempfile.mkdtemp(**kwargs)
-    settings['FILE_ROOT'] = path
+    settings["FILE_ROOT"] = path
     return path
 
 
 def teardown_temp_root(path):
     """ Delete the temporary file root. """
     shutil.rmtree(path)
-    settings['FILE_ROOT'] = defaults['FILE_ROOT']
+    settings["FILE_ROOT"] = defaults["FILE_ROOT"]
 
 
 def create_tif(
-        path, bands=1, no_data_value=255, base_level=7, dtype='i2',
-        projection='EPSG:28992', geo_transform=None, shape=(16, 16)
+    path,
+    bands=1,
+    no_data_value=255,
+    base_level=7,
+    dtype="i2",
+    projection="EPSG:28992",
+    geo_transform=None,
+    shape=(16, 16),
 ):
     """ Create a test source dataset at path. """
 
     kwargs = {
-        'no_data_value': no_data_value,
-        'geo_transform': geo_transform or (-16, 2, 0, 16, 0, -2),
-        'projection': osr.GetUserInputAsWKT(str(projection))
+        "no_data_value": no_data_value,
+        "geo_transform": geo_transform or (-16, 2, 0, 16, 0, -2),
+        "projection": osr.GetUserInputAsWKT(str(projection)),
     }
 
     data = np.full(shape, base_level, dtype=dtype)
 
     array = data[np.newaxis][bands * [0]]
     with Dataset(array, **kwargs) as dataset:
-        gdal.GetDriverByName(str('gtiff')).CreateCopy(path, dataset)
+        gdal.GetDriverByName(str("gtiff")).CreateCopy(path, dataset)

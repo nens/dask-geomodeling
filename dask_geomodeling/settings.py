@@ -13,17 +13,19 @@ class Settings(dict):
     """Settings dictionary that first checks environment variables."""
 
     def __getitem__(self, key):
-        result = os.environ.get('GEOBLOCKS_{}'.format(key.upper()))
+        result = os.environ.get("GEOBLOCKS_{}".format(key.upper()))
         if result:
             return result
         else:
             return super(Settings, self).__getitem__(key)
 
 
-defaults = Settings({
-    'FILE_ROOT': '/',
-    'RASTER_LIMIT': 12 * (1024 ** 3),  # about 100 MB of float64
-    'GEOMETRY_LIMIT': 10000,  # maximum number of geometries in one dataframe
-})
+defaults = Settings(
+    {
+        "FILE_ROOT": "/",
+        "RASTER_LIMIT": 12 * (1024 ** 3),  # about 100 MB of float64
+        "GEOMETRY_LIMIT": 10000,  # maximum number of geometries in one dataframe
+    }
+)
 
 settings = Settings(defaults.copy())

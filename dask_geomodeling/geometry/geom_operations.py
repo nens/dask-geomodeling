@@ -24,11 +24,10 @@ class Area(SeriesBlock):
     :type source: GeometryBlock
     :type projection: string
     """
+
     def __init__(self, source, projection):
         if not isinstance(source, GeometryBlock):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(source))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(source)))
         if not isinstance(projection, str):
             raise TypeError("Argument 'projection' must be a str.")
         super().__init__(source, projection)
@@ -43,9 +42,11 @@ class Area(SeriesBlock):
 
     @staticmethod
     def process(data, projection):
-        if 'features' not in data or len(data['features']) == 0:
+        if "features" not in data or len(data["features"]) == 0:
             return pd.Series([], dtype=float)
 
-        return data['features'].geometry.apply(
-            shapely_transform, args=(data['projection'], projection)
-        ).area
+        return (
+            data["features"]
+            .geometry.apply(shapely_transform, args=(data["projection"], projection))
+            .area
+        )

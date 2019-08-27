@@ -62,9 +62,7 @@ class RasterBlock(Block):
         timedelta = self.timedelta
         if timedelta is None:
             # hard way, since bands are not aligned
-            return len(
-                self.get_data(mode='time', start=start, stop=stop)['time']
-            )
+            return len(self.get_data(mode="time", start=start, stop=stop)["time"])
 
         # bands are aligned, just divide the period length by the delta
         period_seconds = (stop - start).total_seconds()

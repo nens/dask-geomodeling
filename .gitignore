@@ -1,0 +1,42 @@
+# From https://github.com/github/gitignore/blob/master/Python.gitignore
+
+# Pyc/pyo files.
+*.py[co]
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+.venv
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+nosetests.xml
+coverage.xml
+.coverage
+htmlcov
+
+#Translations
+# *.mo
+# ^^^ No, django needs the .mo files as it doesn't compile them on the fly.
+
+#Mr Developer
+.mr.developer.cfg
+src
+
+# Ignore generated config files
+etc/*.nginx.conf
+etc/*.logrotate
+
+# Ignore ide's
+.idea/

@@ -13,7 +13,7 @@ __all__ = ["ParseTextColumn"]
 # https://catonmat.net/my-favorite-regex
 # key matches any ASCII char except for '='
 # value matches any ASCII char
-REGEX_KEYVALUE = re.compile(r'((?:[ -<>-~])+)=((?:[ -~])*)')
+REGEX_KEYVALUE = re.compile(r"((?:[ -<>-~])+)=((?:[ -~])*)")
 
 
 def autocast_value(value):
@@ -21,11 +21,11 @@ def autocast_value(value):
     if value is None:
         return
     value_lcase = value.lower()
-    if value_lcase == 'null':
+    if value_lcase == "null":
         return
-    if value_lcase == 'false':
+    if value_lcase == "false":
         return False
-    if value_lcase == 'true':
+    if value_lcase == "true":
         return True
     try:
         return float(value)
@@ -79,43 +79,40 @@ class ParseTextColumn(BaseSingle):
 
     def get_sources_and_requests(self, **request):
         process_kwargs = {
-            'source_column': self.source_column,
-            'key_mapping': self.key_mapping
+            "source_column": self.source_column,
+            "key_mapping": self.key_mapping,
         }
         return [(self.source, request), (process_kwargs, None)]
 
     @staticmethod
     def process(data, kwargs):
-        source_column = kwargs['source_column']
-        key_mapping = kwargs['key_mapping']
+        source_column = kwargs["source_column"]
+        key_mapping = kwargs["key_mapping"]
 
-        if 'features' not in data or len(data['features']) == 0:
+        if "features" not in data or len(data["features"]) == 0:
             return data  # do nothing for non-feature requests
 
-        f = data['features'].copy()
+        f = data["features"].copy()
         # Most of the code in this function revolves around the idea that we do
         # not keep large strings multiple times in memory. We use the pandas
         # categorical for that.
 
         # Hopefully, this is already the case:
-        column = f[source_column].astype('category')
+        column = f[source_column].astype("category")
 
         def parser(description):
             pairs = dict(REGEX_KEYVALUE.findall(description))
-            return [
-                autocast_value(pairs.get(key)) for key in key_mapping.keys()
-            ]
+            return [autocast_value(pairs.get(key)) for key in key_mapping.keys()]
 
         # Parse each category
         extra_columns = pd.DataFrame(
-            [parser(x) for x in column.cat.categories],
-            columns=key_mapping.values()
+            [parser(x) for x in column.cat.categories], columns=key_mapping.values()
         )
 
         # Convert strings to categoricals before aligning
         for name, dtype in zip(extra_columns.columns, extra_columns.dtypes):
             if dtype == object:
-                extra_columns[name] = extra_columns[name].astype('category')
+                extra_columns[name] = extra_columns[name].astype("category")
 
         # Align the generated dataframe with the original. Pandas versions
         # later than 0.19 have a pd.align that could be used also.
@@ -123,11 +120,10 @@ class ParseTextColumn(BaseSingle):
             extra_columns_aligned = extra_columns.loc[column.cat.codes]
             extra_columns_aligned.index = f.index
         except KeyError:
-            extra_columns_aligned\
-                = pd.DataFrame([], columns=key_mapping.values())
+            extra_columns_aligned = pd.DataFrame([], columns=key_mapping.values())
 
         # Assign the extra columns one by one. This preserves categoricals.
         for name in extra_columns_aligned.columns:
             f[name] = extra_columns_aligned[name]
 
-        return {'features': f, 'projection': data['projection']}
+        return {"features": f, "projection": data["projection"]}

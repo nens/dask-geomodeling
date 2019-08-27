@@ -38,6 +38,7 @@ class GeometryBlock(Block):
     - extent: bbox tuple (x1, y1, x2, y2)
     - projection: wkt spatial reference (the same as requested)
     """
+
     def __getitem__(self, name):
         return GetSeriesBlock(self, name)
 
@@ -153,6 +154,7 @@ class GetSeriesBlock(SeriesBlock):
     :type source: GeometryBlock
     :type name: string
     """
+
     def __init__(self, source, name):
         if not isinstance(source, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))
@@ -168,9 +170,9 @@ class GetSeriesBlock(SeriesBlock):
 
     @staticmethod
     def process(data, name):
-        if 'features' not in data or name not in data['features'].columns:
+        if "features" not in data or name not in data["features"].columns:
             return pd.Series([])
-        return data['features'][name]
+        return data["features"][name]
 
 
 class SetSeriesBlock(GeometryBlock):
@@ -189,6 +191,7 @@ class SetSeriesBlock(GeometryBlock):
     Example:
       >>> SetSeriesBlock(view, 'column_1', series_1, 'column_2', series_2)
     """
+
     def __init__(self, source, column, value, *args):
         if not isinstance(source, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))
@@ -197,9 +200,7 @@ class SetSeriesBlock(GeometryBlock):
             raise ValueError("The number of arguments should be even")
         for column in args[::2]:
             if not isinstance(column, str):
-                raise TypeError(
-                    "'{}' object is not allowed".format(type(column))
-                )
+                raise TypeError("'{}' object is not allowed".format(type(column)))
         super().__init__(source, *args)
 
     @property
@@ -212,17 +213,18 @@ class SetSeriesBlock(GeometryBlock):
 
     @staticmethod
     def process(data, *col_val_pairs):
-        if 'features' not in data or len(data['features']) == 0:
+        if "features" not in data or len(data["features"]) == 0:
             return data
-        features = data['features'].copy()
+        features = data["features"].copy()
         for column, value in zip(col_val_pairs[::2], col_val_pairs[1::2]):
             features[column] = value
 
-        return {'features': features, 'projection': data['projection']}
+        return {"features": features, "projection": data["projection"]}
 
 
 class BaseSingle(GeometryBlock):
     """Baseclass for all geometry blocks that adjust a geometry source"""
+
     def __init__(self, source, *args):
         if not isinstance(source, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))
@@ -239,6 +241,7 @@ class BaseSingle(GeometryBlock):
 
 class BaseSingleSeries(SeriesBlock):
     """Baseclass for all series blocks that adjust a single series source"""
+
     def __init__(self, source, *args):
         if not isinstance(source, SeriesBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))

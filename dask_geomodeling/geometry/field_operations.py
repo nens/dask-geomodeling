@@ -55,6 +55,7 @@ class Classify(BaseSingleSeries):
     See also:
       https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.cut.html
     """
+
     def __init__(self, source, bins, labels, right=True):
         if not isinstance(bins, list):
             raise TypeError(f"'{type(bins)}' object is not allowed")
@@ -69,8 +70,8 @@ class Classify(BaseSingleSeries):
             raise ValueError("'bins' must increase monotonically.")
         if len(labels) not in (len(bins) - 1, len(bins) + 1):
             raise ValueError(
-                f'Expected {len(bins) - 1} or {len(bins) + 1} labels,'
-                f'got {len(labels)}'
+                f"Expected {len(bins) - 1} or {len(bins) + 1} labels,"
+                f"got {len(labels)}"
             )
         super().__init__(source, bins, labels, right)
 
@@ -93,7 +94,7 @@ class Classify(BaseSingleSeries):
             bins = np.concatenate([[-np.inf], bins, [np.inf]])
         result = pd.cut(series, bins, right, labels)
         labels_dtype = pd.Series(labels).dtype
-        if labels_dtype.name != 'object':
+        if labels_dtype.name != "object":
             result = pd.Series(result, dtype=labels_dtype)
         if open_bounds:
             # patch the result, we actually want to classify np.inf
@@ -125,9 +126,8 @@ class ClassifyFromColumns(SeriesBlock):
     See also:
       :class:`geoblocks.geometry.field_operations.Classify`
     """
-    def __init__(
-            self, source, value_column, bin_columns, labels, right=True
-    ):
+
+    def __init__(self, source, value_column, bin_columns, labels, right=True):
         if not isinstance(source, GeometryBlock):
             raise TypeError(f"'{type(source)}' object is not allowed")
         if not isinstance(value_column, str):
@@ -143,8 +143,8 @@ class ClassifyFromColumns(SeriesBlock):
             raise KeyError(f"Columns '{missing_columns}' are not present")
         if len(labels) not in (len(bin_columns) - 1, len(bin_columns) + 1):
             raise ValueError(
-                f'Expected {len(bin_columns) - 1} or '
-                f'{len(bin_columns) + 1} labels, got {len(labels)}'
+                f"Expected {len(bin_columns) - 1} or "
+                f"{len(bin_columns) + 1} labels, got {len(labels)}"
             )
         super().__init__(source, value_column, bin_columns, labels, right)
 
@@ -170,9 +170,9 @@ class ClassifyFromColumns(SeriesBlock):
 
     @staticmethod
     def process(data, value_column, bin_columns, labels, right):
-        if 'features' not in data or len(data['features']) == 0:
+        if "features" not in data or len(data["features"]) == 0:
             return pd.Series([])
-        features = data['features']
+        features = data["features"]
         values = features[value_column].values
         bins = features[bin_columns].values
         n_bins = len(bin_columns)
@@ -194,9 +194,7 @@ class ClassifyFromColumns(SeriesBlock):
             indices -= 1
 
         # The output of pd.cut is a categorical Series.
-        labeled_data = pd.Categorical.from_codes(
-            indices, labels, ordered=True
-        )
+        labeled_data = pd.Categorical.from_codes(indices, labels, ordered=True)
         return pd.Series(labeled_data, index=features.index)
 
 
@@ -227,6 +225,7 @@ class Add(BaseFieldOperation):
     See also:
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.add.html
     """
+
     process = staticmethod(operator.add)
 
 
@@ -421,6 +420,7 @@ class And(BaseLogicOperation):
     :type source: SeriesBlock
     :type other: SeriesBlock, float
     """
+
     process = staticmethod(operator.and_)
 
 
@@ -452,6 +452,7 @@ class Invert(BaseSingleSeries):
 
     :type source: SeriesBlock
     """
+
     process = staticmethod(operator.inv)
 
 
@@ -470,6 +471,7 @@ class Where(BaseSingleSeries):
     See also:
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.where.html
     """
+
     def __init__(self, source, cond, other):
         if not isinstance(cond, SeriesBlock):
             raise TypeError("'{}' object is not allowed".format(type(cond)))
@@ -503,6 +505,7 @@ class Mask(BaseSingleSeries):
     See also:
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.mask.html
     """
+
     def __init__(self, source, cond, other):
         if not isinstance(cond, SeriesBlock):
             raise TypeError("'{}' object is not allowed".format(type(cond)))
@@ -535,6 +538,7 @@ class Round(BaseSingleSeries):
     See also:
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.round.html
     """
+
     def __init__(self, source, decimals=0):
         if not isinstance(decimals, int):
             raise TypeError(f"'{type(decimals)}' object is not allowed")
@@ -564,6 +568,7 @@ class Interp(BaseSingleSeries):
     See also:
       https://docs.scipy.org/doc/numpy/reference/generated/numpy.interp.html
     """
+
     def __init__(self, source, xp, fp, left=None, right=None):
         xp = [float(x) for x in xp]
         fp = [float(x) for x in fp]
@@ -595,10 +600,10 @@ class Choose(BaseSingleSeries):
     See also:
       https://docs.scipy.org/doc/numpy/reference/generated/numpy.choose.html
     """
+
     def __init__(self, source, *choices):
         if not len(choices) >= 2:
-            raise ValueError(
-                "The number of choices must be greater than one.")
+            raise ValueError("The number of choices must be greater than one.")
         if not all([isinstance(choice, SeriesBlock) for choice in choices]):
             raise TypeError("All choices must be SeriesBlock objects")
         super().__init__(source, *choices)

@@ -17,23 +17,21 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    "construct", "construct_multiple", "compute", "Block", "DummyBlock"
-]
+__all__ = ["construct", "construct_multiple", "compute", "Block", "DummyBlock"]
 
 
 def _construct_exc_callback(e, dumps):
     """Callback to be used as a 'pack_exception' kwarg in get_sync
 
     """
-    key = inspect.currentframe().f_back.f_locals.get('key')
+    key = inspect.currentframe().f_back.f_locals.get("key")
     e.args = (f"{key}: {str(e)}",)
     raise
 
 
 def _reconstruct_token(key):
     """Reconstruct a token from a key in a graph ('SomeName_<token>')"""
-    if len(key) < 34 or key[-33] != '_':
+    if len(key) < 34 or key[-33] != "_":
         return
     token = key[-32:]
     try:
@@ -78,9 +76,7 @@ def construct_multiple(graph, names, validate=True):
                 )
             new_graph[key] = (cls._init_no_validation, token) + args
 
-    return get_sync(
-        new_graph, names, pack_exception=_construct_exc_callback
-    )
+    return get_sync(new_graph, names, pack_exception=_construct_exc_callback)
 
 
 class Block(object):
@@ -109,9 +105,7 @@ class Block(object):
         except AttributeError:
             pass
         klass_path = self.get_import_path()
-        args = [
-            arg.token if isinstance(arg, Block) else arg for arg in self.args
-        ]
+        args = [arg.token if isinstance(arg, Block) else arg for arg in self.args]
         self._cached_token = tokenize(klass_path, *args)
         return self._cached_token
 
@@ -173,7 +167,7 @@ class Block(object):
         # generate a token from the specific request passed to the block
         # NB generates a random hash if the request cannot be tokenized
         token = tokenize([self.token, request])
-        name = '{}_{}'.format(self.__class__.__name__.lower(), token)
+        name = "{}_{}".format(self.__class__.__name__.lower(), token)
         graph = cached_compute_graph or dict()
 
         if name in graph:
@@ -222,13 +216,13 @@ class Block(object):
 
     @property
     def name(self):
-        return '{}_{}'.format(self.__class__.__name__, self.token)
+        return "{}_{}".format(self.__class__.__name__, self.token)
 
     def __reduce__(self):
         """Serialize the object (pattern: callable, args). Construct is called
         with the arguments (graph, name) to reconstruct this block and its
         dependencies. Validation is skipped by adding False to the args."""
-        return construct, self.get_graph() + (False, )
+        return construct, self.get_graph() + (False,)
 
     @classmethod
     def get_import_path(cls):
@@ -242,8 +236,7 @@ class Block(object):
             klass = getattr(mod, name)
         except (ImportError, KeyError, AttributeError):
             raise Exception(
-                "Can't serialize %r: it's not found as %s.%s"
-                % (cls, module, name)
+                "Can't serialize %r: it's not found as %s.%s" % (cls, module, name)
             )
         else:
             if klass is not cls:
@@ -252,12 +245,12 @@ class Block(object):
                     % (cls, module, name)
                 )
 
-        return '{}.{}'.format(module, name)
+        return "{}.{}".format(module, name)
 
     @staticmethod
     def from_import_path(path):
         """Deserialize the Block by importing it from given path."""
-        module, name = path.rsplit('.', 1)
+        module, name = path.rsplit(".", 1)
         __import__(module)
         mod = sys.modules[module]
         klass = getattr(mod, name)
@@ -279,7 +272,7 @@ class Block(object):
         """Serialize this block into a dict containing version, graph and name
         """
         graph, name = self.get_graph(serialize=True)
-        return {'version': self.JSON_VERSION, 'graph': graph, 'name': name}
+        return {"version": self.JSON_VERSION, "graph": graph, "name": name}
 
     @classmethod
     def deserialize(cls, val, validate=False):
@@ -287,11 +280,11 @@ class Block(object):
         Deserialize this block from a dict containing version, graph and name
         """
         # TODO Compare val['version'] with cls.JSON_VERSION
-        return construct(val['graph'], val['name'], validate=validate)
+        return construct(val["graph"], val["name"], validate=validate)
 
     def __repr__(self):
         name = self.__class__.__name__
-        return '{}({})'.format(name, ', '.join([repr(x) for x in self.args]))
+        return "{}({})".format(name, ", ".join([repr(x) for x in self.args]))
 
 
 class DummyBlock(Block):
@@ -299,6 +292,7 @@ class DummyBlock(Block):
 
     This is useful for partially evaluating block graphs for computing tokens.
     """
+
     def __init__(self, name):
         super().__init__(name)
 
@@ -320,6 +314,7 @@ class DummyBlock(Block):
 @normalize_token.register(BaseGeometry)
 def normalize_shapely_geometry(geometry):
     return geometry.wkb
+
 
 # Tokenize datetime and timedeltas using their pickle handle
 @normalize_token.register((datetime, timedelta))

@@ -18,22 +18,17 @@ from dask_geomodeling.utils import (
 
 from .base import BaseSingle
 
-__all__ = [
-    "Dilate",
-    "Smooth",
-    "MovingMax",
-    "HillShade",
-]
+__all__ = ["Dilate", "Smooth", "MovingMax", "HillShade"]
 
 
 def expand_request_pixels(request, radius=1):
     """ Expand request by `radius` pixels. Returns None for non-vals requests
     or point requests. """
-    if request['mode'] != 'vals':  # do nothing with time and meta requests
+    if request["mode"] != "vals":  # do nothing with time and meta requests
         return None
 
-    width, height = request['width'], request['height']
-    x1, y1, x2, y2 = request['bbox']
+    width, height = request["width"], request["height"]
+    x1, y1, x2, y2 = request["bbox"]
     pwidth, pheight = x2 - x1, y2 - y1
 
     if pwidth == 0 or pheight == 0:  # cannot dilate a point request
@@ -43,14 +38,9 @@ def expand_request_pixels(request, radius=1):
     amount_y = pheight / height * radius
 
     new_request = request.copy()
-    new_request['bbox'] = (
-        x1 - amount_x,
-        y1 - amount_x,
-        x2 + amount_y,
-        y2 + amount_y,
-    )
-    new_request['width'] += 2 * radius
-    new_request['height'] += 2 * radius
+    new_request["bbox"] = (x1 - amount_x, y1 - amount_x, x2 + amount_y, y2 + amount_y)
+    new_request["width"] += 2 * radius
+    new_request["height"] += 2 * radius
     return new_request
 
 
@@ -64,8 +54,8 @@ def expand_request_meters(request, radius_m=1):
      - the radius transformed to pixels as a (y, x) tuple of floats
      - the added margins as a (y, x) tuple of integers
     """
-    sr = get_sr(request['projection'])
-    bbox = request['bbox']
+    sr = get_sr(request["projection"])
+    bbox = request["bbox"]
 
     # throughout, variables in the projected unit ( = meters, mostly) are
     # suffixed by _m, in pixels by _px
@@ -86,7 +76,7 @@ def expand_request_meters(request, radius_m=1):
     zoom = [2 * radius_m / s for s in shape_m]
 
     # compute the size in pixels, and compute the margins (rounded size)
-    shape_px = request['height'], request['width']
+    shape_px = request["height"], request["width"]
     radius_px = [z * s / 2 for (z, s) in zip(zoom, shape_px)]
     margins_px = [int(round(sz)) for sz in radius_px]
 
@@ -96,7 +86,7 @@ def expand_request_meters(request, radius_m=1):
 
     # assemble the request
     new_request = request.copy()
-    new_request['bbox'] = (
+    new_request["bbox"] = (
         x1 - margins_m[1],
         y1 - margins_m[0],
         x2 + margins_m[1],
@@ -104,10 +94,10 @@ def expand_request_meters(request, radius_m=1):
     )
     if sr.IsGeographic():
         # transform back to original projection
-        extent_proj = Extent(new_request['bbox'], EPSG3857)
-        new_request['bbox'] = extent_proj.transformed(sr).bbox
-    new_request['height'] += 2 * margins_px[0]
-    new_request['width'] += 2 * margins_px[1]
+        extent_proj = Extent(new_request["bbox"], EPSG3857)
+        new_request["bbox"] = extent_proj.transformed(sr).bbox
+    new_request["height"] += 2 * margins_px[0]
+    new_request["width"] += 2 * margins_px[1]
 
     return new_request, radius_px
 
@@ -123,6 +113,7 @@ class Dilate(BaseSingle):
     :type store: RasterBlock
     :type values: list
     """
+
     def __init__(self, store, values):
         values = np.asarray(values, dtype=store.dtype)
         super(Dilate, self).__init__(store, values)
@@ -140,14 +131,14 @@ class Dilate(BaseSingle):
 
     @staticmethod
     def process(data, values=None):
-        if data is None or values is None or 'values' not in data:
+        if data is None or values is None or "values" not in data:
             return data
-        original = data['values']
+        original = data["values"]
         dilated = original.copy()
         for value in values:
             dilated[ndimage.binary_dilation(original == value)] = value
         dilated = dilated[:, 1:-1, 1:-1]
-        return {'values': dilated, 'no_data_value': data['no_data_value']}
+        return {"values": dilated, "no_data_value": data["no_data_value"]}
 
 
 class MovingMax(BaseSingle):
@@ -184,26 +175,26 @@ class MovingMax(BaseSingle):
 
     @staticmethod
     def process(data, size=None):
-        if data is None or size is None or 'values' not in data:
+        if data is None or size is None or "values" not in data:
             return data
         radius = int(size // 2)
         footprint = get_footprint(size)[np.newaxis]
 
         # put absolute minimum on no data pixels
-        array = data['values'].copy()
+        array = data["values"].copy()
         minimum = get_dtype_min(array.dtype)
-        no_data_mask = array == data['no_data_value']
+        no_data_mask = array == data["no_data_value"]
         array[no_data_mask] = minimum
 
         # apply maximum filter
         filtered = ndimage.maximum_filter(array, footprint=footprint)
 
         # replace absolute minimum with original fillvalue
-        filtered[(filtered == minimum) & no_data_mask] = data['no_data_value']
+        filtered[(filtered == minimum) & no_data_mask] = data["no_data_value"]
 
         # cut out the result
         filtered = filtered[:, radius:-radius, radius:-radius]
-        return {'values': filtered, 'no_data_value': data['no_data_value']}
+        return {"values": filtered, "no_data_value": data["no_data_value"]}
 
 
 class Smooth(BaseSingle):
@@ -225,6 +216,7 @@ class Smooth(BaseSingle):
     any direction, the approach used here is requesting a zoomed out geometry,
     smooth that and zoom back in to the original region of interest.
     """
+
     MARGIN_THRESHOLD = 6
 
     def __init__(self, store, size, fill=0):
@@ -242,26 +234,24 @@ class Smooth(BaseSingle):
         return self.args[2]
 
     def get_sources_and_requests(self, **request):
-        if request['mode'] != 'vals':  # do nothing with time and meta requests
+        if request["mode"] != "vals":  # do nothing with time and meta requests
             return [(self.store, request)]
 
         new_request, size = expand_request_meters(request, self.size)
 
         # check how many pixels will be added by the request
         if any([s > self.MARGIN_THRESHOLD for s in size]):
-            smooth_mode = 'zoom'
+            smooth_mode = "zoom"
             # rescale the size
-            zoom = [new_request[x] / request[x] for x in ('height', 'width')]
+            zoom = [new_request[x] / request[x] for x in ("height", "width")]
             size = [s / z for s, z in zip(size, zoom)]
             # request the original (not expanded) shape
-            new_request['height'] = request['height']
-            new_request['width'] = request['width']
+            new_request["height"] = request["height"]
+            new_request["width"] = request["width"]
         else:
-            smooth_mode = 'exact'
+            smooth_mode = "exact"
 
-        process_kwargs = dict(
-            smooth_mode=smooth_mode, fill=self.fill, size=size
-        )
+        process_kwargs = dict(smooth_mode=smooth_mode, fill=self.fill, size=size)
 
         return [(self.store, new_request), (process_kwargs, None)]
 
@@ -269,27 +259,25 @@ class Smooth(BaseSingle):
     def process(data, process_kwargs=None):
         if data is None or process_kwargs is None:
             return data
-        smooth_mode = process_kwargs['smooth_mode']
-        size_px = process_kwargs['size']
-        fill = process_kwargs['fill']
+        smooth_mode = process_kwargs["smooth_mode"]
+        size_px = process_kwargs["size"]
+        fill = process_kwargs["fill"]
 
         # fill in nodata values
-        values = data['values'].copy()
-        no_data_value = data['no_data_value']
+        values = data["values"].copy()
+        no_data_value = data["no_data_value"]
         values[values == no_data_value] = fill
 
         # compute the sigma
         sigma = 0, size_px[0] / 3, size_px[1] / 3
         ndimage.gaussian_filter(
-            values, sigma, output=values, mode='constant', cval=fill
+            values, sigma, output=values, mode="constant", cval=fill
         )
 
         # remove the margins
-        if smooth_mode == 'exact':
+        if smooth_mode == "exact":
             my, mx = [int(round(s)) for s in size_px]
-            values = values[
-                :, my : values.shape[1] - my, mx : values.shape[2] - mx
-            ]
+            values = values[:, my : values.shape[1] - my, mx : values.shape[2] - mx]
         else:
             _, ny, nx = values.shape
             zy, zx = [1 - 2 * size_px[0] / ny, 1 - 2 * size_px[1] / nx]
@@ -301,7 +289,7 @@ class Smooth(BaseSingle):
                 offset=[0, size_px[0], size_px[1]],
             )
 
-        return {'values': values, 'no_data_value': no_data_value}
+        return {"values": values, "no_data_value": no_data_value}
 
 
 class HillShade(BaseSingle):
@@ -323,13 +311,12 @@ class HillShade(BaseSingle):
     Hillshade, adapted from gdal algorithm. Smooths prior to shading to
     keep it good looking even when zoomed beyond 1:1.
     """
+
     def __init__(self, store, altitude=45, azimuth=315, fill=0):
         for x in (altitude, azimuth, fill):
             if not isinstance(x, (int, float)):
                 raise TypeError("'{}' object is not allowed".format(type(x)))
-        super(HillShade, self).__init__(
-            store, float(altitude), float(azimuth), fill
-        )
+        super(HillShade, self).__init__(store, float(altitude), float(azimuth), fill)
 
     @property
     def altitude(self):
@@ -345,7 +332,7 @@ class HillShade(BaseSingle):
 
     @property
     def dtype(self):
-        return np.dtype('u1')
+        return np.dtype("u1")
 
     @property
     def fillvalue(self):
@@ -362,12 +349,12 @@ class HillShade(BaseSingle):
         if process_kwargs is None:
             return data
 
-        array = data['values'].copy()
-        array[array == data['no_data_value']] = process_kwargs['fill']
+        array = data["values"].copy()
+        array[array == data["no_data_value"]] = process_kwargs["fill"]
 
-        xres, yres = process_kwargs['resolution']
-        alt = math.radians(process_kwargs['altitude'])
-        az = math.radians(process_kwargs['azimuth'])
+        xres, yres = process_kwargs["resolution"]
+        alt = math.radians(process_kwargs["altitude"])
+        az = math.radians(process_kwargs["azimuth"])
         zsf = 1 / 8  # vertical scale factor
         square_zsf = zsf * zsf
 
@@ -383,7 +370,7 @@ class HillShade(BaseSingle):
         s8 = slice(None, None), slice(2, None), slice(2, None)
 
         # angle calculation
-        y = np.empty(array.shape, dtype='f4')
+        y = np.empty(array.shape, dtype="f4")
         y[s4] = (
             array[s0]
             + 2 * array[s1]
@@ -393,7 +380,7 @@ class HillShade(BaseSingle):
             - array[s8]
         ) / yres
 
-        x = np.empty(array.shape, dtype='f4')
+        x = np.empty(array.shape, dtype="f4")
         x[s4] = (
             array[s0]
             + 2 * array[s3]
@@ -403,22 +390,19 @@ class HillShade(BaseSingle):
             - array[s8]
         ) / xres
 
-        with np.errstate(all='ignore'):
+        with np.errstate(all="ignore"):
             xx_plus_yy = x * x + y * y
             aspect = np.arctan2(y, x)
 
             # shading
             cang = (
                 math.sin(alt)
-                - math.cos(alt)
-                * zsf
-                * np.sqrt(xx_plus_yy)
-                * np.sin(aspect - az)
+                - math.cos(alt) * zsf * np.sqrt(xx_plus_yy) * np.sin(aspect - az)
             ) / np.sqrt(1 + square_zsf * xx_plus_yy)
 
         cang = cang[..., 1:-1, 1:-1]
-        result = np.where(cang <= 0, 0, 255 * cang).astype('u1')
-        return {'values': result, 'no_data_value': 256}
+        result = np.where(cang <= 0, 0, 255 * cang).astype("u1")
+        return {"values": result, "no_data_value": 256}
 
     def get_sources_and_requests(self, **request):
         new_request = expand_request_pixels(request, radius=1)
@@ -426,10 +410,10 @@ class HillShade(BaseSingle):
             return [(self.store, request)]
 
         # determine resolution
-        bbox = request['bbox']
+        bbox = request["bbox"]
         resolution = (
-            (bbox[2] - bbox[0]) / request['width'],
-            (bbox[3] - bbox[1]) / request['height'],
+            (bbox[2] - bbox[0]) / request["width"],
+            (bbox[3] - bbox[1]) / request["height"],
         )
 
         process_kwargs = dict(

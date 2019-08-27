@@ -44,6 +44,7 @@ class MemorySource(RasterBlock):
     :type time_delta: integer or timedelta or NoneType
     :type metadata: list or NoneType
     """
+
     def __init__(
         self,
         data,
@@ -161,7 +162,7 @@ class MemorySource(RasterBlock):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000), ) * 2
+            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
         else:
             first = datetime.utcfromtimestamp(self.time_first / 1000)
             last = first + (len(self) - 1) * self.timedelta
@@ -176,8 +177,10 @@ class MemorySource(RasterBlock):
     def get_sources_and_requests(self, **request):
         mode = request["mode"]
 
-        if mode == "vals" and \
-                request.get("projection").upper() != self.projection.upper():
+        if (
+            mode == "vals"
+            and request.get("projection").upper() != self.projection.upper()
+        ):
             raise RuntimeError("This source block cannot reproject data")
         elif mode == "meta" and self.metadata is None:
             return [({"mode": "empty_meta"}, None)]
@@ -197,7 +200,7 @@ class MemorySource(RasterBlock):
         if mode == "vals":
             process_kwargs = {
                 "mode": "vals",
-                "data": self.data[first_i: last_i + 1],
+                "data": self.data[first_i : last_i + 1],
                 "no_data_value": self.no_data_value,
                 "bbox": request["bbox"],
                 "width": request["width"],
@@ -208,14 +211,14 @@ class MemorySource(RasterBlock):
             # metadata can't be None at this point
             process_kwargs = {
                 "mode": "meta",
-                "metadata": self.metadata[first_i: last_i + 1]
+                "metadata": self.metadata[first_i : last_i + 1],
             }
         elif mode == "time":
             process_kwargs = {
                 "mode": "time",
                 "start": start,
                 "delta": self.timedelta or timedelta(0),
-                "length": last_i - first_i + 1
+                "length": last_i - first_i + 1,
             }
         else:
             raise RuntimeError(f"Unknown mode '{mode}'")
@@ -234,13 +237,13 @@ class MemorySource(RasterBlock):
             return {"meta": []}
 
         # handle time requests
-        if mode == 'time':
+        if mode == "time":
             start = process_kwargs["start"]
             length = process_kwargs["length"]
             delta = process_kwargs["delta"]
-            return {'time': [start + i * delta for i in range(length)]}
-        elif mode == 'meta':
-            return {'meta': process_kwargs["metadata"]}
+            return {"time": [start + i * delta for i in range(length)]}
+        elif mode == "meta":
+            return {"meta": process_kwargs["metadata"]}
 
         # handle 'vals' requests
         data = process_kwargs["data"]
@@ -261,17 +264,15 @@ class MemorySource(RasterBlock):
 
         # pad the data to the shape given by the index
         if padding is not None:
-            padding = ((0, 0), ) + padding  # for the time axis
-            result = np.pad(
-                result, padding, 'constant', constant_values=no_data_value,
-            )
+            padding = ((0, 0),) + padding  # for the time axis
+            result = np.pad(result, padding, "constant", constant_values=no_data_value)
 
         # zoom to the desired height and width
         result = utils.zoom_raster(result, no_data_value, height, width)
 
         # fill nan values if they popped up
         result[~np.isfinite(result)] = no_data_value
-        return {'values': result, 'no_data_value': no_data_value}
+        return {"values": result, "no_data_value": no_data_value}
 
 
 class RasterFileSource(RasterBlock):
@@ -286,6 +287,7 @@ class RasterFileSource(RasterBlock):
     :type time_first: integer or datetime
     :type time_delta: integer or timedelta
     """
+
     def __init__(self, url, time_first, time_delta):
         url = utils.safe_file_url(url, settings["FILE_ROOT"])
         if isinstance(time_first, datetime):
@@ -339,8 +341,7 @@ class RasterFileSource(RasterBlock):
 
     def _get_extent(self):
         bbox = self.geo_transform.get_bbox(
-            (0, 0),
-            (self.gdal_dataset.RasterYSize, self.gdal_dataset.RasterXSize),
+            (0, 0), (self.gdal_dataset.RasterYSize, self.gdal_dataset.RasterXSize)
         )
         return utils.Extent(bbox, utils.get_sr(self.projection))
 
@@ -361,7 +362,7 @@ class RasterFileSource(RasterBlock):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000), ) * 2
+            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
         else:
             first = datetime.utcfromtimestamp(self.time_first / 1000)
             last = first + (len(self) - 1) * self.timedelta
@@ -376,8 +377,10 @@ class RasterFileSource(RasterBlock):
     def get_sources_and_requests(self, **request):
         mode = request["mode"]
 
-        if mode == "vals" and \
-                request.get("projection").upper() != self.projection.upper():
+        if (
+            mode == "vals"
+            and request.get("projection").upper() != self.projection.upper()
+        ):
             raise RuntimeError("This source block cannot reproject data")
 
         # interpret start and stop request parameters
@@ -436,11 +439,11 @@ class RasterFileSource(RasterBlock):
             return {"meta": []}
 
         # handle time requests
-        if mode == 'time':
+        if mode == "time":
             start = process_kwargs["start"]
             length = process_kwargs["length"]
             delta = process_kwargs["delta"]
-            return {'time': [start + i * delta for i in range(length)]}
+            return {"time": [start + i * delta for i in range(length)]}
 
         # open the dataset
         url = process_kwargs["url"]
@@ -450,9 +453,9 @@ class RasterFileSource(RasterBlock):
         last_band = process_kwargs["last_band"]
 
         # handle meta requests
-        if mode == 'meta':
+        if mode == "meta":
             return {
-                'meta': [
+                "meta": [
                     dataset.GetRasterBand(i + 1).GetMetadata_Dict()
                     for i in range(first_band, last_band + 1)
                 ]
@@ -479,11 +482,9 @@ class RasterFileSource(RasterBlock):
         # return nodata immediately for empty
         if any([x <= 0 for x in read_shape]):
             result = np.full(
-                shape=(length, height, width),
-                fill_value=no_data_value,
-                dtype=dtype
+                shape=(length, height, width), fill_value=no_data_value, dtype=dtype
             )
-            return {'values': result, 'no_data_value': no_data_value}
+            return {"values": result, "no_data_value": no_data_value}
 
         # read arrays from file
         result = np.empty([length] + read_shape, dtype=dtype)
@@ -499,13 +500,11 @@ class RasterFileSource(RasterBlock):
         # pad the data to the shape given by the index
         if padding is not None:
             padding = ((0, 0),) + padding  # for the time axis
-            result = np.pad(
-                result, padding, 'constant', constant_values=no_data_value,
-            )
+            result = np.pad(result, padding, "constant", constant_values=no_data_value)
 
         # zoom to the desired height and width
         result = utils.zoom_raster(result, no_data_value, height, width)
 
         # fill nan values if they popped up
         result[~np.isfinite(result)] = no_data_value
-        return {'values': result, 'no_data_value': no_data_value}
+        return {"values": result, "no_data_value": no_data_value}
