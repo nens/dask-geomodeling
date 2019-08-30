@@ -1,2 +1,4 @@
 # Include docs in the root.
 include *.rst
+include LICENSE
+
