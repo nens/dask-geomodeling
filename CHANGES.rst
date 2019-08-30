@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.0.1 (unreleased)
+2.0.1 (2019-08-30)
 ------------------
 
 - Renamed the package to dask-geomodeling.
