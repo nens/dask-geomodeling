@@ -1,5 +1,3 @@
-# (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
-# -*- coding: utf-8 -*-
 """
 Module containing text column operations that act on geometry blocks
 """

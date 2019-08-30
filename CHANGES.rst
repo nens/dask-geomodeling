@@ -9,6 +9,8 @@ Changelog of dask-geomodeling
 
 - Integrated the settings with dask.config.
 
+- Added BSD 3-Clause license.
+
 
 2.0.0 (2019-08-27)
 ------------------

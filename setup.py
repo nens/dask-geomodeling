@@ -16,7 +16,7 @@ install_requires = (
     ],
 )
 
-tests_require = ["pytest", "pytest-cov", "pytest-black"]
+tests_require = ["pytest"]
 
 setup(
     name="dask-geomodeling",
@@ -24,12 +24,18 @@ setup(
     description="On-the-fly operations on geographical maps.",
     long_description=long_description,
     # Get strings from http://www.python.org/pypi?%3Aaction=list_classifiers
-    classifiers=[],
-    keywords=[],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3 :: Only",
+        "Topic :: Scientific/Engineering :: GIS",
+    ],
+    keywords=["dask"],
     author="Casper van der Wel",
     author_email="casper.vanderwel@nelen-schuurmans.nl",
-    url="",
-    license="closed source",
+    url="https://github.com/nens/dask-geomodeling",
+    license="BSD 3-Clause License",
     packages=[
         "dask_geomodeling",
         "dask_geomodeling.core",

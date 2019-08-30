@@ -1,5 +1,3 @@
-# (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
-# -*- coding: utf-8 -*-
 import numpy as np
 import math
 from scipy import ndimage

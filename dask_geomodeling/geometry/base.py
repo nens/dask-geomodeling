@@ -1,5 +1,3 @@
-# (c) Nelen & Schuurmans.  GPL licensed, see LICENSE.rst.
-# -*- coding: utf-8 -*-
 """
 Module containing the base geometry block classes.
 """
