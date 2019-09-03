@@ -40,7 +40,6 @@ class TestRasterBlockAttrs(unittest.TestCase):
                 "period",
                 "timedelta",
                 "extent",
-                "check",
                 "dtype",
                 "fillvalue",
                 "geometry",
