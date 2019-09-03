@@ -56,11 +56,11 @@ class Classify(BaseSingleSeries):
 
     def __init__(self, source, bins, labels, right=True):
         if not isinstance(bins, list):
-            raise TypeError(f"'{type(bins)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(bins)))
         if not isinstance(labels, list):
-            raise TypeError(f"'{type(labels)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(labels)))
         if not isinstance(right, bool):
-            raise TypeError(f"'{type(right)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(right)))
         bins_arr = np.asarray(bins)
         if bins_arr.ndim != 1:
             raise TypeError("'bins' must be one-dimensional")
@@ -68,8 +68,9 @@ class Classify(BaseSingleSeries):
             raise ValueError("'bins' must increase monotonically.")
         if len(labels) not in (len(bins) - 1, len(bins) + 1):
             raise ValueError(
-                f"Expected {len(bins) - 1} or {len(bins) + 1} labels,"
-                f"got {len(labels)}"
+                "Expected {} or {} labels, got {}".format(
+                    len(bins) - 1, len(bins) + 1, len(labels)
+                )
             )
         super().__init__(source, bins, labels, right)
 
@@ -127,22 +128,23 @@ class ClassifyFromColumns(SeriesBlock):
 
     def __init__(self, source, value_column, bin_columns, labels, right=True):
         if not isinstance(source, GeometryBlock):
-            raise TypeError(f"'{type(source)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(source)))
         if not isinstance(value_column, str):
-            raise TypeError(f"'{type(value_column)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(value_column)))
         if not isinstance(bin_columns, list):
-            raise TypeError(f"'{type(bin_columns)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(bin_columns)))
         if not isinstance(labels, list):
-            raise TypeError(f"'{type(labels)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(labels)))
         if not isinstance(right, bool):
-            raise TypeError(f"'{type(right)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(right)))
         missing_columns = (set(bin_columns) | {value_column}) - source.columns
         if missing_columns:
-            raise KeyError(f"Columns '{missing_columns}' are not present")
+            raise KeyError("Columns '{}' are not present".format(missing_columns))
         if len(labels) not in (len(bin_columns) - 1, len(bin_columns) + 1):
             raise ValueError(
-                f"Expected {len(bin_columns) - 1} or "
-                f"{len(bin_columns) + 1} labels, got {len(labels)}"
+                "Expected {} or {} labels, got {}".format(
+                    len(bin_columns) - 1, len(bin_columns) + 1, len(labels)
+                )
             )
         super().__init__(source, value_column, bin_columns, labels, right)
 
@@ -539,7 +541,7 @@ class Round(BaseSingleSeries):
 
     def __init__(self, source, decimals=0):
         if not isinstance(decimals, int):
-            raise TypeError(f"'{type(decimals)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(decimals)))
         super().__init__(source, decimals)
 
     process = staticmethod(np.around)
@@ -575,7 +577,7 @@ class Interp(BaseSingleSeries):
         if right is not None:
             right = float(right)
         if np.any(np.diff(xp) < 0):
-            raise ValueError(f"xp must be monotonically increasing")
+            raise ValueError("xp must be monotonically increasing")
         super().__init__(source, xp, fp, left, right)
 
     @staticmethod

@@ -381,24 +381,24 @@ class TemporalAggregate(BaseSingle):
         timezone="UTC",
     ):
         if not isinstance(source, RasterBlock):
-            raise TypeError(f"'{type(source)}' object is not allowed.")
+            raise TypeError("'{}' object is not allowed.".format(type(source)))
         if frequency is not None:
             if not isinstance(frequency, str):
-                raise TypeError(f"'{type(frequency)}' object is not allowed.")
+                raise TypeError("'{}' object is not allowed.".format(type(frequency)))
             frequency = to_offset(frequency).freqstr
             if closed not in {None, "left", "right"}:
-                raise ValueError(f"closed must be None, 'left', or 'right'.")
+                raise ValueError("closed must be None, 'left', or 'right'.")
             if label not in {None, "left", "right"}:
-                raise ValueError(f"label must be None, 'left', or 'right'.")
+                raise ValueError("label must be None, 'left', or 'right'.")
             if not isinstance(timezone, str):
-                raise TypeError(f"'{type(timezone)}' object is not allowed.")
+                raise TypeError("'{}' object is not allowed.".format(type(timezone)))
             timezone = pytz.timezone(timezone).zone
         else:
             closed = None
             label = None
             timezone = None
         if not isinstance(statistic, str):
-            raise TypeError(f"'{type(statistic)}' object is not allowed.")
+            raise TypeError("'{}' object is not allowed.".format(type(statistic)))
         # interpret percentile statistic
         percentile = parse_percentile_statistic(statistic)
         if percentile:
@@ -677,9 +677,9 @@ class Cumulative(BaseSingle):
 
     def __init__(self, source, statistic="sum", frequency=None, timezone="UTC"):
         if not isinstance(source, RasterBlock):
-            raise TypeError(f"'{type(source)}' object is not allowed.")
+            raise TypeError("'{}' object is not allowed.".format(type(source)))
         if not isinstance(statistic, str):
-            raise TypeError(f"'{type(statistic)}' object is not allowed.")
+            raise TypeError("'{}' object is not allowed.".format(type(statistic)))
         # interpret percentile statistic
         percentile = parse_percentile_statistic(statistic)
         if percentile:
@@ -688,10 +688,10 @@ class Cumulative(BaseSingle):
             raise ValueError("Unknown statistic '{}'".format(statistic))
         if frequency is not None:
             if not isinstance(frequency, str):
-                raise TypeError(f"'{type(frequency)}' object is not allowed.")
+                raise TypeError("'{}' object is not allowed.".format(type(frequency)))
             frequency = to_offset(frequency).freqstr
             if not isinstance(timezone, str):
-                raise TypeError(f"'{type(timezone)}' object is not allowed.")
+                raise TypeError("'{}' object is not allowed.".format(type(timezone)))
             timezone = pytz.timezone(timezone).zone
         else:
             timezone = None

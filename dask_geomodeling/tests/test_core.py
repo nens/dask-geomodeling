@@ -250,7 +250,9 @@ class TestBlock(unittest.TestCase):
         block = Add(self.block, 2)
         graph, name = block.get_graph(serialize=True)
         graph[name] = graph[name][:2]  # chop of one arg, making this invalid
-        self.assertRaisesRegex(TypeError, f"^{name}: (.*?)", construct, graph, name)
+        self.assertRaisesRegex(
+            TypeError, "^{}: (.*?)".format(name), construct, graph, name
+        )
 
     def test_construct_invalid_no_validation(self):
         block = Add(self.block, 2)

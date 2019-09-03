@@ -297,8 +297,8 @@ class AggregateRaster(GeometryBlock):
             pixel_size *= ceil(sqrt(required_pixels / max_pixels))
         elif required_pixels > max_pixels:
             raise RuntimeError(
-                f"The required raster size for the aggregation exceeded "
-                f"the maximum ({required_pixels} > {max_pixels})"
+                "The required raster size for the aggregation exceeded "
+                "the maximum ({} > {})".format(required_pixels, max_pixels)
             )
 
         # snap the extent to (0, 0) to prevent subpixel shifts
@@ -502,9 +502,9 @@ class AggregateRasterAboveThreshold(AggregateRaster):
         threshold_name=None,
     ):
         if not isinstance(threshold_name, str):
-            raise TypeError(f"'{type(threshold_name)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(threshold_name)))
         if threshold_name not in source.columns:
-            raise KeyError(f"Column '{threshold_name}' is not available")
+            raise KeyError("Column '{}' is not available".format(threshold_name))
         super().__init__(
             source,
             raster,

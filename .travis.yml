@@ -3,7 +3,7 @@ language: minimal
 matrix:
   include:
   - os: linux
-    env: PYTHON_VERSION="3.5" DEPS="numpy=1.10 gdal=2.0 dask-core=0.18 pandas=0.19 shapely=1.5 geopandas=0.3 pytz scipy=0.19"
+    env: PYTHON_VERSION="3.5" DEPS="numpy=1.10 gdal=2.0 dask-core=0.18 toolz=0.9 pandas=0.19 shapely=1.5 geopandas=0.3 pytz scipy=0.19"
   - os: linux
     env: PYTHON_VERSION="3.6" DEPS="numpy=1.14 gdal=2.2 dask-core=0.20 toolz=0.10 pandas=0.23 shapely=1.6 geopandas=0.4 pytz scipy=1.1"
   - os: linux

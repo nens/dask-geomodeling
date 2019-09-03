@@ -219,7 +219,7 @@ class MemorySource(RasterBlock):
                 "length": last_i - first_i + 1,
             }
         else:
-            raise RuntimeError(f"Unknown mode '{mode}'")
+            raise RuntimeError("Unknown mode '{}'".format(mode))
         return [(process_kwargs, None)]
 
     @staticmethod
@@ -421,7 +421,7 @@ class RasterFileSource(RasterBlock):
                 "length": last_i - first_i + 1,
             }
         else:
-            raise RuntimeError(f"Unknown mode '{mode}'")
+            raise RuntimeError("Unknown mode '{}'".format(mode))
         return [(process_kwargs, None)]
 
     @staticmethod

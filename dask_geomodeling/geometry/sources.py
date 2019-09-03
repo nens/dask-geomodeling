@@ -134,8 +134,8 @@ class GeometryFileSource(GeometryBlock):
                 global_limit = config.get("geomodeling.geometry_limit")
                 if len(f) > global_limit:
                     raise RuntimeError(
-                        f"The amount of returned geometries exceeded "
-                        f"the maximum of {global_limit} geometries."
+                        "The amount of returned geometries exceeded "
+                        "the maximum of {} geometries.".format(global_limit)
                     )
 
             return {"projection": request["projection"], "features": f}

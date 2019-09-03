@@ -1351,8 +1351,8 @@ class TestCumulative(unittest.TestCase):
             result["meta"],
             [
                 ["Testmeta for band 0"],
-                [f"Testmeta for band {i}" for i in range(2)],
-                [f"Testmeta for band {i}" for i in range(3)],
+                ["Testmeta for band {}".format(i) for i in range(2)],
+                ["Testmeta for band {}".format(i) for i in range(3)],
             ],
         )
 
