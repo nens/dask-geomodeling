@@ -7,11 +7,11 @@ long_description = "\n\n".join([open("README.rst").read(), open("CHANGES.rst").r
 install_requires = (
     [
         "cityhash",  # optional, but speeds up hashing a lot
-        "dask[delayed]",
+        "dask[delayed]>=0.18",
         "geopandas",
         "pygdal",
         "pytz",
-        "numpy>=1.11",
+        "numpy>=1.10",
         "scipy",
     ],
 )

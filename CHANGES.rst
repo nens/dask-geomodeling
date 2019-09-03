@@ -7,6 +7,10 @@ Changelog of dask-geomodeling
 
 - Clean up the .check() method for RasterBlocks.
 
+- Added a Travisfile testing with against versions since 2017 on Linux and OSX.
+
+- Constrain dask to >= 0.18.
+
 
 2.0.1 (2019-08-30)
 ------------------
