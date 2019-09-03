@@ -548,10 +548,10 @@ class TestAggregateRaster(unittest.TestCase):
             geometry=box(0, 0, 10, 10),
             min_size=1.0,
         )
-        self.default_raster_limit = config.get("geomodeling.raster_limit")
+        self.default_raster_limit = config.get("geomodeling.raster-limit")
 
     def tearDown(self):
-        config.set({"geomodeling.raster_limit": self.default_raster_limit})
+        config.set({"geomodeling.raster-limit": self.default_raster_limit})
 
     def test_arg_types(self):
         self.assertRaises(TypeError, geometry.AggregateRaster, self.source, None)
@@ -775,7 +775,7 @@ class TestAggregateRaster(unittest.TestCase):
         )
 
     def test_max_pixels_fallback(self):
-        config.set({"geomodeling.raster_limit": 9})
+        config.set({"geomodeling.raster-limit": 9})
         self.view = geometry.AggregateRaster(
             source=self.source, raster=self.raster, statistic="sum"
         )

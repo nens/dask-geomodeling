@@ -131,7 +131,7 @@ class GeometryFileSource(GeometryBlock):
             if request.get("limit") and len(f) > request["limit"]:
                 f = f.iloc[: request["limit"]]
             elif request.get("limit") is None:
-                global_limit = config.get("geomodeling.geometry_limit")
+                global_limit = config.get("geomodeling.geometry-limit")
                 if len(f) > global_limit:
                     raise RuntimeError(
                         "The amount of returned geometries exceeded "

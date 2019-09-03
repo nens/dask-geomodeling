@@ -289,7 +289,7 @@ class AggregateRaster(GeometryBlock):
         # in case this request is too large, we adapt pixel size
         max_pixels = self.max_pixels
         if max_pixels is None:
-            max_pixels = config.get("geomodeling.raster_limit")
+            max_pixels = config.get("geomodeling.raster-limit")
         pixel_size = self.pixel_size
 
         if required_pixels > max_pixels and self.auto_pixel_size:

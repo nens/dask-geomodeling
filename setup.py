@@ -11,7 +11,7 @@ install_requires = (
         "geopandas",
         "pygdal",
         "pytz",
-        "numpy>=1.10",
+        "numpy>=1.12",
         "scipy",
     ],
 )

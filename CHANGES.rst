@@ -9,7 +9,11 @@ Changelog of dask-geomodeling
 
 - Added a Travisfile testing with against versions since 2017 on Linux and OSX.
 
-- Constrain dask to >= 0.18.
+- Took some python 3.5 compatibility measures.
+
+- Change raster_limit and geometry_limit settings to raster/geometry-limit.
+
+- Constrain dask to >= 0.18 and numpy to >= 1.12.
 
 
 2.0.1 (2019-08-30)
