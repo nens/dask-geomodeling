@@ -67,21 +67,6 @@ class RasterBlock(Block):
         delta_seconds = timedelta.total_seconds()
         return int(period_seconds / delta_seconds) + 1
 
-    def check(self, cold=False):
-        """
-        Return boolean indicating if the dependent stores had to be updated.
-
-        :param cold: ignore cached modification time
-        :type cold: bool
-
-        Check if this store object has been modified in an external
-        process. If so, update attributes such as period, extent and timedelta
-        accordingly.
-        """
-        for x in self.args:
-            if isinstance(x, RasterBlock):
-                x.check(cold=cold)
-
     def __add__(self, other):
         from . import Add
 

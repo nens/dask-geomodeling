@@ -5,7 +5,7 @@ Changelog of dask-geomodeling
 2.0.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Clean up the .check() method for RasterBlocks.
 
 
 2.0.1 (2019-08-30)
