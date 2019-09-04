@@ -15,7 +15,10 @@ Changelog of dask-geomodeling
 
 - Changed underscores in config to dashes for dask 0.18 compatibility.
 
-- Constrained dask to >= 0.18, numpy to >= 1.12, geopandas to >= 0.4.
+- Constrained dask to >= 0.18, numpy to >= 1.12, pandas to >= 0.19,
+  geopandas to >= 0.4, scipy to >= 0.19.
+
+- Removed the explicit (py)gdal dependency.
 
 
 2.0.1 (2019-08-30)

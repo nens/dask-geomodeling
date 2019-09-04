@@ -8,11 +8,11 @@ install_requires = (
     [
         "cityhash",  # optional, but speeds up hashing a lot
         "dask[delayed]>=0.18",
+        "pandas>=0.19",
         "geopandas>=0.4",
-        "pygdal",
         "pytz",
         "numpy>=1.12",
-        "scipy",
+        "scipy>=0.19",
     ],
 )
 
