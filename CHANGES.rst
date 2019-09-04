@@ -11,9 +11,11 @@ Changelog of dask-geomodeling
 
 - Took some python 3.5 compatibility measures.
 
-- Change raster_limit and geometry_limit settings to raster/geometry-limit.
+- Added fix in ParseText block for pandas 0.23.
 
-- Constrain dask to >= 0.18, numpy to >= 1.12, geopandas to >= 0.4.
+- Changed underscores in config to dashes for dask 0.18 compatibility.
+
+- Constrained dask to >= 0.18, numpy to >= 1.12, geopandas to >= 0.4.
 
 
 2.0.1 (2019-08-30)

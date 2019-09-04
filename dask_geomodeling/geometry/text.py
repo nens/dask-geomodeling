@@ -98,6 +98,11 @@ class ParseTextColumn(BaseSingle):
         # Hopefully, this is already the case:
         column = f[source_column].astype("category")
 
+        if len(column.cat.categories) == 0:
+            # no data to parse: add empty columns and return directly
+            f = f.reindex(columns=list(f.columns) + list(key_mapping.values()))
+            return {"features": f, "projection": data["projection"]}
+
         def parser(description):
             pairs = dict(REGEX_KEYVALUE.findall(description))
             return [autocast_value(pairs.get(key)) for key in key_mapping.keys()]
