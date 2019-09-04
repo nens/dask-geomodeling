@@ -488,7 +488,7 @@ class Rasterize(RasterBlock):
 
         limit = self.limit
         if self.limit is None:
-            limit = config.get("geomodeling.geometry_limit")
+            limit = config.get("geomodeling.geometry-limit")
 
         geom_request = {
             "mode": "intersects",

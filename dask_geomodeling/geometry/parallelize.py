@@ -48,7 +48,7 @@ class GeometryTiler(BaseSingle):
         if mode == "extent":
             return [(self.source, request)]
         if mode != "centroid":
-            raise NotImplementedError(f"Cannot process '{mode}' mode")
+            raise NotImplementedError("Cannot process '{}' mode".format(mode))
 
         # tile the requested geometry in boxes that have a maximum size
         req_geometry = request["geometry"]

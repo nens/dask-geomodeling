@@ -23,8 +23,8 @@ def _construct_exc_callback(e, dumps):
 
     """
     key = inspect.currentframe().f_back.f_locals.get("key")
-    e.args = (f"{key}: {str(e)}",)
-    raise
+    e.args = ("{0}: {1}".format(key, str(e)),)
+    raise e
 
 
 def _reconstruct_token(key):
@@ -61,7 +61,7 @@ def construct_multiple(graph, names, validate=True):
         if isinstance(cls, str):
             cls = Block.from_import_path(cls)
         if not issubclass(cls, Block):
-            raise TypeError(f'Cannot construct from object of type "{cls}"')
+            raise TypeError("Cannot construct from object of type '{}'".format(cls))
         args = tuple(value[1:])
         if validate:
             new_graph[key] = (cls,) + args
@@ -69,8 +69,9 @@ def construct_multiple(graph, names, validate=True):
             token = _reconstruct_token(key)
             if token is None:
                 logger.warning(
-                    f"Construct received a key with an invalid name ('{key}'),"
-                    f"while validation was turned off"
+                    "Construct received a key with an invalid name ('%s'),"
+                    "while validation was turned off",
+                    key,
                 )
             new_graph[key] = (cls._init_no_validation, token) + args
 

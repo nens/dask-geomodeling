@@ -176,7 +176,7 @@ class AggregateRaster(GeometryBlock):
         max_pixels=None,
         column_name="agg",
         auto_pixel_size=False,
-        *args,
+        *args
     ):
         if not isinstance(source, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))
@@ -222,7 +222,7 @@ class AggregateRaster(GeometryBlock):
             max_pixels,
             column_name,
             auto_pixel_size,
-            *args,
+            *args
         )
 
     @property
@@ -289,7 +289,7 @@ class AggregateRaster(GeometryBlock):
         # in case this request is too large, we adapt pixel size
         max_pixels = self.max_pixels
         if max_pixels is None:
-            max_pixels = config.get("geomodeling.raster_limit")
+            max_pixels = config.get("geomodeling.raster-limit")
         pixel_size = self.pixel_size
 
         if required_pixels > max_pixels and self.auto_pixel_size:
@@ -297,8 +297,8 @@ class AggregateRaster(GeometryBlock):
             pixel_size *= ceil(sqrt(required_pixels / max_pixels))
         elif required_pixels > max_pixels:
             raise RuntimeError(
-                f"The required raster size for the aggregation exceeded "
-                f"the maximum ({required_pixels} > {max_pixels})"
+                "The required raster size for the aggregation exceeded "
+                "the maximum ({} > {})".format(required_pixels, max_pixels)
             )
 
         # snap the extent to (0, 0) to prevent subpixel shifts
@@ -502,9 +502,9 @@ class AggregateRasterAboveThreshold(AggregateRaster):
         threshold_name=None,
     ):
         if not isinstance(threshold_name, str):
-            raise TypeError(f"'{type(threshold_name)}' object is not allowed")
+            raise TypeError("'{}' object is not allowed".format(type(threshold_name)))
         if threshold_name not in source.columns:
-            raise KeyError(f"Column '{threshold_name}' is not available")
+            raise KeyError("Column '{}' is not available".format(threshold_name))
         super().__init__(
             source,
             raster,

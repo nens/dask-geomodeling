@@ -50,13 +50,13 @@ class ParseTextColumn(BaseSingle):
 
     def __init__(self, source, source_column, key_mapping):
         if not isinstance(source, GeometryBlock):
-            raise TypeError(f"'{type(source)}' object is not allowed.")
+            raise TypeError("'{}' object is not allowed.".format(type(source)))
         if not isinstance(source_column, str):
-            raise TypeError(f"'{type(source_column)}' object is not allowed.")
+            raise TypeError("'{}' object is not allowed.".format(type(source_column)))
         if source_column not in source.columns:
-            raise KeyError(f"Column '{source_column}' is not available.")
+            raise KeyError("Column '{}' is not available.".format(source_column))
         if not isinstance(key_mapping, dict):
-            raise TypeError(f"'{type(key_mapping)}' object is not allowed.")
+            raise TypeError("'{}' object is not allowed.".format(type(key_mapping)))
         super().__init__(source, source_column, key_mapping)
 
     @property
@@ -97,6 +97,11 @@ class ParseTextColumn(BaseSingle):
 
         # Hopefully, this is already the case:
         column = f[source_column].astype("category")
+
+        if len(column.cat.categories) == 0:
+            # no data to parse: add empty columns and return directly
+            f = f.reindex(columns=list(f.columns) + list(key_mapping.values()))
+            return {"features": f, "projection": data["projection"]}
 
         def parser(description):
             pairs = dict(REGEX_KEYVALUE.findall(description))

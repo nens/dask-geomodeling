@@ -7,6 +7,19 @@ Changelog of dask-geomodeling
 
 - Clean up the .check() method for RasterBlocks.
 
+- Added a Travisfile testing with against versions since 2017 on Linux and OSX.
+
+- Took some python 3.5 compatibility measures.
+
+- Added fix in ParseText block for pandas 0.23.
+
+- Changed underscores in config to dashes for dask 0.18 compatibility.
+
+- Constrained dask to >= 0.18, numpy to >= 1.12, pandas to >= 0.19,
+  geopandas to >= 0.4, scipy to >= 0.19.
+
+- Removed the explicit (py)gdal dependency.
+
 
 2.0.1 (2019-08-30)
 ------------------

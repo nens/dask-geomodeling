@@ -159,7 +159,7 @@ class GetSeriesBlock(SeriesBlock):
         if not isinstance(name, str):
             raise TypeError("'{}' object is not allowed".format(type(name)))
         if name not in source.columns:
-            raise KeyError(f"Column '{name}' is not available")
+            raise KeyError("Column '{}' is not available".format(name))
         super().__init__(source, name)
 
     @property

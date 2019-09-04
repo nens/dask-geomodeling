@@ -169,9 +169,11 @@ class TestBlock(unittest.TestCase):
         """A Block's token is saved"""
         block = MockBlock(1)
         _ = block.token
-        patched_tokenize.assert_called_once()  # tokenized 1 argument
+        # tokenized 1 argument
+        self.assertEqual(1, patched_tokenize.call_count)
         _ = block.token
-        patched_tokenize.assert_called_once()  # did not tokenize again
+        # did not tokenize again
+        self.assertEqual(1, patched_tokenize.call_count)
 
     def test_graph_equal_sources(self):
         add = Add(self.block, self.block)
@@ -250,7 +252,9 @@ class TestBlock(unittest.TestCase):
         block = Add(self.block, 2)
         graph, name = block.get_graph(serialize=True)
         graph[name] = graph[name][:2]  # chop of one arg, making this invalid
-        self.assertRaisesRegex(TypeError, f"^{name}: (.*?)", construct, graph, name)
+        self.assertRaisesRegex(
+            TypeError, "^{}: (.*?)".format(name), construct, graph, name
+        )
 
     def test_construct_invalid_no_validation(self):
         block = Add(self.block, 2)
