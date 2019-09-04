@@ -24,7 +24,7 @@ def _construct_exc_callback(e, dumps):
     """
     key = inspect.currentframe().f_back.f_locals.get("key")
     e.args = ("{0}: {1}".format(key, str(e)),)
-    raise
+    raise e
 
 
 def _reconstruct_token(key):
