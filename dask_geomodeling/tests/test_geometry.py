@@ -1794,11 +1794,11 @@ class TestText(unittest.TestCase):
         self.assertSetEqual(set(data["features"].columns), view.columns)
 
     def test_parser_results(self):
-        data = self.view.get_data(**self.request)
-        self.assertEqual(
-            data["features"][list(self.key_mapping.values())].values.tolist(),
-            [["rotterdam 01", 120, 70, True]],
-        )
+        data = self.view.get_data(**self.request)["features"].iloc[0]
+        self.assertEqual("rotterdam 01", data["model_name"])
+        self.assertEqual(120, data["rainfall_duration"])
+        self.assertEqual(70, data["rainfall_strength"])
+        self.assertTrue(data["ahn2_used"])
 
     def test_parser_two_same(self):
         source = MockGeometry(
@@ -1809,11 +1809,13 @@ class TestText(unittest.TestCase):
             ],
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
-        data = view.get_data(**self.request)
-        self.assertEqual(
-            data["features"][list(self.key_mapping.values())].values.tolist(),
-            [["rotterdam 01", 120, 70, True], ["rotterdam 01", 120, 70, True]],
-        )
+        data = view.get_data(**self.request)["features"]
+        self.assertEqual("category", str(data["model_name"].dtype))
+        for i in [1, 2]:
+            self.assertEqual("rotterdam 01", data.loc[i, "model_name"])
+            self.assertEqual(120, data.loc[i, "rainfall_duration"])
+            self.assertEqual(70, data.loc[i, "rainfall_strength"])
+            self.assertTrue(data.loc[i, "ahn2_used"])
 
     def test_parser_two_different(self):
         other_description = (
@@ -1829,11 +1831,17 @@ class TestText(unittest.TestCase):
             ],
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
-        data = view.get_data(**self.request)
-        self.assertEqual(
-            data["features"][list(self.key_mapping.values())].values.tolist(),
-            [["rotterdam 01", 120, 70, True], ["groningen 01", 60, 120, False]],
-        )
+        data = view.get_data(**self.request)["features"]
+
+        self.assertEqual("rotterdam 01", data.loc[1, "model_name"])
+        self.assertEqual(120, data.loc[1, "rainfall_duration"])
+        self.assertEqual(70, data.loc[1, "rainfall_strength"])
+        self.assertTrue(data.loc[1, "ahn2_used"])
+
+        self.assertEqual("groningen 01", data.loc[2, "model_name"])
+        self.assertEqual(60, data.loc[2, "rainfall_duration"])
+        self.assertEqual(120, data.loc[2, "rainfall_strength"])
+        self.assertFalse(data.loc[2, "ahn2_used"])
 
     def test_parser_missing_and_null_keys(self):
         description = (

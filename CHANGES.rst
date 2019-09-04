@@ -13,7 +13,7 @@ Changelog of dask-geomodeling
 
 - Change raster_limit and geometry_limit settings to raster/geometry-limit.
 
-- Constrain dask to >= 0.18 and numpy to >= 1.12.
+- Constrain dask to >= 0.18, numpy to >= 1.12, geopandas to >= 0.4.
 
 
 2.0.1 (2019-08-30)

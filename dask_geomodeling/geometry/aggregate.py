@@ -176,7 +176,7 @@ class AggregateRaster(GeometryBlock):
         max_pixels=None,
         column_name="agg",
         auto_pixel_size=False,
-        *args,
+        *args
     ):
         if not isinstance(source, GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(source)))
@@ -222,7 +222,7 @@ class AggregateRaster(GeometryBlock):
             max_pixels,
             column_name,
             auto_pixel_size,
-            *args,
+            *args
         )
 
     @property

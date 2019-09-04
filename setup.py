@@ -8,7 +8,7 @@ install_requires = (
     [
         "cityhash",  # optional, but speeds up hashing a lot
         "dask[delayed]>=0.18",
-        "geopandas",
+        "geopandas>=0.4",
         "pygdal",
         "pytz",
         "numpy>=1.12",
@@ -46,6 +46,7 @@ setup(
     zip_safe=False,
     install_requires=install_requires,
     tests_require=tests_require,
+    python_requires='>=3.5',
     extras_require={"test": tests_require},
     entry_points={"console_scripts": []},
 )
