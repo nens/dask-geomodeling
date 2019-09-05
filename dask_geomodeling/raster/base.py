@@ -23,29 +23,24 @@ class RasterBlock(Block):
 
     These attributes are ``None`` if the raster is empty.
 
-    A Request is a dict with the following fields:
+    A raster data request contains the following fields:
 
-    - mode: request mode: values ('vals'), time ('time') or metadata ('meta')
+    - mode: values (``'vals'``), time (``'time'``) or metadata (``'meta'``)
     - bbox: bounding box ``(x1, y1, x2, y2)``
     - projection: wkt spatial reference
-    - width: specify data width
-    - height: specify data height
-    - start: start date as naive datetime
-    - stop: stop date as naive datetime
-    - aggregation: name of spatial aggregation algorithm
+    - width: data width
+    - height: data height
+    - start: start date as naive UTC datetime
+    - stop: stop date as naive UTC datetime
 
-    Result dictionary contains (if ``mode == 'vals'``):
+    The data response contains the following:
 
-    - values: numpy ndarray of shape (bands, height, width)
-    - no_data_value: value indicating no data
-
-    If ``mode == 'time'``:
-
-    - ``time``: list of naive datetimes corresponding to the temporal axis
-
-    If ``mode == 'meta'``:
-
-    - ``meta``: list of metadata values corresponding to the temporal axis
+    - if mode was ``'vals'``: a three dimensional array of shape
+      ``(bands, height, width)``
+    - if mode was ``'time'``: a list of naive UTC datetimes corresponding to
+      the time axis
+    - if mode was ``'meta'``: a list of metadata values corresponding to
+      the time axis
     """
 
     DEFAULT_ORIGIN = Datetime(1970, 1, 1, 0, 0)

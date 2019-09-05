@@ -1,6 +1,11 @@
 Geometry and Series Blocks
 ==========================
 
+Geometry-type blocks contain sets of geometries, optionally with ``'start'``
+and ``'end'`` fields and other properties. Internally, geometry data is stored
+in `GeoPandas <https://http://geopandas.org//>`_ GeoDataframes.
+
+
 API Specification
 -----------------
 

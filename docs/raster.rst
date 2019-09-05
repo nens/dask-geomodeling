@@ -1,6 +1,9 @@
 Raster Blocks
 =============
 
+Raster-type blocks contain rasters with a time axis. Internally, the raster
+data is stored as `NumPy <https://numpy.org/>`_ arrays.
+
 API Specification
 -----------------
 

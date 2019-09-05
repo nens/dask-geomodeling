@@ -130,8 +130,8 @@ A block type sets three things:
 
 This is not enforced at the code level, it is up to the developer to stick to
 this specification. The specification is written down in the type baseclass
-:meth:`~dask_geomodeling.raster.RasterBlock` or
-:meth:`~dask_geomodeling.geometry.GeometryBlock`.
+:meth:`~dask_geomodeling.raster.base.RasterBlock` or
+:meth:`~dask_geomodeling.geometry.base.GeometryBlock`.
 
 API specification
 -----------------

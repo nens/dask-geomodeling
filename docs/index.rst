@@ -15,6 +15,13 @@ Multiple Block instances together make a view. Each Block has the ``get_data``
 method that fetches the data in one go, as well as a ``get_compute_graph``
 method that creates a graph to compute the data later.
 
+Blocks are used for the on-the-fly modification of raster- and vectordata,
+respectively through the baseclasses :meth:`~dask_geomodeling.raster.base.RasterBlock` and
+:meth:`~dask_geomodeling.geometry.base.GeometryBlock`. Derived classes support
+operations such has grouping
+basic math, shifting time, smoothing, reclassification, geometry operations,
+zonal statistics, and property field operations.
+
 About
 -----
 
