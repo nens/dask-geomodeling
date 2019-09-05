@@ -491,7 +491,7 @@ class AggregateRasterAboveThreshold(AggregateRaster):
     :type threshold_name: string
 
     See also:
-      :class:`geoblocks.geometry.aggregate.AggregateRaster`
+      :class:`dask_geomodeling.geometry.aggregate.AggregateRaster`
     """
 
     def __init__(

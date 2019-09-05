@@ -47,7 +47,7 @@ class GeometryBlock(Block):
         raise NotImplementedError("Please use block.set to set a column.")
 
     def set(self, *args):
-        # NB cannot use __setitem__ as geoblocks are immutable
+        # NB cannot use __setitem__ as block instances are immutable
         return SetSeriesBlock(self, *args)
 
 

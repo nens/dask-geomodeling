@@ -128,7 +128,7 @@ class Block(object):
 
     @classmethod
     def _init_no_validation(cls, token, *args):
-        """This constructs this geoblock directly from its key and args
+        """This constructs this block directly from its key and args
         without any validation and tokenization."""
         obj = cls.__new__(cls)
         obj.args = args

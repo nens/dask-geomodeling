@@ -4,7 +4,7 @@ Blocks
 The Block class
 ----------------
 
-To write a new dask_geomodeling Block class, we need to write the following:
+To write a new ``Block`` subclass, we need to write the following:
 
 1. the ``__init__`` that validates the arguments when constructing the block
 2. the ``get_sources_and_requests`` that processes the request
@@ -20,7 +20,7 @@ does so by returning a list of (source, request) tuples. During the data
 evaluation each of these 2-tuples will be converted to a single data object
 which is supplied to the ``process`` function.
 
-First, an example in words. We construct a geoblock
+First, an example in words. We construct a View
 ``add = RasterFileSource('path/to/geotiff') + 2.4`` and ask it the following:
 
 - give me a 256x256 raster at location (138000, 480000)
@@ -52,7 +52,7 @@ Dask will evaluate this graph by calling the ``process`` methods on each block:
 Implementation example
 ~~~~~~~~~~~~~~~~~~~~~~
 
-As an example, we use a simplified Dilate geoblock, which adds a buffer of 1
+As an example, we use a simplified Dilate block, which adds a buffer of 1
 pixel around all pixels of given value:
 
 .. code:: python
@@ -126,7 +126,7 @@ A block type sets three things:
 2. the request schema: e.g. "RasterBlock.get_sources_and_requests expects a
    dictionary with the fields 'mode', 'bbox', 'projection', 'height', 'width'"
 
-3. the attributes to be implemented on each geoblock
+3. the attributes to be implemented on each block
 
 This is not enforced at the code level, it is up to the developer to stick to
 this specification. The specification is written down in the type baseclass

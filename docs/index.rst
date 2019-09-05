@@ -39,6 +39,7 @@ Contents
 
    installation
    quickstart
+   views
    blocks
    raster
    geometry
