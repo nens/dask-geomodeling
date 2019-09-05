@@ -40,3 +40,6 @@ etc/*.logrotate
 
 # Ignore ide's
 .idea/
+
+# ignore docs
+docs/_*

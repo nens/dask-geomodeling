@@ -1,0 +1,12 @@
+name: dask-geomodeling
+channels:
+  - conda-forge
+dependencies:
+  - gdal
+  - dask-core
+  - toolz
+  - numpy
+  - scipy
+  - pandas
+  - geopandas
+  - pytz

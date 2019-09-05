@@ -12,20 +12,21 @@ class RasterBlock(Block):
     All raster blocks must be derived from this base class and must implement
     the following attributes:
 
-     - ``period``: a tuple of datetimes
-     - ``timedelta``: a datetime.timedelta (or None if nonequidistant)
-     - ``extent``: a tuple ``(x1, y1, x2, y2)``
-     - ``dtype``: a numpy dtype object
-     - ``fillvalue``: a number
-     - ``geometry``: OGR Geometry
-     - ``projection``: WKT string
-     - ``geo_transform``: a tuple of 6 numbers
+    - ``period``: a tuple of datetimes
+    - ``timedelta``: a datetime.timedelta (or None if nonequidistant)
+    - ``extent``: a tuple ``(x1, y1, x2, y2)``
+    - ``dtype``: a numpy dtype object
+    - ``fillvalue``: a number
+    - ``geometry``: OGR Geometry
+    - ``projection``: WKT string
+    - ``geo_transform``: a tuple of 6 numbers
 
     These attributes are ``None`` if the raster is empty.
 
     A Request is a dict with the following fields:
+
     - mode: request mode: values ('vals'), time ('time') or metadata ('meta')
-    - bbox: bounding box (x1, y1, x2, y2)
+    - bbox: bounding box ``(x1, y1, x2, y2)``
     - projection: wkt spatial reference
     - width: specify data width
     - height: specify data height
@@ -33,15 +34,18 @@ class RasterBlock(Block):
     - stop: stop date as naive datetime
     - aggregation: name of spatial aggregation algorithm
 
-    Result dictionary contains (if mode == 'vals'):
+    Result dictionary contains (if ``mode == 'vals'``):
+
     - values: numpy ndarray of shape (bands, height, width)
     - no_data_value: value indicating no data
 
-    If mode == 'time':
-    - time: list of naive datetimes corresponding to the temporal axis
+    If ``mode == 'time'``:
 
-    If mode == 'meta':
-    - meta: list of metadata values corresponding to the temporal axis
+    - ``time``: list of naive datetimes corresponding to the temporal axis
+
+    If ``mode == 'meta'``:
+
+    - ``meta``: list of metadata values corresponding to the temporal axis
     """
 
     DEFAULT_ORIGIN = Datetime(1970, 1, 1, 0, 0)

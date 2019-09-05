@@ -13,9 +13,10 @@ class GeometryBlock(Block):
     All geometry blocks must be derived from this base class and must implement
     the following attributes:
 
-     - ``columns``: a set of column names to expect in the dataframe
+    - ``columns``: a set of column names to expect in the dataframe
 
     A geometry request is a dict with the following fields:
+
     - mode: 'intersects' or 'extent'. default 'intersects'.
     - geometry: return geometries that intersect with this (shapely.shape)
     - projection: projection to return the geometries in as WKT string
@@ -27,12 +28,14 @@ class GeometryBlock(Block):
     - filters: dict of django ORM-like filters on properties (e.g. id=5)
 
     Result dictionary contains (if mode == 'intersects'):
+
     - features: geopandas.GeoDataFrame
     - projection: str defining spatial reference (the same as requested). This
       is because it is not easy to convert back from the fiona crs defined on
       the GeoDataFrame
 
     If mode == 'extent':
+
     - extent: bbox tuple (x1, y1, x2, y2)
     - projection: wkt spatial reference (the same as requested)
     """
