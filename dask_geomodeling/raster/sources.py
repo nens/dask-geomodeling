@@ -288,8 +288,8 @@ class RasterFileSource(RasterBlock):
     :type time_delta: integer or timedelta
 
     The global root path can be adapted as follows:
-    >>> from dask import config
-    >>> config.set({"geomodeling.root": "/my/data/path"})
+      >>> from dask import config
+      >>> config.set({"geomodeling.root": "/my/data/path"})
     """
 
     def __init__(self, url, time_first, time_delta):

@@ -406,8 +406,8 @@ class Rasterize(RasterBlock):
       https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html
 
     The global geometry-limit setting can be adapted as follows:
-    >>> from dask import config
-    >>> config.set({"geomodeling.geometry-limit": 100000})
+      >>> from dask import config
+      >>> config.set({"geomodeling.geometry-limit": 100000})
     """
 
     def __init__(self, source, column_name=None, dtype=None, limit=None):

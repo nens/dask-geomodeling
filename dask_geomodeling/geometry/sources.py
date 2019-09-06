@@ -27,9 +27,9 @@ class GeometryFileSource(GeometryBlock):
     The input of these blocks is by default limited to 10000 geometries.
 
     Relevant settings can be adapted as follows:
-    >>> from dask import config
-    >>> config.set({"geomodeling.root": '/my/data/path'})
-    >>> config.set({"geomodeling.geometry-limit": 100000})
+      >>> from dask import config
+      >>> config.set({"geomodeling.root": '/my/data/path'})
+      >>> config.set({"geomodeling.geometry-limit": 100000})
     """
 
     def __init__(self, url, layer=None, id_field="id"):

@@ -156,8 +156,8 @@ class AggregateRaster(GeometryBlock):
     a RuntimeError is raised.
 
     The global raster-limit setting can be adapted as follows:
-    >>> from dask import config
-    >>> config.set({"geomodeling.raster-limit": 10 ** 9})
+      >>> from dask import config
+      >>> config.set({"geomodeling.raster-limit": 10 ** 9})
     """
 
     # extensive (opposite: intensive) means: additive, proportional to size
