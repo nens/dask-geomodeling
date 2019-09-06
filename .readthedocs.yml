@@ -19,7 +19,8 @@ formats:
 
 python:
   version: 3.7
-  site_packages: true  # for numpy; the rest is mocked by autodoc_mock_imports
+  # use system_packages for numpy; the rest is mocked by autodoc_mock_imports
+  system_packages: true
   install:
     - method: setuptools
       path: .  # setup.py includes a hack that emulates --no-deps for RTD
