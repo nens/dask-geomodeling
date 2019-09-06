@@ -49,3 +49,10 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+# mock imports so that we don't need all the dependencies to build the docs
+
+autodoc_mock_imports = [
+    "osgeo", "scipy", "pandas", "geopandas", "dask", "pytz", "shapely", "fiona"
+]

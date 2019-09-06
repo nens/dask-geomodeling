@@ -17,10 +17,9 @@ sphinx:
 formats:
   - pdf
 
-conda:
-  environment: docs/environment.yml
-
 python:
+  version: 3.7
+  site_packages: true  # for numpy; the rest is mocked by autodoc_mock_imports
   install:
     - method: setuptools
-      path: .
+      path: .  # setup.py includes a hack that emulates --no-deps for RTD

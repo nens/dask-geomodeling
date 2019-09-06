@@ -52,9 +52,9 @@ evaluates what needs to be done for certain request, storing that in a
 *compute graph*. This graph can then be evaluated to obtain the data. The data
 is evaluated with dask, and the specification of the compute graph also comes
 from dask. For more information about how a graph works, consult the dask
-docs_:
+documentation_:
 
-.. _docs: http://docs.dask.org/en/latest/custom-graphs.html
+.. _documentation: http://docs.dask.org/en/latest/custom-graphs.html
 
 We use the previous example to demonstrate how this works:
 
