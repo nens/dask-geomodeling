@@ -26,9 +26,8 @@ About
 -----
 
 This package was developed by Nelen & Schuurmans and is used commercially
-under the name `Lizard Geoblocks <https://www.lizard.net/>`_. The commercial
-version runs on an optimized cluster, has access to pre-configured datasets,
-and adds several features.
+under the name Geoblocks. Please consult the `Lizard <https://www.lizard.net/>`_
+website for more information about this product.
 
 Contents
 --------
