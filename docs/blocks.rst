@@ -30,14 +30,14 @@ calls ``get_sources_and_requests`` on each block instance recursively.
 
 First ``add.get_sources_and_requests`` would respond with the following:
 
-- I need a 256x256 raster at location (138000, 480000) from
+- I will need a 256x256 raster at location (138000, 480000) from
   ``RasterFileSource('/path/to/geotiff')``
-- I need the number 2.4
+- I will need 2.4
 
 Then, on recursion, the ``RasterFileSource.get_sources_and_requests`` would
 respond:
 
-- I need to read a 256x256 raster at (138000, 480000) from ``'/path/to/geotiff'``
+- I will give you the 256x256 raster at location (138000, 480000)
 
 These small subtasks get summarized in a compute graph, which is returned by
 ``get_compute_graph``. Then ``get_data`` feeds that compute graph to dask.

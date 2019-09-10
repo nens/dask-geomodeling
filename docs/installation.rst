@@ -17,48 +17,45 @@ These instructions make use of the system-wide Python 3 interpreter.
 
 Install dask-geomodeling::
 
-    $ pip install --user dask-geomodeling
-
-Install dask-geomodeling::
-
-    $ pip install -e .[test]
+    $ pip install --user dask-geomodeling[test]
 
 Run the tests::
 
     $ pytest
 
-Or optionally, with coverage and code style checking::
 
-    $ pytest --cov=dask_geomodeling --black
-
-
-Local setup using virtualenv (Ubuntu)
--------------------------------------
+Local setup for development (Ubuntu)
+------------------------------------
 
 These instructions assume that ``git``, ``python3``, ``pip``, and
 ``virtualenv`` are installed on your host machine.
 
-First make sure you have the GDAL libraries installed. On Ubuntu::
+Clone the dask-geomodeling repository::
+
+    $ git clone https://github.com/nens/dask-geomodeling
+
+Make sure you have the GDAL libraries installed. On Ubuntu::
 
     $ sudo apt install libgdal-dev
 
-Take note the GDAL version::
+Take note of the GDAL version::
 
     $ apt show libgdal-dev
 
 Create and activate a virtualenv::
 
+    $ cd dask-geomodeling
     $ virtualenv --python=python3 .venv
     $ source .venv/bin/activate
 
 Install PyGDAL with the correct version (example assumes GDAL 2.2.3)::
 
-    $ pip install pygdal==2.2.3.*
+    (.venv) $ pip install pygdal==2.2.3.*
 
 Install dask-geomodeling::
 
-    $ pip install -e .[test]
+    (.venv) $ pip install -e .[test]
 
 Run the tests::
 
-    $ pytest
+    (.venv) $ pytest
