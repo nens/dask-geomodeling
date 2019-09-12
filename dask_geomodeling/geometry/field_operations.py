@@ -123,7 +123,7 @@ class ClassifyFromColumns(SeriesBlock):
     :type right: boolean
 
     See also:
-      :class:`geoblocks.geometry.field_operations.Classify`
+      :class:`dask_geomodeling.geometry.field_operations.Classify`
     """
 
     def __init__(self, source, value_column, bin_columns, labels, right=True):

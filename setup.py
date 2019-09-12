@@ -1,4 +1,5 @@
 from setuptools import setup
+import os
 
 version = '2.0.3.dev0'
 
@@ -15,6 +16,12 @@ install_requires = (
         "scipy>=0.19",
     ],
 )
+
+# emulate "--no-deps" on the readthedocs build (there is no way to specify this
+# behaviour in the .readthedocs.yml)
+if os.environ.get('READTHEDOCS') == 'True':
+    install_requires = []
+
 
 tests_require = ["pytest"]
 

@@ -13,38 +13,41 @@ class GeometryBlock(Block):
     All geometry blocks must be derived from this base class and must implement
     the following attributes:
 
-     - ``columns``: a set of column names to expect in the dataframe
+    - ``columns``: a set of column names to expect in the dataframe
 
-    A geometry request is a dict with the following fields:
-    - mode: 'intersects' or 'extent'. default 'intersects'.
-    - geometry: return geometries that intersect with this (shapely.shape)
+    A geometry request contains the following fields:
+
+    - mode: ``'intersects'`` or ``'extent'``. default ``'intersects'``.
+    - geometry: limit returned objects to objects that intersect with this
+      shapely geometry object
     - projection: projection to return the geometries in as WKT string
-    - limit: the maximum number of geometries. default 1024.
+    - limit: the maximum number of geometries
     - min_size: geometries with a bbox that is smaller than this on all sides
       are left out
-    - start: start datetime, naive, will be interpreted as UTC.
-    - stop: stop datetime, naive, will be interpreted as UTC.
-    - filters: dict of django ORM-like filters on properties (e.g. id=5)
+    - start: start date as UTC datetime
+    - stop: stop date as UTC datetime
+    - filters: dict of `Django <https://www.djangoproject.com/>`_ ORM-like
+      filters on properties (e.g. ``id=598``)
 
-    Result dictionary contains (if mode == 'intersects'):
-    - features: geopandas.GeoDataFrame
-    - projection: str defining spatial reference (the same as requested). This
-      is because it is not easy to convert back from the fiona crs defined on
-      the GeoDataFrame
+    The data response contains the following:
 
-    If mode == 'extent':
-    - extent: bbox tuple (x1, y1, x2, y2)
-    - projection: wkt spatial reference (the same as requested)
+    - if mode was ``'intersects'``: a DataFrame of features with properties
+    - if mode was ``'extent'``: the bbox that contains all features
+
+    To be able to perform operations on properties, there is a helper type
+    called``SeriesBlock``. This is the block equivalent of a ``pandas.Series``.
+    You can get a ``SeriesBlock`` from a ``GeometryBlock``, perform operations
+    on it, and set it back into a ``GeometryBlock``.
     """
 
     def __getitem__(self, name):
         return GetSeriesBlock(self, name)
 
     def __setitem__(self, *args, **kwargs):
-        raise NotImplementedError("Please use self.set to set a column.")
+        raise NotImplementedError("Please use block.set to set a column.")
 
     def set(self, *args):
-        # NB cannot use __setitem__ as geoblocks are immutable
+        # NB cannot use __setitem__ as block instances are immutable
         return SetSeriesBlock(self, *args)
 
 

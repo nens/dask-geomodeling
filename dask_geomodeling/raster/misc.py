@@ -391,7 +391,8 @@ class Rasterize(RasterBlock):
       where there are geometries.
     :param dtype: a numpy datatype specification to return the array. Defaults
       to 'int32' if column_name is not, else it defaults to 'bool'.
-    :param limit: the maximum number of geometries. Defaults to GEOMETRY_LIMIT.
+    :param limit: the maximum number of geometries. Defaults to the
+      geomodeling.goemetry-limit setting.
     :returns: a raster containing values from 'column_name' or True/False.
 
     :type source: GeometryBlock
@@ -403,6 +404,10 @@ class Rasterize(RasterBlock):
 
     See also:
       https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html
+
+    The global geometry-limit setting can be adapted as follows:
+      >>> from dask import config
+      >>> config.set({"geomodeling.geometry-limit": 100000})
     """
 
     def __init__(self, source, column_name=None, dtype=None, limit=None):

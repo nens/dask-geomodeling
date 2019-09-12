@@ -1,0 +1,26 @@
+# .readthedocs.yml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+  configuration: docs/conf.py
+
+# Build documentation with MkDocs
+#mkdocs:
+#  configuration: mkdocs.yml
+
+# Optionally build your docs in additional formats such as PDF and ePub
+formats:
+  - pdf
+
+python:
+  version: 3.7
+  # use system_packages for numpy; the rest is mocked by autodoc_mock_imports
+  system_packages: true
+  install:
+    - method: setuptools
+      path: .  # setup.py includes a hack that emulates --no-deps for RTD

@@ -13,7 +13,9 @@ __all__ = ["GeometryFileSource"]
 class GeometryFileSource(GeometryBlock):
     """A geometry source that opens a geometry file from disk.
 
-    :param url: URL to the file
+    :param url: URL to the file. File paths have to be contained inside the
+      current root setting. Relative paths are interpreted relative to this
+      setting  but internally stored as absolute paths).
     :param layer: the layer_name in the json to use as source. If None,
       the first layer is used.
     :param id_field: the field name to use as unique ID. Default ``'id'``.
@@ -21,6 +23,13 @@ class GeometryFileSource(GeometryBlock):
     :type path: string
     :type layer: string
     :type id_field: string
+
+    The input of these blocks is by default limited to 10000 geometries.
+
+    Relevant settings can be adapted as follows:
+      >>> from dask import config
+      >>> config.set({"geomodeling.root": '/my/data/path'})
+      >>> config.set({"geomodeling.geometry-limit": 100000})
     """
 
     def __init__(self, url, layer=None, id_field="id"):
