@@ -292,6 +292,7 @@ class Reclassify(BaseSingle):
     :type data: list
     :type select: bool
     """
+
     def __init__(self, store, data, select=False):
         dtype = store.dtype
         if dtype != np.bool and not np.issubdtype(dtype, np.integer):
@@ -306,15 +307,11 @@ class Reclassify(BaseSingle):
             raise ValueError("Please supply a list of [from, to] values")
         # "from" can have bool or int dtype, "to" can also be float
         if source.dtype != np.bool and not np.issubdtype(source.dtype, np.integer):
-            raise TypeError(
-                f"Cannot reclassify from value with type '{source.dtype}'"
-            )
+            raise TypeError(f"Cannot reclassify from value with type '{source.dtype}'")
         if len(np.unique(source)) != len(source):
             raise ValueError("There are duplicates in the reclassify values")
         if not np.issubdtype(target.dtype, np.number):
-            raise TypeError(
-                f"Cannot reclassify to value with type '{target.dtype}'"
-            )
+            raise TypeError(f"Cannot reclassify to value with type '{target.dtype}'")
         # put 'data' into a list with consistent dtypes
         data = list([list(x) for x in zip(source.tolist(), target.tolist())])
 
@@ -344,7 +341,7 @@ class Reclassify(BaseSingle):
             "dtype": self.dtype.str,
             "fillvalue": self.fillvalue,
             "data": self.data,
-            "select": self.select
+            "select": self.select,
         }
         return [(self.store, request), (process_kwargs, None)]
 
