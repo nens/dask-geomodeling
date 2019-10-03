@@ -283,103 +283,104 @@ class Reclassify(BaseSingle):
 
     :param store: rasterdata to reclassify
     :param data: list of (from, to) values defining the reclassification
+        the from values can be of bool or int datatype; the to values can be
+        of int or float datatype
     :param select: leave only reclassified values, set others to 'no data'.
       Default False.
 
     :type store: RasterBlock
     :type data: list
     :type select: bool
-
-    Specify the mapping in the form of a list of (from, to)-tuples. If there
-    is any float value in the 'to' data, then all 'to' values are treated as
-    float values.
-
-    The maximum of the store's fillvalue and the 'from' values determine the
-    size of the lookup array. For float target values, the dtype is 'f4' and
-    the fillvalue is the maximum possible value for that dtype. for integer
-    target values, the fillvalue of the raster is the maximum of:
-
-    - the target values plus one,
-    - the source values plus one and
-    - the fillvalue of the store
-
-    the raster's dtype is the unsigned integer dtype with the smallest
-    itemsize that still accomodates the raster's fillvalue.
-
-    These properties make it possible to keep the lookup array for the
-    conversion small, but the drawback is that stores with fillvalues below
-    data values will not work.
     """
-
     def __init__(self, store, data, select=False):
-        if not np.issubdtype(store.dtype, np.integer):
-            raise TypeError("The store must be of integer datatype")
+        dtype = store.dtype
+        if dtype != np.bool and not np.issubdtype(dtype, np.integer):
+            raise TypeError("The store must be of boolean or integer datatype")
+
+        # validate "data"
         if not hasattr(data, "__iter__"):
             raise TypeError("'{}' object is not allowed".format(type(data)))
+        try:
+            source, target = map(np.asarray, zip(*data))
+        except ValueError:
+            raise ValueError("Please supply a list of [from, to] values")
+        # "from" can have bool or int dtype, "to" can also be float
+        if source.dtype != np.bool and not np.issubdtype(source.dtype, np.integer):
+            raise TypeError(
+                f"Cannot reclassify from value with type '{source.dtype}'"
+            )
+        if len(np.unique(source)) != len(source):
+            raise ValueError("There are duplicates in the reclassify values")
+        if not np.issubdtype(target.dtype, np.number):
+            raise TypeError(
+                f"Cannot reclassify to value with type '{target.dtype}'"
+            )
+        # put 'data' into a list with consistent dtypes
+        data = list([list(x) for x in zip(source.tolist(), target.tolist())])
+
         if select is not True and select is not False:
             raise TypeError("'{}' object is not allowed".format(type(select)))
-        super(Reclassify, self).__init__(store, data, select)
+        super().__init__(store, data, select)
 
     @property
     def data(self):
         return self.args[1]
 
     @property
-    def dtype(self):
-        source, target = map(np.asarray, zip(*self.data))
+    def select(self):
+        return self.args[2]
 
-        if np.issubdtype(target.dtype, np.floating):
-            dtype = np.dtype("f4")
-        else:
-            # integer mapping
-            fillvalue = max(source.max() + 1, target.max() + 1, self.store.fillvalue)
-            for dtype in np.uint8, np.uint16, np.uint32, np.uint64:
-                if fillvalue <= dtype(-1):
-                    break
-        return dtype
+    @property
+    def dtype(self):
+        _, target = map(np.asarray, zip(*self.data))
+        return target.dtype
 
     @property
     def fillvalue(self):
-        source, target = map(np.asarray, zip(*self.data))
+        return get_dtype_max(self.dtype)
 
-        if np.issubdtype(target.dtype, np.floating):
-            fillvalue = np.finfo("f4").max
-        else:
-            fillvalue = max(source.max() + 1, target.max() + 1, self.store.fillvalue)
-        return fillvalue
+    def get_sources_and_requests(self, **request):
+        process_kwargs = {
+            "dtype": self.dtype.str,
+            "fillvalue": self.fillvalue,
+            "data": self.data,
+            "select": self.select
+        }
+        return [(self.store, request), (process_kwargs, None)]
 
     @staticmethod
-    def process(store_data, mapping_data, select):
+    def process(store_data, process_kwargs):
         if store_data is None or "values" not in store_data:
             return store_data
 
         no_data_value = store_data["no_data_value"]
-        source, target = map(np.asarray, zip(*mapping_data))
+        values = store_data["values"]
+        source, target = map(np.asarray, zip(*process_kwargs["data"]))
+        dtype = np.dtype(process_kwargs["dtype"])
+        fillvalue = process_kwargs["fillvalue"]
 
-        if np.issubdtype(target.dtype, np.floating):
-            dtype = np.dtype("f4")
-            fillvalue = np.finfo("f4").max
-        else:
-            # integer mapping
-            fillvalue = max(source.max() + 1, target.max() + 1, no_data_value)
-            for dtype in np.uint8, np.uint16, np.uint32, np.uint64:
-                if fillvalue <= dtype(-1):
-                    break
+        # add the nodata value to the source array and map it to the target
+        # nodata
+        if no_data_value is not None and no_data_value not in source:
+            source = np.append(source, no_data_value)
+            target = np.append(target, fillvalue)
 
-        # create mapping
-        size = max(source.max(), no_data_value) + 1
-        if select:
-            # map everything, including old fillvalue, to fillvalue
-            mapping = np.full(size, fillvalue, dtype=dtype)
-        else:
-            # map every value onto itself
-            mapping = np.arange(size, dtype=dtype)
+        # sort the source and target values
+        inds = np.argsort(source)
+        source = source[inds]
+        target = target[inds]
 
-        # modify mapping using provided data
-        mapping[source] = target
+        # create the result array
+        if process_kwargs["select"]:  # select = True: initialize with nodata
+            result = np.full(values.shape, fillvalue, dtype=dtype)
+        else:  # select = True: initialize with existing data
+            result = values.astype(dtype)  # makes a copy
 
-        values = mapping[store_data["values"]]
-        return {"values": values, "no_data_value": fillvalue}
+        # find all values in the source data that are to be mapped
+        mask = np.isin(values, source)
+        # place the target values (this also maps nodata values)
+        result[mask] = target[np.searchsorted(source, values[mask])]
+        return {"values": result, "no_data_value": fillvalue}
 
 
 class Rasterize(RasterBlock):

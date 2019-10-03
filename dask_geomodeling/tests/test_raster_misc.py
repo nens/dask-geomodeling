@@ -63,9 +63,6 @@ def test_reclassify(source, vals_request):
     view = raster.Reclassify(store=source, data=[[7, 1000]])
     data = view.get_data(**vals_request)
 
-    assert view.dtype == np.uint16
-    assert data["values"].dtype == np.uint16
-    assert view.fillvalue == data["no_data_value"]
     assert_equal(data["values"][:, 0, 0], [1, 1000, data["no_data_value"]])
 
 
@@ -73,21 +70,15 @@ def test_reclassify_select(source, vals_request):
     view = raster.Reclassify(store=source, data=[[7, 1000]], select=True)
     data = view.get_data(**vals_request)
 
-    assert view.dtype == np.uint16
-    assert data["values"].dtype == np.uint16
-    assert view.fillvalue == data["no_data_value"]
     expected = [data["no_data_value"], 1000, data["no_data_value"]]
     assert_equal(data["values"][:, 0, 0], expected)
 
 
 def test_reclassify_to_float(source, vals_request):
-    view = raster.Reclassify(store=source, data=[[7, 8.0]])
+    view = raster.Reclassify(store=source, data=[[7, 8.2]])
     data = view.get_data(**vals_request)
 
-    assert view.dtype == np.float32
-    assert data["values"].dtype == np.float32
-    assert view.fillvalue == data["no_data_value"]
-    assert_equal(data["values"][:, 0, 0], [1.0, 8.0, data["no_data_value"]])
+    assert_equal(data["values"][:, 0, 0], [1.0, 8.2, data["no_data_value"]])
 
 
 def test_reclassify_bool(source, vals_request):
@@ -95,10 +86,7 @@ def test_reclassify_bool(source, vals_request):
     view = raster.Reclassify(store=source_bool, data=[[True, 1000]])
     data = view.get_data(**vals_request)
 
-    assert view.dtype == np.uint16
-    assert data["values"].dtype == np.uint16
-    assert view.fillvalue == data["no_data_value"]
-    assert_equal(data["values"], [0, 1000, 0])
+    assert_equal(data["values"][:, 0, 0], [0, 1000, 0])
 
 
 def test_reclassify_int32(source, vals_request):
@@ -109,10 +97,7 @@ def test_reclassify_int32(source, vals_request):
     view = raster.Reclassify(store=source_int32, data=[[7, 1000]])
     data = view.get_data(**vals_request)
 
-    assert view.dtype == np.uint16
-    assert data["values"].dtype == np.uint16
-    assert view.fillvalue == data["no_data_value"]
-    assert_equal(data["values"], [1, 1000, data["no_data_value"]])
+    assert_equal(data["values"][:, 0, 0], [1, 1000, data["no_data_value"]])
 
 
 def test_reclassify_float_raster(source):
