@@ -13,6 +13,8 @@ Changelog of dask-geomodeling
   now be boolean or integer, and the 'to' dtype integer or float. The returned
   dtype is now decided by numpy (int64 or float64).
 
+- Increased numpy version constraint to >=1.13
+
 
 2.0.2 (2019-09-04)
 ------------------
