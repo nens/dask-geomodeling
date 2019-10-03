@@ -1606,27 +1606,6 @@ class TestBase(unittest.TestCase):
         self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
         self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
-    def test_reclassify_meta_time(self):
-        view = raster.Reclassify(store=self.raster, data=[[7, 1000]])
-        self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
-        self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
-
-    def test_reclassify_with_integers(self):
-        for select in True, False:
-            view = raster.Reclassify(store=self.raster, data=[[7, 1000]], select=select)
-
-            data = view.get_data(**self.vals_request)
-            self.assertEqual(view.dtype, np.uint16)
-            assert_equal(data["values"], 1000)
-
-    def test_reclassify_with_floats(self):
-        for select in True, False:
-            view = raster.Reclassify(store=self.raster, data=[[7, 8.0]], select=select)
-            data = view.get_data(**self.vals_request)
-            self.assertEqual(view.dtype, np.float32)
-            assert_equal(data["values"], 8.0)
-            self.assertEqual(data["no_data_value"], view.fillvalue)
-
     def test_classify_meta_time(self):
         view = raster.Classify(store=self.raster, bins=[1, 2, 3])
         self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
