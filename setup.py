@@ -12,7 +12,7 @@ install_requires = (
         "pandas>=0.19",
         "geopandas>=0.4",
         "pytz",
-        "numpy>=1.13",
+        "numpy>=1.12",
         "scipy>=0.19",
     ],
 )

@@ -317,7 +317,7 @@ class Reclassify(BaseSingle):
                 "Cannot reclassify to value with type '{}'".format(target.dtype)
             )
         # put 'data' into a list with consistent dtypes
-        data = list([list(x) for x in zip(source.tolist(), target.tolist())])
+        data = [list(x) for x in zip(source.tolist(), target.tolist())]
 
         if select is not True and select is not False:
             raise TypeError("'{}' object is not allowed".format(type(select)))
@@ -378,7 +378,8 @@ class Reclassify(BaseSingle):
             result = values.astype(dtype)  # makes a copy
 
         # find all values in the source data that are to be mapped
-        mask = np.isin(values, source)
+        mask = np.in1d(values.ravel(), source)
+        mask.shape = values.shape
         # place the target values (this also maps nodata values)
         result[mask] = target[np.searchsorted(source, values[mask])]
         return {"values": result, "no_data_value": fillvalue}
