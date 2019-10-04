@@ -7,6 +7,12 @@ Changelog of dask-geomodeling
 
 - Added documentation.
 
+- Fixed MemorySource incase of a request outside of the data boundary.
+
+- Fixed multiple bugs in Reclassify and added some tests. The 'from' dtype can
+  now be boolean or integer, and the 'to' dtype integer or float. The returned
+  dtype is now decided by numpy (int64 or float64).
+
 
 2.0.2 (2019-09-04)
 ------------------
