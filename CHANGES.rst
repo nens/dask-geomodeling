@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.0.3 (unreleased)
+2.0.3 (2019-10-08)
 ------------------
 
 - Added documentation.
