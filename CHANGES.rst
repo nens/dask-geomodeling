@@ -5,7 +5,7 @@ Changelog of dask-geomodeling
 2.0.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fixed propagation of the 'extent' attribute through the raster.Clip.
 
 
 2.0.3 (2019-10-08)

@@ -1506,38 +1506,6 @@ class TestBase(unittest.TestCase):
         )
         self.assertEqual(view2.time, view.time)
 
-    def test_clip(self):
-        # store returns None
-        clip = raster.Clip(store=self.raster_none, source=self.raster_none)
-        self.assertIsNone(clip.get_data(**self.vals_request))
-
-        # store returns no data
-        clip = raster.Clip(store=self.raster_nodata, source=self.raster_none)
-        assert_equal(clip.get_data(**self.vals_request)["values"], 255)
-
-        # source returns None
-        clip = raster.Clip(store=self.raster, source=self.raster_none)
-        self.assertIsNone(clip.get_data(**self.vals_request))
-
-        # source has nodata everywhere (everything will be masked)
-        clip = raster.Clip(store=self.raster, source=self.raster_nodata)
-        assert_equal(clip.get_data(**self.vals_request)["values"], 255)
-
-        # source has data everywhere (nothing will be masked)
-        clip = raster.Clip(store=self.raster, source=self.raster)
-        assert_equal(clip.get_data(**self.vals_request)["values"], 7)
-
-        self.assertEqual(clip.get_data(**self.meta_request)["meta"], self.expected_meta)
-        self.assertEqual(clip.get_data(**self.time_request)["time"], self.expected_time)
-
-        # Use a boolean mask with True everywhere, should propagate data
-        clip = raster.Clip(self.raster, self.raster == 7)
-        assert_equal(clip.get_data(**self.vals_request)["values"], 7)
-
-        # Use a boolean mask with False everywhere, should propagate nodata
-        clip = raster.Clip(self.raster, self.raster != 7)
-        assert_equal(clip.get_data(**self.vals_request)["values"], 255)
-
     def test_mask(self):
         view = raster.Mask(store=self.raster, value=8)
         data = view.get_data(**self.vals_request)

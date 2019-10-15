@@ -69,6 +69,10 @@ class Clip(BaseSingle):
         return {"values": values, "no_data_value": data["no_data_value"]}
 
     @property
+    def extent(self):
+        return self.source.extent
+
+    @property
     def geometry(self):
         return self.source.geometry
 
