@@ -23,4 +23,4 @@ install:
   - pip install . --no-deps
 
 script:
-  - pytest -v --color=yes tests
+  - pytest -v --color=yes
