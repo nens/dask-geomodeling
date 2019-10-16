@@ -21,7 +21,6 @@ install:
   - ./conda.exe install --channel conda-forge --prefix $HOME/miniconda $DEPS
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
-  - conda activate testenv
   - pip install . --no-deps
 
 script:
