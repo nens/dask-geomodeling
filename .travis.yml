@@ -3,25 +3,23 @@ language: minimal
 matrix:
   include:
   - os: linux
-    # constrain poppler: https://github.com/ContinuumIO/anaconda-issues/issues/10351
-    env: PYTHON_VERSION="3.5" DEPS="numpy=1.12 gdal=2.2 poppler<0.62 dask-core=0.18 toolz=0.9 pandas=0.19 shapely=1.5 geopandas=0.4.0 pytz scipy=0.19"
+    env: PYTHON_VERSION="3.5" DEPSPIP="geopandas=0.4.0" DEPS="numpy=1.12 gdal=2.0 dask-core=0.18 toolz=0.9 pandas=0.19 shapely=1.5 pytz scipy=0.19"
   - os: linux
-    # constrain poppler: https://github.com/ContinuumIO/anaconda-issues/issues/10351
-    env: PYTHON_VERSION="3.6" DEPS="numpy=1.14 gdal=2.4 poppler<0.62 dask-core=0.20 toolz=0.10 pandas=0.23 shapely=1.6 geopandas=0.4 pytz scipy=1.1"
+    env: PYTHON_VERSION="3.6" DEPSPIP="geopandas=0.4.*" DEPS="numpy=1.14 gdal=2.2 dask-core=0.20 toolz=0.10 pandas=0.23 shapely=1.6 pytz scipy=1.1"
   - os: linux
-    env: PYTHON_VERSION="3.7" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
+    env: PYTHON_VERSION="3.7" DEPSPIP="geopandas" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
   - os: osx
-    env: PYTHON_VERSION="3.7" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
+    env: PYTHON_VERSION="3.7" DEPSPIP="geopandas" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
 
 install:
   # create a test environment using Conda
   # recipe from https://github.com/conda/conda-prefix-replacement/blob/master/.travis.yml
   - wget https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-$TRAVIS_OS_NAME-64.exe -O conda.exe
   - chmod +x conda.exe
-  - export CONDA_ALWAYS_YES=1
-  - ./conda.exe create --channel conda-forge --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest $DEPS
+  - ./conda.exe create --yes --channel free --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest $DEPS
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
+  - pip install $PIPDEPS
   - pip install . --no-deps
 
 script:
