@@ -17,9 +17,10 @@ install:
   - wget https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-$TRAVIS_OS_NAME-64.exe -O conda.exe
   - chmod +x conda.exe
   - export CONDA_ALWAYS_YES=1
-  - ./conda.exe create -c conda-forge -p $HOME/miniconda python=$PYTHON_VERSION conda $DEPS pytest
+  - ./conda.exe create --name testenv --channel conda-forge --prefix $HOME/miniconda python=$PYTHON_VERSION conda $DEPS pytest
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
+  - conda activate testenv
   - pip install . --no-deps
 
 script:
