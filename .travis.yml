@@ -19,7 +19,7 @@ install:
   - wget https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-$TRAVIS_OS_NAME-64.exe -O conda.exe
   - chmod +x conda.exe
   - export CONDA_ALWAYS_YES=1
-  - ./conda.exe install --channel conda-forge --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest $DEPS
+  - ./conda.exe create --channel conda-forge --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest $DEPS
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - pip install . --no-deps
