@@ -101,16 +101,73 @@ def expected_time():
     return [time_first + i * time_delta for i in range(bands)]
 
 
-def test_clip_extent_attr(source, empty_source):
-    # clip should propagate the extent of the clipping mask
+def test_clip_attrs_store_empty(source, empty_source):
+    # clip should propagate the (empty) extent of the store
     clip = raster.Clip(empty_source, source)
+    assert clip.extent is None
+    assert clip.geometry is None
+
+
+def test_clip_attrs_mask_empty(source, empty_source):
+    # clip should propagate the (empty) extent of the clipping mask
+    clip = raster.Clip(source, empty_source)
+    assert clip.extent is None
+    assert clip.geometry is None
+
+
+def test_clip_attrs_intersects(source, empty_source):
+    # create a raster in that only partially overlaps the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection="EPSG:28992",
+        pixel_size=source.pixel_size,
+        pixel_origin=[o + 3 for o in source.pixel_origin],
+        time_first=source.time_first,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
+    expected_extent = (
+        clipping_mask.extent[0],
+        clipping_mask.extent[1],
+        source.extent[2],
+        source.extent[3],
+    )
+    expected_geometry = source.geometry.Intersection(clipping_mask.geometry)
+    assert clip.extent == expected_extent
+    assert clip.geometry.ExportToWkt() == expected_geometry.ExportToWkt()
+
+
+def test_clip_attrs_with_reprojection(source, empty_source):
+    # create a raster in WGS84 that contains the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection="EPSG:4326",
+        pixel_size=1,
+        pixel_origin=(4, 54),
+        time_first=source.time_first,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
     assert clip.extent == source.extent
+    assert clip.geometry.GetEnvelope() == source.geometry.GetEnvelope()
 
 
-def test_clip_geometry_attr(source, empty_source):
-    # clip should propagate the geometry of the clipping mask
-    clip = raster.Clip(empty_source, source)
-    assert clip.geometry.ExportToWkt() == source.geometry.ExportToWkt()
+def test_clip_attrs_no_intersection(source, empty_source):
+    # create a raster in that does not overlap the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection="EPSG:28992",
+        pixel_size=source.pixel_size,
+        pixel_origin=[o + 5 for o in source.pixel_origin],
+        time_first=source.time_first,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
+    assert clip.extent is None
+    assert clip.geometry is None
 
 
 def test_clip_empty_source(source, empty_source, vals_request):

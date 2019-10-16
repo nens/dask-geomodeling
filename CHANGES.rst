@@ -5,7 +5,11 @@ Changelog of dask-geomodeling
 2.0.4 (unreleased)
 ------------------
 
-- Fixed propagation of the 'extent' attribute through the raster.Clip.
+- Fixed propagation of the 'extent' and 'geometry' attributes through the
+  raster.Clip. Both now return the intersection of the store and mask rasters.
+
+- The MemorySource and elementwise blocks now return None for 'extent' and
+  'geometry' if they are empty.
 
 
 2.0.3 (2019-10-08)
