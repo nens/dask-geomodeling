@@ -3,13 +3,13 @@ language: minimal
 matrix:
   include:
   - os: linux
-    env: PYTHON_VERSION="3.5" DEPS="numpy=1.12 gdal=2.0 dask-core=0.18 toolz=0.9 pandas=0.19 shapely=1.5 geopandas=0.4.0 pytz scipy=0.19"
+    env: PYTHON_VERSION="3.5" GDAL_VERSION="2.0" DEPS="numpy=1.12 dask-core=0.18 toolz=0.9 pandas=0.19 shapely=1.5 geopandas=0.4.0 pytz scipy=0.19"
   - os: linux
-    env: PYTHON_VERSION="3.6" DEPS="numpy=1.14 gdal=2.2 dask-core=0.20 toolz=0.10 pandas=0.23 shapely=1.6 geopandas=0.4 pytz scipy=1.1"
+    env: PYTHON_VERSION="3.6" GDAL_VERSION="2.2" DEPS="numpy=1.14 dask-core=0.20 toolz=0.10 pandas=0.23 shapely=1.6 geopandas=0.4 pytz scipy=1.1"
   - os: linux
-    env: PYTHON_VERSION="3.7" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
+    env: PYTHON_VERSION="3.7" GDAL_VERSION="*" DEPS="numpy dask-core toolz geopandas pytz scipy"
   - os: osx
-    env: PYTHON_VERSION="3.7" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
+    env: PYTHON_VERSION="3.7" GDAL_VERSION="*" DEPS="numpy dask-core toolz geopandas pytz scipy"
 
 install:
   # create a test environment using Conda
@@ -17,7 +17,8 @@ install:
   - wget https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-$TRAVIS_OS_NAME-64.exe -O conda.exe
   - chmod +x conda.exe
   - export CONDA_ALWAYS_YES=1
-  - ./conda.exe create --name testenv --channel conda-forge --prefix $HOME/miniconda python=$PYTHON_VERSION conda $DEPS pytest
+  - ./conda.exe create --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest gdal=$GDAL_VERSION
+  - ./conda.exe install --channel conda-forge --prefix $HOME/miniconda $DEPS
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda activate testenv
