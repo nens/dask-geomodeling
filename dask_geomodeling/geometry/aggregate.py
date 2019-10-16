@@ -121,7 +121,8 @@ class AggregateRaster(GeometryBlock):
       ``'sum', 'count', 'min', 'max', 'mean', 'median', 'p<percentile>'``.
     :param projection: the projection to perform the aggregation in
     :param pixel_size: the pixel size to perform aggregation in
-    :param max_pixels: the maximum number of pixels to use for aggregation
+    :param max_pixels: the maximum number of pixels to use for aggregation.
+       defaults to the geomodeling.raster-limit setting.
     :param column_name: the name of the column to output the results
     :param auto_pixel_size: determines whether the pixel_size is
       adjusted when a raster is too large. Default False.
@@ -130,9 +131,9 @@ class AggregateRaster(GeometryBlock):
     :type source: GeometryBlock
     :type raster: RasterBlock
     :type statistic: string
-    :type projection: string
-    :type pixel_size: float
-    :type max_pixels: int
+    :type projection: string or None
+    :type pixel_size: float or None
+    :type max_pixels: int or None
     :type column_name: string
     :type auto_pixel_size: boolean
 
@@ -153,6 +154,10 @@ class AggregateRaster(GeometryBlock):
     source geometry cause the requested raster size to exceed max_pixels, the
     pixel_size is adjusted automatically if ``auto_pixel_size = True``, else
     a RuntimeError is raised.
+
+    The global raster-limit setting can be adapted as follows:
+      >>> from dask import config
+      >>> config.set({"geomodeling.raster-limit": 10 ** 9})
     """
 
     # extensive (opposite: intensive) means: additive, proportional to size
@@ -486,7 +491,7 @@ class AggregateRasterAboveThreshold(AggregateRaster):
     :type threshold_name: string
 
     See also:
-      :class:`geoblocks.geometry.aggregate.AggregateRaster`
+      :class:`dask_geomodeling.geometry.aggregate.AggregateRaster`
     """
 
     def __init__(

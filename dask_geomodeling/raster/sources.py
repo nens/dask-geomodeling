@@ -276,7 +276,9 @@ class MemorySource(RasterBlock):
 class RasterFileSource(RasterBlock):
     """A raster source that interfaces data from a file path.
 
-    :param url: the path to the file
+    :param url: the path to the file. File paths have to be contained inside
+      the current root setting. Relative paths are interpreted relative to this
+      setting (but internally stored as absolute paths).
     :param time_first: the timestamp of the first frame in data (in
         milliseconds since 1-1-1970)
     :param time_delta: the difference between two consecutive frames (in ms)
@@ -284,6 +286,10 @@ class RasterFileSource(RasterBlock):
     :type url: str
     :type time_first: integer or datetime
     :type time_delta: integer or timedelta
+
+    The global root path can be adapted as follows:
+      >>> from dask import config
+      >>> config.set({"geomodeling.root": "/my/data/path"})
     """
 
     def __init__(self, url, time_first, time_delta):

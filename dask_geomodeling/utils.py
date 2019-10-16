@@ -296,13 +296,15 @@ class GeoTransform(tuple):
         if j1 == j2:
             j2 += 1
 
-        # clip the indices to the array bounds and get the data
+        # clip the indices to the array bounds for getting the data
         _i1, _i2 = np.clip([i1, i2], 0, shape[1])
         _j1, _j2 = np.clip([j1, j2], 0, shape[2])
         ranges = (_i1, _i2), (_j1, _j2)
 
         # pad the data to the shape given by the index
-        padding = (_i1 - i1, i2 - _i2), (_j1 - j1, j2 - _j2)
+        padding_i = (i2 - i1, 0) if _i1 == _i2 else (_i1 - i1, i2 - _i2)
+        padding_j = (j2 - j1, 0) if _j1 == _j2 else (_j1 - j1, j2 - _j2)
+        padding = padding_i, padding_j
         if np.all(np.array(padding) <= 0):
             padding = None
         return ranges, padding
