@@ -30,7 +30,7 @@ install:
   # update and configure miniconda
   - conda update --yes conda
   - conda config --set changeps1 no --set restore_free_channel true
-  - conda config --append channels conda-forge
+  - conda config --add channels conda-forge
   # create and activate the test environment
   - conda create -n testenv --yes python=$PYTHON_VERSION $DEPS pytest
   - conda activate testenv
