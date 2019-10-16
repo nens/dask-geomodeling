@@ -17,7 +17,7 @@ install:
   - wget https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-$TRAVIS_OS_NAME-64.exe -O conda.exe
   - chmod +x conda.exe
   - export CONDA_ALWAYS_YES=1
-  - ./conda.exe create --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest gdal=$GDAL_VERSION
+  - ./conda.exe create --channel free --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest gdal=$GDAL_VERSION
   - ./conda.exe install --channel conda-forge --prefix $HOME/miniconda $DEPS
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
