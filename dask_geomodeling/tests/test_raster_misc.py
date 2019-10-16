@@ -105,14 +105,12 @@ def test_clip_extent_attr(source, empty_source):
     # clip should propagate the extent of the clipping mask
     clip = raster.Clip(empty_source, source)
     assert clip.extent == source.extent
-    assert clip.extent != empty_source.extent
 
 
 def test_clip_geometry_attr(source, empty_source):
     # clip should propagate the geometry of the clipping mask
     clip = raster.Clip(empty_source, source)
     assert clip.geometry.ExportToWkt() == source.geometry.ExportToWkt()
-    assert clip.geometry.ExportToWkt() != empty_source.geometry.ExportToWkt()
 
 
 def test_clip_empty_source(source, empty_source, vals_request):
