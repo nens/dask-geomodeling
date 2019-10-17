@@ -93,9 +93,9 @@ class Clip(BaseSingle):
             return
         sr = result.GetSpatialReference()
         if not mask.GetSpatialReference().IsSame(sr):
-            other = mask.Clone()
-            other.TransformTo(sr)
-        result = result.Intersection(other)
+            mask = mask.Clone()
+            mask.TransformTo(sr)
+        result = result.Intersection(mask)
         if result.GetArea() == 0.0:
             return
         return result
