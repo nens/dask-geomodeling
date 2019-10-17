@@ -28,7 +28,7 @@ install:
   - source $HOME/miniconda/etc/profile.d/conda.sh
   - hash -r
   # update and configure miniconda
-  - conda update --yes --force conda
+  - conda update --yes conda
   - conda config --set changeps1 no --set restore_free_channel true
   - conda config --add channels conda-forge
   # create and activate the test environment
