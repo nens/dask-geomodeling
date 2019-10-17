@@ -3,40 +3,23 @@ language: minimal
 matrix:
   include:
   - os: linux
-    env: PYTHON_VERSION="3.5" DEPS="numpy=1.12 gdal=2.0 dask-core=0.18 toolz=0.9 pandas=0.19 shapely=1.5 geopandas=0.4.0 pytz scipy=0.19"
+    env: PYTHON_VERSION="3.5" MAINDEPS="numpy=1.12 gdal=2.2.4 scipy=0.19 pytz" DEPS="dask-core=0.18 toolz=0.9 pandas=0.19 geopandas=0.4.1"
   - os: linux
-    env: PYTHON_VERSION="3.6" DEPS="numpy=1.14 gdal=2.2 dask-core=0.20 toolz=0.10 pandas=0.23 shapely=1.6 geopandas=0.4 pytz scipy=1.1"
+    env: PYTHON_VERSION="3.6" MAINDEPS="numpy=1.14 gdal=2.2.4 scipy=1.1 pytz" DEPS="dask-core=0.20 toolz=0.10 pandas=0.23 geopandas=0.5"
   - os: linux
-    env: PYTHON_VERSION="3.7" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
+    env: PYTHON_VERSION="3.7" MAINDEPS="numpy gdal scipy pytz" DEPS="dask-core toolz geopandas"
   - os: osx
-    env: PYTHON_VERSION="3.7" DEPS="numpy gdal dask-core toolz geopandas pytz scipy"
-
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    elif  [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
-    fi;
+    env: PYTHON_VERSION="3.7" MAINDEPS="numpy gdal scipy pytz" DEPS="dask-core toolz geopandas"
 
 install:
-  # install miniconda
-  # -b means "batch mode": automatically agree with license
-  # -p means "prefix": determine installation prefix
-  - bash miniconda.sh -b -p $HOME/miniconda
-  # setup the paths and reset hash
-  - export PATH="$HOME/miniconda:$HOME/miniconda/bin:$PATH"
-  - source $HOME/miniconda/etc/profile.d/conda.sh
+  - wget https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-$TRAVIS_OS_NAME-64.exe -O conda.exe
+  - chmod +x conda.exe
+  - export CONDA_ALWAYS_YES=1
+  - ./conda.exe create --prefix $HOME/miniconda python=$PYTHON_VERSION conda pytest $MAINDEPS
+  - ./conda.exe install --prefix $HOME/miniconda --channel conda-forge $DEPS
+  - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
-  # update and configure miniconda
-  - conda update --yes conda
-  - conda config --set changeps1 no --set restore_free_channel true
-  - conda config --append channels conda-forge
-  # create and activate the test environment
-  - conda create -n testenv --yes python=$PYTHON_VERSION $DEPS pytest
-  - conda activate testenv
   - pip install . --no-deps
-  # print stuff for debugging
-  - conda --version ; python --version ; pip --version;
 
 script:
   - pytest
