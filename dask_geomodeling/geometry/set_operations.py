@@ -59,13 +59,21 @@ class Difference(BaseSingle):
                 }
             else:
                 return source_data
-        if len(source_data["features"]) == 0 or len(other_data["features"]) == 0:
-            return source_data  # do nothing
 
-        features = source_data["features"].set_geometry(
-            source_data["features"].difference(other_data["features"])
-        )
-        return {"features": features, "projection": source_data["projection"]}
+        a = source_data["features"]
+        b = other_data["features"]
+        if len(a) == 0 or len(b) == 0:
+            return source_data   # do nothing
+
+        a_series = a["geometry"]
+        b_series = b["geometry"].reindex(a_series.index)
+        result_series = a_series.difference(b_series)
+
+        # re-insert geometries that were missing in b (we want A - None = A)
+        missing_in_b = b_series.isna()
+        result_series[missing_in_b] = a_series[missing_in_b]
+        result = a.set_geometry(result_series)
+        return {"features": result, "projection": source_data["projection"]}
 
 
 class Intersection(BaseSingle):
