@@ -140,7 +140,7 @@ class MemorySource(RasterBlock):
         return utils.GeoTransform((p, a, 0, q, 0, -d))
 
     def _get_extent(self):
-        if any(x == 0 for x in self.data.shape):
+        if not self.data.size:
             return
         bbox = self.geo_transform.get_bbox((0, 0), self.data.shape[1:])
         return utils.Extent(bbox, utils.get_sr(self.projection))
