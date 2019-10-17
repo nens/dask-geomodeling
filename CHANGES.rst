@@ -5,7 +5,9 @@ Changelog of dask-geomodeling
 2.0.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Preserve functionality of the geometry.Difference block with geopandas 0.6.
+  When taking the difference of a geometry with a missing geometry (A - None),
+  geopandas < 0.6 returned A as result, while >= 0.6 returns None as result.
 
 
 2.0.3 (2019-10-08)
