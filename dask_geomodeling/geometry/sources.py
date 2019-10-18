@@ -1,11 +1,19 @@
 """
 Module containing geometry sources.
 """
+import fiona
 import geopandas as gpd
 
 from dask import config
 from dask_geomodeling import utils
 from .base import GeometryBlock
+
+# this import is a copy from geopandas.io.files
+try:
+    from fiona import Env as fiona_env
+except ImportError:
+    from fiona import drivers as fiona_env
+
 
 __all__ = ["GeometryFileSource"]
 
@@ -54,7 +62,10 @@ class GeometryFileSource(GeometryBlock):
 
     @property
     def columns(self):
-        raise NotImplementedError()
+        # this is exactly how geopandas determines the columns
+        with fiona_env(), fiona.open(self.path) as reader:
+            properties = reader.meta["schema"]["properties"]
+            return set(properties.keys()) | {"geometry"}
 
     def get_sources_and_requests(self, **request):
         # check the filters: this block does not support lookups
