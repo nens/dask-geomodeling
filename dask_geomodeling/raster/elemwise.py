@@ -159,6 +159,8 @@ class BaseElementwise(RasterBlock):
                 geometry = geometry.Clone()
                 geometry.TransformTo(sr)
             result = result.Intersection(geometry)
+        if result.GetArea() == 0.0:
+            return
         return result
 
     @property

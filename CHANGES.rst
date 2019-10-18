@@ -5,6 +5,12 @@ Changelog of dask-geomodeling
 2.0.4 (unreleased)
 ------------------
 
+- Fixed propagation of the 'extent' and 'geometry' attributes through the
+  raster.Clip. Both now return the intersection of the store and mask rasters.
+
+- The MemorySource and elementwise blocks now return None for 'extent' and
+  'geometry' if they are empty.
+
 - Preserve functionality of the geometry.Difference block with geopandas 0.6.
   When taking the difference of a geometry with a missing geometry (A - None),
   geopandas < 0.6 returned A as result, while >= 0.6 returns None as result.

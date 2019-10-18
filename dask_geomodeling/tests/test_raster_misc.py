@@ -30,9 +30,51 @@ def source():
 
 
 @pytest.fixture
+def empty_source():
+    yield MemorySource(
+        data=np.empty((0, 0, 0), dtype=np.uint8),
+        no_data_value=255,
+        projection="EPSG:28992",
+        pixel_size=0.5,
+        pixel_origin=(135000, 456000),
+    )
+
+
+@pytest.fixture
+def nodata_source():
+    time_first = datetime(2000, 1, 1)
+    time_delta = timedelta(hours=1)
+    yield MemorySource(
+        data=np.full((3, 10, 10), 255, dtype=np.uint8),
+        no_data_value=255,
+        projection="EPSG:28992",
+        pixel_size=0.5,
+        pixel_origin=(135000, 456000),
+        time_first=time_first,
+        time_delta=time_delta,
+    )
+
+
+@pytest.fixture
 def vals_request():
     bands = 3
     time_first = datetime(2000, 1, 1)
+    time_delta = timedelta(hours=1)
+    yield {
+        "mode": "vals",
+        "start": time_first,
+        "stop": time_first + bands * time_delta,
+        "width": 4,
+        "height": 6,
+        "bbox": (135000, 456000 - 3, 135000 + 2, 456000),
+        "projection": "EPSG:28992",
+    }
+
+
+@pytest.fixture
+def vals_request_none():
+    bands = 3
+    time_first = datetime(2001, 1, 1)
     time_delta = timedelta(hours=1)
     yield {
         "mode": "vals",
@@ -57,6 +99,114 @@ def expected_time():
     time_first = datetime(2000, 1, 1)
     time_delta = timedelta(hours=1)
     return [time_first + i * time_delta for i in range(bands)]
+
+
+def test_clip_attrs_store_empty(source, empty_source):
+    # clip should propagate the (empty) extent of the store
+    clip = raster.Clip(empty_source, source)
+    assert clip.extent is None
+    assert clip.geometry is None
+
+
+def test_clip_attrs_mask_empty(source, empty_source):
+    # clip should propagate the (empty) extent of the clipping mask
+    clip = raster.Clip(source, empty_source)
+    assert clip.extent is None
+    assert clip.geometry is None
+
+
+def test_clip_attrs_intersects(source, empty_source):
+    # create a raster in that only partially overlaps the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection="EPSG:28992",
+        pixel_size=source.pixel_size,
+        pixel_origin=[o + 3 for o in source.pixel_origin],
+        time_first=source.time_first,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
+    expected_extent = (
+        clipping_mask.extent[0],
+        clipping_mask.extent[1],
+        source.extent[2],
+        source.extent[3],
+    )
+    expected_geometry = source.geometry.Intersection(clipping_mask.geometry)
+    assert clip.extent == expected_extent
+    assert clip.geometry.ExportToWkt() == expected_geometry.ExportToWkt()
+
+
+def test_clip_attrs_with_reprojection(source, empty_source):
+    # create a raster in WGS84 that contains the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection="EPSG:4326",
+        pixel_size=1,
+        pixel_origin=(4, 54),
+        time_first=source.time_first,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
+    assert clip.extent == source.extent
+    assert clip.geometry.GetEnvelope() == source.geometry.GetEnvelope()
+
+
+def test_clip_attrs_no_intersection(source, empty_source):
+    # create a raster in that does not overlap the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection="EPSG:28992",
+        pixel_size=source.pixel_size,
+        pixel_origin=[o + 5 for o in source.pixel_origin],
+        time_first=source.time_first,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
+    assert clip.extent is None
+    assert clip.geometry is None
+
+
+def test_clip_empty_source(source, empty_source, vals_request):
+    clip = raster.Clip(empty_source, source)
+    assert clip.get_data(**vals_request) is None
+
+
+def test_clip_with_empty_mask(source, empty_source, vals_request):
+    clip = raster.Clip(source, empty_source)
+    assert clip.get_data(**vals_request) is None
+
+
+def test_clip_with_nodata(source, nodata_source, vals_request):
+    # the clipping mask has nodata everywhere (everything will be masked)
+    clip = raster.Clip(source, nodata_source)
+    assert_equal(clip.get_data(**vals_request)["values"], 255)
+
+
+def test_clip_with_data(source, nodata_source, vals_request):
+    # the clipping mask has data everywhere (nothing will be masked)
+    clip = raster.Clip(source, source)
+    assert_equal(clip.get_data(**vals_request)["values"][:, 0, 0], [1, 7, 255])
+
+
+def test_clip_with_bool(source, vals_request):
+    clip = raster.Clip(source, source == 7)
+    assert_equal(clip.get_data(**vals_request)["values"][:, 0, 0], [255, 7, 255])
+
+
+def test_clip_meta_request(source, vals_request, expected_meta):
+    clip = raster.Clip(source, source)
+    vals_request["mode"] = "meta"
+    assert clip.get_data(**vals_request)["meta"] == expected_meta
+
+
+def test_clip_time_request(source, vals_request, expected_time):
+    clip = raster.Clip(source, source)
+    vals_request["mode"] = "time"
+    assert clip.get_data(**vals_request)["time"] == expected_time
 
 
 def test_reclassify(source, vals_request):

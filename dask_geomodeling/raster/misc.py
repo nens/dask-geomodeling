@@ -69,8 +69,36 @@ class Clip(BaseSingle):
         return {"values": values, "no_data_value": data["no_data_value"]}
 
     @property
+    def extent(self):
+        """Intersection of bounding boxes of 'store' and 'source'. """
+        result, mask = [s.extent for s in self.args]
+        if result is None or mask is None:
+            return
+
+        # return the overlapping box
+        x1 = max(result[0], mask[0])
+        y1 = max(result[1], mask[1])
+        x2 = min(result[2], mask[2])
+        y2 = min(result[3], mask[3])
+        if x2 <= x1 or y2 <= y1:
+            return None  # no overlap
+        else:
+            return x1, y1, x2, y2
+
+    @property
     def geometry(self):
-        return self.source.geometry
+        """Intersection of geometries of 'store' and 'source'. """
+        result, mask = [x.geometry for x in self.args]
+        if result is None or mask is None:
+            return
+        sr = result.GetSpatialReference()
+        if not mask.GetSpatialReference().IsSame(sr):
+            mask = mask.Clone()
+            mask.TransformTo(sr)
+        result = result.Intersection(mask)
+        if result.GetArea() == 0.0:
+            return
+        return result
 
 
 class Mask(BaseSingle):
