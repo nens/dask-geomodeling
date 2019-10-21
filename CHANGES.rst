@@ -15,6 +15,11 @@ Changelog of dask-geomodeling
   When taking the difference of a geometry with a missing geometry (A - None),
   geopandas < 0.6 returned A as result, while >= 0.6 returns None as result.
 
+- Fixed the projection attribute of elementwise raster blocks in case one of
+  the arguments is a number and not a Block instance.
+
+- Implemented the geo_transform attribute of elementwise raster blocks.
+
 
 2.0.3 (2019-10-08)
 ------------------

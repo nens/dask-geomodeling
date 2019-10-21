@@ -190,6 +190,94 @@ class TestElementwise(unittest.TestCase):
                 args[0].projection, get_epsg_or_wkt(geometry.GetSpatialReference())
             )
 
+    def test_propagate_projection(self):
+        self.assertEqual(
+            self.klass(MockRaster(value=1, projection="EPSG:3857"), 1).projection,
+            "EPSG:3857",
+        )
+
+        self.assertEqual(
+            self.klass(1, MockRaster(value=1, projection="EPSG:3857")).projection,
+            "EPSG:3857",
+        )
+
+        self.assertEqual(
+            self.klass(
+                MockRaster(value=1, projection="EPSG:3857"),
+                MockRaster(value=2, projection="EPSG:3857"),
+            ).projection,
+            "EPSG:3857",
+        )
+
+        self.assertIsNone(
+            self.klass(
+                MockRaster(value=1, projection="EPSG:3857"),
+                MockRaster(value=2, projection="EPSG:4326"),
+            ).projection
+        )
+
+        self.assertIsNone(
+            self.klass(
+                MockRaster(value=1, projection="EPSG:3857"),
+                MockRaster(value=2, projection=None),
+            ).projection
+        )
+
+        self.assertIsNone(
+            self.klass(
+                MockRaster(value=1, projection=None),
+                MockRaster(value=2, projection=None),
+            ).projection
+        )
+
+    def test_propagate_geo_transform(self):
+        # single geo-transform propagates
+        self.assertTupleEqual(
+            self.klass(
+                MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)), 1
+            ).geo_transform,
+            (0, 1, 0, 1, 0, -1),
+        )
+
+        self.assertTupleEqual(
+            self.klass(
+                1, MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1))
+            ).geo_transform,
+            (0, 1, 0, 1, 0, -1),
+        )
+
+        # matching geotransform propagates
+        self.assertTupleEqual(
+            self.klass(
+                MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
+                MockRasterWithGeotransform(geo_transform=(5, 1, 0, -8, 0, -1)),
+            ).geo_transform,
+            (0, 1, 0, 1, 0, -1),
+        )
+
+        # non-matching results in None
+        self.assertIsNone(
+            self.klass(
+                MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
+                MockRasterWithGeotransform(geo_transform=(0, 2, 0, 1, 0, -2)),
+            ).geo_transform
+        )
+
+        # check None propagation
+        self.assertIsNone(
+            self.klass(
+                MockRasterWithGeotransform(geo_transform=None),
+                MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
+            ).geo_transform
+        )
+
+        self.assertIsNone(
+            self.klass(
+                MockRasterWithGeotransform(geo_transform=(0, 1, 0, 1, 0, -1)),
+                MockRasterWithGeotransform(geo_transform=None),
+            ).geo_transform
+        )
+
 
 class TestMath(unittest.TestCase):
     klass = raster.elemwise.BaseMath
