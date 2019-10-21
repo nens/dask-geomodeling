@@ -17,6 +17,11 @@ Changelog of dask-geomodeling
 
 - Added default values for RasterFileSource's time parameters.
 
+- Fixed the projection attribute of elementwise raster blocks in case one of
+  the arguments is a number and not a Block instance.
+
+- Implemented the geo_transform attribute of elementwise raster blocks.
+
 
 2.0.3 (2019-10-08)
 ------------------

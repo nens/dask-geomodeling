@@ -5,7 +5,7 @@ from functools import wraps
 
 import numpy as np
 
-from dask_geomodeling.utils import get_dtype_max, get_index
+from dask_geomodeling.utils import get_dtype_max, get_index, GeoTransform
 
 from .base import RasterBlock, BaseSingle
 
@@ -147,7 +147,7 @@ class BaseElementwise(RasterBlock):
     def geometry(self):
         """Intersection of geometries in the projection of the first store
         geometry. """
-        geometries = [x.geometry for x in self.args]
+        geometries = [x.geometry for x in self._sources]
         if any(x is None for x in geometries):
             return
         if len(geometries) == 1:
@@ -166,17 +166,25 @@ class BaseElementwise(RasterBlock):
     @property
     def projection(self):
         """Projection of the data if they match, else None"""
-        projection = self.args[0].projection
+        projection = self._sources[0].projection
         if projection is None:
             return
-        for arg in self.args[1:]:
+        for arg in self._sources[1:]:
             if projection != arg.projection:
                 return
         return projection
 
     @property
     def geo_transform(self):
-        return  # TODO: Propagate geo_transform if the sources match
+        geo_transform = self._sources[0].geo_transform
+        if geo_transform is None:
+            return
+        geo_transform = GeoTransform(geo_transform)
+        for arg in self._sources[1:]:
+            other = arg.geo_transform
+            if other is None or not geo_transform.aligns_with(other):
+                return
+        return geo_transform
 
 
 class BaseMath(BaseElementwise):
