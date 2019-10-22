@@ -15,6 +15,7 @@ Changelog of dask-geomodeling
   When taking the difference of a geometry with a missing geometry (A - None),
   geopandas < 0.6 returned A as result, while >= 0.6 returns None as result.
 
+- Added default values for RasterFileSource's time parameters.
 
 - Implemented the 'columns' attribute for GeometryFileSource.
 
