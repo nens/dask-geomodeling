@@ -15,6 +15,7 @@ from matplotlib.colors import Normalize
 from io import BytesIO
 import numpy as np
 from PIL import Image
+import traitlets
 
 # include this plugin with:
 # jupyter notebook --NotebookApp.nbserver_extensions="{'dask_geomodeling.ipyleaflet_plugin':True}"
@@ -29,8 +30,13 @@ class GeomodelingWMSHandler(IPythonHandler):
         # the request params to set up a WMS / TMS service
         block = Block.from_json(self.get_query_argument("layers"))
         style = self.get_query_argument("styles")
+        vmin = float(self.get_query_argument("vmin"))
+        vmax = float(self.get_query_argument("vmax"))
         format = self.get_query_argument("format")
-        transparent = self.get_query_argument("transparent")
+        if format.lower() != "image/png":
+            self.set_status(400)
+            self.finish("Only image/png is supported")
+            return
         srs = self.get_query_argument("srs")
         height = int(self.get_query_argument("height"))
         max_cell_size = 5  # TODO
@@ -42,12 +48,11 @@ class GeomodelingWMSHandler(IPythonHandler):
         cell_size_x = (bbox[2] - bbox[0]) / width
         cell_size_y = (bbox[3] - bbox[1]) / height
         if cell_size_x > max_cell_size or cell_size_y > max_cell_size:
+            self.set_status(400)
             self.finish("Too large area requested")
             return
 
         # get cmap
-        cmap, vmin, vmax, alpha = style.split(":")
-
         data = block.get_data(
             mode="vals",
             bbox=bbox,
@@ -59,9 +64,8 @@ class GeomodelingWMSHandler(IPythonHandler):
         masked = np.ma.masked_equal(data["values"][0], data["no_data_value"])
         stream = BytesIO()
 
-        normalized = Normalize(vmin=float(vmin), vmax=float(vmax))(masked)
-        img = cm.get_cmap(cmap)(normalized)
-        img[:, :, 3] = float(alpha)
+        normalized = Normalize(vmin=vmin, vmax=vmax, clip=True)(masked)
+        img = cm.get_cmap(style)(normalized)
         img[normalized.mask, 3] = 0.
         img_uint8 = (img * 255).astype(np.uint8)
         Image.fromarray(img_uint8).save(stream, format="png")
@@ -83,6 +87,10 @@ class GeomodelingWMSHandler(IPythonHandler):
 
 class GeomodelingLayer(WMSLayer):
     base_url = None  # set by load_jupyter_server_extension
+
+    format = traitlets.Unicode('image/png').tag(sync=True, o=True)
+    vmin = traitlets.Float(0.0).tag(sync=True, o=True)
+    vmax = traitlets.Float(1.0).tag(sync=True, o=True)
 
     def __init__(self, hostname="localhost", **kwargs):
         from notebook import notebookapp
