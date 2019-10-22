@@ -121,6 +121,9 @@ class TestGeometryFileSource(unittest.TestCase):
         self.assertEqual(self.source.path, self.abspath)
         self.assertEqual(self.source.id_field, self.id_field)
 
+    def test_columns(self):
+        self.assertSetEqual(self.source.columns, {"id", "name", "geometry"})
+
     def test_get_data(self):
         result = self.source.get_data(geometry=box(*self.bbox), projection="EPSG:4326")
         self.assertEqual(self.projection, result["projection"])

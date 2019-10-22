@@ -17,6 +17,8 @@ Changelog of dask-geomodeling
 
 - Added default values for RasterFileSource's time parameters.
 
+- Implemented the 'columns' attribute for GeometryFileSource.
+
 - Fixed the projection attribute of elementwise raster blocks in case one of
   the arguments is a number and not a Block instance.
 
