@@ -287,8 +287,9 @@ class RasterFileSource(RasterBlock):
       the current root setting. Relative paths are interpreted relative to this
       setting (but internally stored as absolute paths).
     :param time_first: the timestamp of the first frame in data (in
-        milliseconds since 1-1-1970)
-    :param time_delta: the difference between two consecutive frames (in ms)
+        milliseconds since 1-1-1970), defaults to 1-1-1970
+    :param time_delta: the difference between two consecutive frames (in ms),
+        defaults to 5 minutes
 
     :type url: str
     :type time_first: integer or datetime
@@ -299,7 +300,7 @@ class RasterFileSource(RasterBlock):
       >>> config.set({"geomodeling.root": "/my/data/path"})
     """
 
-    def __init__(self, url, time_first, time_delta):
+    def __init__(self, url, time_first=0, time_delta=300000):
         url = utils.safe_file_url(url, config.get("geomodeling.root"))
         if isinstance(time_first, datetime):
             time_first = utils.dt_to_ms(time_first)
