@@ -656,6 +656,9 @@ def safe_abspath(url, start=None):
 
     If start = None, an absolute path is expected in URL."""
     url = safe_file_url(url, start)
+    # return url for nt users e.g. Windows
+    if os.name == 'nt':
+        return url
     _, path = url.split("://")
     return path
 
@@ -686,6 +689,9 @@ def safe_file_url(url, start=None):
     else:
         abspath = os.path.abspath(os.path.join(start, path))
         if not abspath.startswith(start):
+            # return absbath for nt users e.g. Windows
+            if os.name == 'nt':
+                return abspath
             raise IOError("'{}' is not contained in '{}'".format(path, start))
     return "://".join([protocol, abspath])
 
