@@ -1,15 +1,32 @@
 Installation
 ============
 
-Local setup (using conda)
--------------------------
+Recommended: use conda
+----------------------
 
 1. `Install anaconda <https://docs.anaconda.com/anaconda/install/>`_
 2. Run ``conda install dask-geomodeling -c conda-forge``
 
 
-Local setup with system Python (Ubuntu)
----------------------------------------
+Using the ipyleaflet plugin
+---------------------------
+
+dask-geomodeling comes with a ipyleaflet plugin for `Jupyter<https://jupyter.org/>`_
+so that you can show your generated views on a mapviewer. If you want to use
+it, install some additional dependencies::
+
+    $ conda install jupyter ipyleaflet matplotlib pillow
+
+And start your notebook server with the plugin::
+
+    $ jupyter notebook --NotebookApp.nbserver_extensions="{'dask_geomodeling.ipyleaflet_plugin':True}"
+
+Alternatively, you can add this extension to your
+`Jupyter configuration<https://jupyter-notebook.readthedocs.io/en/stable/config_overview.html>`_
+
+
+Advanced: local setup with system Python (Ubuntu)
+-------------------------------------------------
 
 These instructions make use of the system-wide Python 3 interpreter.
 
@@ -24,7 +41,7 @@ Run the tests::
     $ pytest
 
 
-Local setup for development (Ubuntu)
+Advanced: local setup for development (Ubuntu)
 ------------------------------------
 
 These instructions assume that ``git``, ``python3``, ``pip``, and
