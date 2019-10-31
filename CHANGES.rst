@@ -24,6 +24,10 @@ Changelog of dask-geomodeling
 
 - Implemented the geo_transform attribute of elementwise raster blocks.
 
+- Added an ipyleaflet plugin for visualizing RasterBlocks in jupyter notebook.
+
+- Changed the default geomodeling.root setting to the current working directory
+
 
 2.0.3 (2019-10-08)
 ------------------

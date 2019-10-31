@@ -44,6 +44,38 @@ type of the block used. In this example, we used a RasterBlock. The request
 and response specifications are listed in the documentation of the specific
 block type.
 
+
+Showing data on the map
+-----------------------
+
+If you a are using Jupyter and our ipyleaflet plugin (see `installation`__),
+you can inspect your dask-geomodeling View on an interactive map widget.
+
+.. code:: python
+
+   from ipyleaflet import Map, basemaps, basemap_to_tiles
+   from dask_geomodeling.ipyleaflet_plugin import GeomodelingLayer
+
+   # create the geomodeling layer and the background layer
+   # the 'styles' parameter refers to a matplotlib colormap;
+   # the 'vmin' and 'vmax' parameters determine the range of the colormap
+   geomodeling_layer = GeomodelingLayer(
+       add, styles="viridis", vmin=0, vmax=10, opacity=0.5
+   )
+   osm_layer = basemap_to_tiles(basemaps.OpenStreetMap.Mapnik)
+
+   # center the map on the middle of the View's extent
+   extent = add.extent
+   Map(
+       center=((extent[1] + extent[3]) / 2, (extent[0] + extent[2]) / 2),
+       zoom=14,
+       layers=[osm_layer, geoomdeling_layer]
+   )
+
+Please consult the `ipyleaflet<https://ipyleaflet.readthedocs.io>`_ docs for
+examples in how to add different basemaps, other layers, or add controls.
+
+
 Delayed evaluation
 ------------------
 
