@@ -2,7 +2,13 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.0.4 (unreleased)
+2.0.5 (unreleased)
+------------------
+
+- Nothing changed yet.
+
+
+2.0.4 (2019-11-01)
 ------------------
 
 - Fixed propagation of the 'extent' and 'geometry' attributes through the
