@@ -1,5 +1,7 @@
 from unittest import mock
 import unittest
+import pytest
+import sys
 
 from osgeo import osr
 from shapely import geometry
@@ -84,6 +86,10 @@ class TestUtils(unittest.TestCase):
         )
         self.assertTrue(np.equal(output, reference).all())
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"),
+        reason="Path tests are not yet written for windows",
+    )
     def test_safe_file_url(self):
         # prepends file:// if necessary
         self.assertEqual(utils.safe_file_url("/tmp"), "file:///tmp")

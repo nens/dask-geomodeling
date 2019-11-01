@@ -326,12 +326,8 @@ class RasterFileSource(RasterBlock):
 
     @property
     def gdal_dataset(self):
-        try:
-            return self._gdal_dataset
-        except AttributeError:
-            path = utils.safe_abspath(self.url, config.get("geomodeling.root"))
-            self._gdal_dataset = gdal.Open(path)
-            return self._gdal_dataset
+        path = utils.safe_abspath(self.url, config.get("geomodeling.root"))
+        return gdal.Open(path)
 
     @property
     def projection(self):

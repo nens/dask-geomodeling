@@ -5,7 +5,9 @@ Changelog of dask-geomodeling
 2.0.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Don't keep GDAL file handlers open in the RasterFileSource.
+
+- Run unittests on windows.
 
 
 2.0.4 (2019-11-01)

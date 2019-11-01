@@ -7,6 +7,9 @@ dask-geomodeling
 .. image:: https://travis-ci.com/nens/dask-geomodeling.svg?branch=master
     :target: https://travis-ci.com/nens/dask-geomodeling
 
+.. image:: https://ci.appveyor.com/api/projects/status/aopxohgl23llkeq8?svg=true
+    :target: https://ci.appveyor.com/project/reinout/dask-geomodeling
+
 .. image:: https://badge.fury.io/py/dask-geomodeling.svg
     :target: https://badge.fury.io/py/dask-geomodeling
 
