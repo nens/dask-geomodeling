@@ -298,6 +298,9 @@ class RasterFileSource(RasterBlock):
     The global root path can be adapted as follows:
       >>> from dask import config
       >>> config.set({"geomodeling.root": "/my/data/path"})
+
+    Note that this object keeps a file handle open. If you need to close the
+    file handle, call block.close_dataset (or dereference the whole object).
     """
 
     def __init__(self, url, time_first=0, time_delta=300000):
@@ -332,6 +335,10 @@ class RasterFileSource(RasterBlock):
             path = utils.safe_abspath(self.url, config.get("geomodeling.root"))
             self._gdal_dataset = gdal.Open(path)
             return self._gdal_dataset
+
+    def close_dataset(self):
+        if hasattr(self, "_gdal_dataset"):
+            self._gdal_dataset = None
 
     @property
     def projection(self):
