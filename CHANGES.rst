@@ -5,7 +5,7 @@ Changelog of dask-geomodeling
 2.0.5 (unreleased)
 ------------------
 
-- Don't keep GDAL file handlers open in the RasterFileSource.
+- Add RasterFileSource.close_dataset to close the GDAL file handle.
 
 - Run unittests on windows.
 

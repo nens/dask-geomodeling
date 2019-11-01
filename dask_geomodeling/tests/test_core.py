@@ -153,7 +153,7 @@ class TestBlock(unittest.TestCase):
     def test_tokenize_timedelta(self):
         """Compare tokens of different timedeltas"""
         hashes = set()
-        for n in np.random.randint(0, 10000000000, self.N):
+        for n in np.random.randint(0, 2000000000, self.N):
             token1 = tokenize(timedelta(microseconds=int(n)))
             token2 = tokenize(timedelta(microseconds=int(n)))
 
