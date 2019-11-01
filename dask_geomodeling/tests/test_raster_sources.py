@@ -239,3 +239,6 @@ class TestGeoTIFFSource(TstRasterSourceBase, unittest.TestCase):
             time_first=datetime(2000, 1, 1),
             time_delta=timedelta(days=1),
         )
+
+    def tearDown(self):
+        self.source.close_dataset()  # needed for the tearDownClass
