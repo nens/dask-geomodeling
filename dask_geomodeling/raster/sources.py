@@ -299,7 +299,7 @@ class RasterFileSource(RasterBlock):
       >>> from dask import config
       >>> config.set({"geomodeling.root": "/my/data/path"})
 
-    Note that this block keeps a file handle open. If you need to close the
+    Note that this object keeps a file handle open. If you need to close the
     file handle, call block.close_dataset (or dereference the whole object).
     """
 
