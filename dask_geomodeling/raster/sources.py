@@ -300,7 +300,7 @@ class RasterFileSource(RasterBlock):
       >>> config.set({"geomodeling.root": "/my/data/path"})
 
     Note that this block keeps a file handle open. If you need to close the
-    file handle, call block.close_dataset (or dereference the block itself).
+    file handle, call block.close_dataset (or dereference the whole object).
     """
 
     def __init__(self, url, time_first=0, time_delta=300000):
