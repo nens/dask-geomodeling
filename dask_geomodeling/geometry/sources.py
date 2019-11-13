@@ -86,7 +86,7 @@ class GeometryFileSource(GeometryBlock):
 
     @staticmethod
     def process(url, request):
-        path = utils.safe_abspath(url, config.get("geomodeling.root"))
+        path = utils.safe_abspath(url)
 
         # convert the requested projection to a fiona CRS
         crs = utils.get_crs(request["projection"])

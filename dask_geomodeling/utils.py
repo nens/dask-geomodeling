@@ -653,7 +653,7 @@ def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None)
     return _finalize_rasterize_result(array, no_data_value)
 
 
-def safe_abspath(url):
+def safe_abspath(url, start=None):
     """Executes safe_file_url but only returns the path and not the protocol.
     """
     url = safe_file_url(url)

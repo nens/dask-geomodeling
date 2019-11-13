@@ -147,7 +147,7 @@ class TestUtils(unittest.TestCase):
             # raise on path outside start when strict-file-paths=True
             with config.set({'geomodeling.strict-file-paths': True}):
                 with pytest.raises(IOError):
-                    f("file://..\\x", "\\tmp")
+                    f("file://..\\x", "C:\\tmp")
                 with pytest.raises(IOError):
                     f("D:\\tmp", "C:\\tmp")
                 with pytest.raises(IOError):
