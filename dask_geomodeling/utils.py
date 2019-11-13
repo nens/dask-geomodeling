@@ -1,6 +1,7 @@
 import re
 import pytz
 import os
+import warnings
 from functools import lru_cache
 from itertools import repeat
 
@@ -9,6 +10,7 @@ from math import floor, log10
 import numpy as np
 import pandas as pd
 from scipy import ndimage
+from dask import config
 
 from osgeo import gdal, ogr, osr, gdal_array
 from shapely.geometry import box, Point
@@ -651,11 +653,10 @@ def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None)
     return _finalize_rasterize_result(array, no_data_value)
 
 
-def safe_abspath(url, start=None):
-    """Returns the absolute path from a file:// URL and start
-
-    If start = None, an absolute path is expected in URL."""
-    url = safe_file_url(url, start)
+def safe_abspath(url):
+    """Executes safe_file_url but only returns the path and not the protocol.
+    """
+    url = safe_file_url(url)
     _, path = url.split("://")
     return path
 
@@ -663,11 +664,14 @@ def safe_abspath(url, start=None):
 def safe_file_url(url, start=None):
     """Formats an URL so that it meets the following safety conditions:
 
-    - the URL starts with file:// (raises NotImplementedError if not)
-    - the path is absolute
-    - the path is contained in `start` (raises IOError if not)
+    - the URL starts with file:// (else: raises NotImplementedError)
+    - the path is absolute (relative paths are taken relative to
+      geomodeling.root)
+    - if geomodeling.strict_paths: the path has to be contained inside
+      `start` (else: raises IOError)
 
-    If `start` is None, absolute paths are returned.
+    For backwards compatibility, geomodeling.root can be overriden using the
+    'start' argument.
     """
     try:
         protocol, path = url.split("://")
@@ -677,16 +681,25 @@ def safe_file_url(url, start=None):
     else:
         if protocol != "file":
             raise NotImplementedError('Unknown protocol: "{}"'.format(protocol))
-    if start is None:
-        if not os.path.isabs(path):
-            raise IOError(
-                "Relative path '{}' provided but start was not " "given.".format(path)
-            )
-        abspath = os.path.abspath(path)
+    if start is not None:
+        warnings.warn(
+            "Using the start argument in safe_file_url is deprecated. Use the "
+            "'geomodeling.root' in the dask config", DeprecationWarning
+        )
     else:
+        start = config.get("geomodeling.root")
+
+    if not os.path.isabs(path):
+        if start is None:
+            raise IOError(
+                "Relative path '{}' provided but start was not given.".format(path)
+            )
         abspath = os.path.abspath(os.path.join(start, path))
-        if not abspath.startswith(start):
-            raise IOError("'{}' is not contained in '{}'".format(path, start))
+    else:
+        abspath = os.path.abspath(path)
+    strict = config.get("geomodeling.strict-file-paths")
+    if strict and not abspath.startswith(start):
+        raise IOError("'{}' is not contained in '{}'".format(path, start))
     return "://".join([protocol, abspath])
 
 

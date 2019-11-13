@@ -41,7 +41,7 @@ class GeometryFileSource(GeometryBlock):
     """
 
     def __init__(self, url, layer=None, id_field="id"):
-        safe_url = utils.safe_file_url(url, config.get("geomodeling.root"))
+        safe_url = utils.safe_file_url(url)
         super().__init__(safe_url, layer, id_field)
 
     @property
@@ -58,7 +58,7 @@ class GeometryFileSource(GeometryBlock):
 
     @property
     def path(self):
-        return utils.safe_abspath(self.url, config.get("geomodeling.root"))
+        return utils.safe_abspath(self.url)
 
     @property
     def columns(self):

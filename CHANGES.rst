@@ -9,6 +9,13 @@ Changelog of dask-geomodeling
 
 - Run unittests on windows.
 
+- Adapt safe_abspath and safe_file_url functions: they now automatically
+  interpret the geomodeling.root config instead of the 'start' kwarg.
+
+- Added a geomodeling.strict-file-paths that defaults to False. This changes
+  the default behaviour of all blocks that handle file paths: by default, the
+  path is not required to be in geomodeling.root.
+
 
 2.0.4 (2019-11-01)
 ------------------

@@ -304,7 +304,7 @@ class RasterFileSource(RasterBlock):
     """
 
     def __init__(self, url, time_first=0, time_delta=300000):
-        url = utils.safe_file_url(url, config.get("geomodeling.root"))
+        url = utils.safe_file_url(url)
         if isinstance(time_first, datetime):
             time_first = utils.dt_to_ms(time_first)
         else:
