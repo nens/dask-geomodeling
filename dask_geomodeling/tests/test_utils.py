@@ -3,6 +3,7 @@ import unittest
 import pytest
 import sys
 
+from dask import config
 from osgeo import osr
 from shapely import geometry
 from shapely.geometry import box
@@ -86,38 +87,71 @@ class TestUtils(unittest.TestCase):
         )
         self.assertTrue(np.equal(output, reference).all())
 
-    @pytest.mark.skipif(
-        sys.platform.startswith("win"),
-        reason="Path tests are not yet written for windows",
-    )
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_safe_file_url(self):
-        # prepends file:// if necessary
-        self.assertEqual(utils.safe_file_url("/tmp"), "file:///tmp")
-        self.assertEqual(utils.safe_file_url("/tmp", "/"), "file:///tmp")
+        f = utils.safe_file_url
+        if not sys.platform.startswith("win"):
+            # prepends file:// if necessary
+            assert f("/tmp") == "file:///tmp"
+            assert f("/tmp", "/") == "file:///tmp"
 
-        # absolute input
-        self.assertEqual(utils.safe_file_url("file:///tmp"), "file:///tmp")
-        self.assertEqual(utils.safe_file_url("file:///tmp", "/"), "file:///tmp")
-        self.assertEqual(utils.safe_file_url("file://tmp", "/"), "file:///tmp")
+            # absolute input
+            assert f("file:///tmp") == "file:///tmp"
+            assert f("file:///tmp", "/") == "file:///tmp"
+            assert f("file://tmp", "/") == "file:///tmp"
 
-        # relative input
-        self.assertEqual(
-            utils.safe_file_url("path", "/tmp/abs"), "file:///tmp/abs/path"
-        )
-        self.assertEqual(
-            utils.safe_file_url("../abs/path", "/tmp/abs"), "file:///tmp/abs/path"
-        )
+            # relative input
+            assert f("path", "/tmp/abs") == "file:///tmp/abs/path"
+            assert f("../abs/path", "/tmp/abs") == "file:///tmp/abs/path"
 
-        # raise on relative path without start provided
-        self.assertRaises(IOError, utils.safe_file_url, "file://tmp")
+            # raise on unknown protocol
+            with pytest.raises(NotImplementedError):
+                f("unknown://tmp")
 
-        # raise on unknown protocol
-        self.assertRaises(NotImplementedError, utils.safe_file_url, "unknown://tmp")
+            # paths outside of 'start'
+            assert f("file://../x", "/tmp") == "file:///x"
+            assert f("/etc/abs", "/tmp") == "file:///etc/abs"
+            assert f("../", "/tmp") == "file:///"
 
-        # raise on path outside start (tested more thorough in safe_relpath)
-        self.assertRaises(IOError, utils.safe_file_url, "file://../x", "/tmp")
-        self.assertRaises(IOError, utils.safe_file_url, "/etc/abs", "/tmp")
-        self.assertRaises(IOError, utils.safe_file_url, "../", "/tmp")
+            # raise on path outside start when strict-file-paths=True
+            with config.set({'geomodeling.strict-file-paths': True}):
+                with pytest.raises(IOError):
+                    f("file://../x", "/tmp")
+                with pytest.raises(IOError):
+                    f("/etc/abs", "/tmp")
+                with pytest.raises(IOError):
+                    f("../", "/tmp")
+        else:
+            # prepends file:// if necessary
+            assert f("C:\\tmp") == "file://C:\\tmp"
+            assert f("C:\\tmp", "C:\\") == "file://C:\\tmp"
+
+            # absolute input
+            assert f("file://C:\\tmp") == "file://C:\\tmp"
+            assert f("file://C:\\tmp", "C:\\") == "file://C:\\tmp"
+            assert f("file://tmp", "C:\\") == "file://C:\\tmp"
+
+            # relative input
+            assert f("path", "C:\\tmp\\abs") == "file://C:\\tmp\\abs\\path"
+            assert f("..\\abs\\path", "C:\\tmp\\abs") == "file://C:\\tmp\\abs\\path"
+
+            # raise on unknown protocol
+            with pytest.raises(NotImplementedError):
+                f("unknown://tmp")
+
+            # paths outside of 'start'
+            assert f("file://..\\x", "C:\\tmp") == "file://C:\\x"
+            assert f("D:\\tmp", "C:\\tmp") == "file://D:\\tmp"
+            assert f("..\\", "C:\\tmp") == "file://C:\\"
+
+            # raise on path outside start when strict-file-paths=True
+            with config.set({'geomodeling.strict-file-paths': True}):
+                with pytest.raises(IOError):
+                    f("file://..\\x", "C:\\tmp")
+                with pytest.raises(IOError):
+                    f("D:\\tmp", "C:\\tmp")
+                with pytest.raises(IOError):
+                    f("..\\", "C:\\tmp")
 
     def test_get_crs(self):
         # from EPSG

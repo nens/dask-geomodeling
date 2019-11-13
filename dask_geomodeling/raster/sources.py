@@ -304,7 +304,7 @@ class RasterFileSource(RasterBlock):
     """
 
     def __init__(self, url, time_first=0, time_delta=300000):
-        url = utils.safe_file_url(url, config.get("geomodeling.root"))
+        url = utils.safe_file_url(url)
         if isinstance(time_first, datetime):
             time_first = utils.dt_to_ms(time_first)
         else:
@@ -332,7 +332,7 @@ class RasterFileSource(RasterBlock):
         try:
             return self._gdal_dataset
         except AttributeError:
-            path = utils.safe_abspath(self.url, config.get("geomodeling.root"))
+            path = utils.safe_abspath(self.url)
             self._gdal_dataset = gdal.Open(path)
             return self._gdal_dataset
 
@@ -466,7 +466,7 @@ class RasterFileSource(RasterBlock):
 
         # open the dataset
         url = process_kwargs["url"]
-        path = utils.safe_abspath(url, config.get("geomodeling.root"))
+        path = utils.safe_abspath(url)
         dataset = gdal.Open(path)
         first_band = process_kwargs["first_band"]
         last_band = process_kwargs["last_band"]
