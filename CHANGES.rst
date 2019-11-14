@@ -16,6 +16,11 @@ Changelog of dask-geomodeling
   the default behaviour of all blocks that handle file paths: by default, the
   path is not required to be in geomodeling.root.
 
+- Added installation instructions for windows.
+
+- Improved the ipyleaflet plugin so that it can deal with multiple notebook
+  servers on the same machine. The parameter 'hostname' was replaced by 'url'.
+
 
 2.0.4 (2019-11-01)
 ------------------
