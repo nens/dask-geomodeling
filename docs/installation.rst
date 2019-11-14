@@ -1,11 +1,41 @@
 Installation
 ============
 
-Recommended: use conda
-----------------------
+Requirements
+------------
 
-1. `Install anaconda <https://docs.anaconda.com/anaconda/install/>`_
-2. Run ``conda install dask-geomodeling -c conda-forge``
+- python >= 3.5
+- GDAL (with BigTIFF support)
+- numpy
+- scipy
+- dask[delayed]
+- pandas
+- geopandas
+- ipyleaflet, matplotlib, pillow (for the ipyleaflet plugin)
+
+Windows
+-------
+
+Installation on windows is tricky due to incompatibilities between dependencies
+of dask-geomodeling (especially python, GDAL, and scipy). We use the following
+steps to consistently create a conda environment in which you can work with
+dask-geomodeling:
+
+1. `Install anaconda / miniconda <https://docs.anaconda.com/anaconda/install/>`_
+2. Start the `Anaconda Prompt` via the start menu
+3. `conda config --add channels conda-forge`
+4. `conda config --set channel_priority strict`
+5. `conda update conda`
+6. `conda create --name geomodeling python=3.8 gdal=3.0.2 scipy=1.3.2 pandas=0.25.3 dask-geomodeling jupyter ipyleaflet matplotlib pillow
+
+.. note::
+
+   Installation of dask-geomodeling on windows has a number of pitfalls related
+   to anaconda and GDAL. The above recipe is given to get you started with
+   dask-geomodeling quickly. If you need other python or GDAL versions: while
+   dask-geomodeling itself is compatible with most current versions, you may
+   may have a hard time getting it to work. If you're reading this, good luck
+   out there.
 
 
 Using the ipyleaflet plugin
