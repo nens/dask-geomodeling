@@ -76,7 +76,7 @@ These instructions make use of the system-wide Python 3 interpreter.
 
 Install dask-geomodeling::
 
-    $ pip install --user dask-geomodeling[test]
+    $ pip install --user dask-geomodeling[test] cityhash
 
 Run the tests::
 
@@ -113,7 +113,7 @@ Install PyGDAL with the correct version (example assumes GDAL 2.2.3)::
 
 Install dask-geomodeling::
 
-    (.venv) $ pip install -e .[test]
+    (.venv) $ pip install -e .[test] cityhash
 
 Run the tests::
 
