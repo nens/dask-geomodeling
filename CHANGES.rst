@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.0.5 (unreleased)
+2.1.0 (2019-11-15)
 ------------------
 
 - Added RasterFileSource.close_dataset to close the GDAL file handle.
