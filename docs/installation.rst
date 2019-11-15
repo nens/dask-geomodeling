@@ -5,7 +5,7 @@ Requirements
 ------------
 
 - python >= 3.5
-- GDAL (with BigTIFF support)
+- GDAL 2.* (with BigTIFF support)
 - numpy
 - scipy
 - dask[delayed]
@@ -38,11 +38,11 @@ Windows (pip)
 
 The following recipe is still a work in progress:
 
-1. `Install Python 3.x (stable) <https://www.python.org/downloads/windows/>`_
-2. `Install GDAL (MSVC 2015) <http://www.gisinternals.com/release.php>`_
+1. `Install Python 3.* (stable) <https://www.python.org/downloads/windows/>`_
+2. `Install GDAL 2.* (MSVC 2015) <http://www.gisinternals.com/release.php>`_
 3. Add the GDAL installation path to your PATH variable
 4. Start the command prompt
-5. `pip install gdal dask-geomodeling ipyleaflet matplotlib pillow`
+5. `pip install gdal==2.* dask-geomodeling ipyleaflet matplotlib pillow`
 6. (optionally) `pip install ipyleaflet matplotlib pillow`
 
 .. note::
