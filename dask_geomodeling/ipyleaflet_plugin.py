@@ -1,5 +1,6 @@
 from datetime import datetime
 from io import BytesIO
+from urllib.parse import urljoin
 
 import numpy as np
 import traitlets
@@ -89,7 +90,7 @@ class GeomodelingLayer(WMSLayer):
     """Visualize a dask_geomodeling.RasterBlock on a ipyleaflet Map.
 
     :param block: a dask_geomodeling.RasterBlock instance to visualize
-    :param hostname: The hostname of the jupyter server
+    :param url: The url of the jupyter server (e.g. https://localhost:8888)
     :param style: a valid matplotlib colormap
     :param vmin: the minimum value (for the colormap)
     :param vmax: the maximum value (for the colormap)
@@ -115,13 +116,12 @@ class GeomodelingLayer(WMSLayer):
     vmin = traitlets.Float(0.0).tag(sync=True, o=True)
     vmax = traitlets.Float(1.0).tag(sync=True, o=True)
 
-    def __init__(self, block, hostname="localhost", **kwargs):
-        for server in notebookapp.list_running_servers():
-            if server["hostname"] == hostname:
-                kwargs["url"] = server["url"] + "wms"
-                break
+    def __init__(self, block, url=None, **kwargs):
+        if url is None:
+            # just get the first URL one
+            url = next(notebookapp.list_running_servers())["url"]
         self.layers = block.to_json()
-        super().__init__(**kwargs)
+        super().__init__(url=urljoin(url, "wms"), **kwargs)
 
 
 def load_jupyter_server_extension(nb_server_app):

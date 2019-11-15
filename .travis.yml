@@ -7,9 +7,9 @@ matrix:
   - os: linux
     env: PYTHON_VERSION="3.6" MAINDEPS="numpy=1.14 gdal=2.2.4 scipy=1.1 pytz" DEPS="dask-core=0.20 toolz=0.10 pandas=0.23 geopandas=0.5"
   - os: linux
-    env: PYTHON_VERSION="3.7" MAINDEPS="numpy gdal scipy pytz" DEPS="dask-core toolz geopandas"
+    env: PYTHON_VERSION="3.7" MAINDEPS="numpy gdal=2.* scipy pytz" DEPS="dask-core toolz geopandas"
   - os: osx
-    env: PYTHON_VERSION="3.7" MAINDEPS="numpy gdal scipy pytz" DEPS="dask-core toolz geopandas"
+    env: PYTHON_VERSION="3.7" MAINDEPS="numpy gdal=2.* scipy pytz" DEPS="dask-core toolz geopandas"
 
 install:
   - wget https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-$TRAVIS_OS_NAME-64.exe -O conda.exe
