@@ -13,39 +13,51 @@ Requirements
 - geopandas
 - ipyleaflet, matplotlib, pillow (for the ipyleaflet plugin)
 
-Windows
--------
-
-Installation on windows is tricky due to incompatibilities between dependencies
-of dask-geomodeling (especially python, GDAL, and scipy). We use the following
-steps to consistently create a conda environment in which you can work with
-dask-geomodeling:
+Anaconda (all platforms)
+------------------------
 
 1. `Install anaconda / miniconda <https://docs.anaconda.com/anaconda/install/>`_
 2. Start the `Anaconda Prompt` via the start menu
 3. `conda config --add channels conda-forge`
-4. `conda config --set channel_priority strict`
-5. `conda update conda`
-6. `conda create --name geomodeling python=3.8 gdal=3.0.2 scipy=1.3.2 pandas=0.25.3 dask-geomodeling jupyter ipyleaflet matplotlib pillow
+4. `conda update conda`
+5. `conda install python=3.6 gdal=2.4.1 scipy=1.3.1 dask-geomodeling ipyleaflet matplotlib pillow`
 
 .. note::
 
-   Installation of dask-geomodeling on windows has a number of pitfalls related
-   to anaconda and GDAL. The above recipe is given to get you started with
-   dask-geomodeling quickly. If you need other python or GDAL versions: while
-   dask-geomodeling itself is compatible with most current versions, you may
-   may have a hard time getting it to work. If you're reading this, good luck
-   out there.
+   The version pins of python, gdal and scipy are related to issues specific
+   to Windows. On other platforms you may leave them out, although we do not
+   recommend using Python 3.8 yet. If you need other python or GDAL versions
+   on windows: while `dask-geomodeling` itself is compatible with all current
+   versions, you may may have a hard time getting it to work via Anaconda and
+   it will probably be easier using the pip route listed below. Good luck out
+   there.
 
 
-Using the ipyleaflet plugin
----------------------------
+Windows (pip)
+-------------
+
+The following recipe is still a work in progress:
+
+1. `Install Python 3.x (stable) <https://www.python.org/downloads/windows/>`_
+2. `Install GDAL (MSVC 2015) <http://www.gisinternals.com/release.php>`_
+3. Add the GDAL installation path to your PATH variable
+4. Start the command prompt
+5. `pip install gdal dask-geomodeling ipyleaflet matplotlib pillow`
+6. (optionally) `pip install ipyleaflet matplotlib pillow`
+
+.. note::
+
+   You might need to setup your C++ compiler according to
+   `this <https://wiki.python.org/moin/WindowsCompilers>`_
+
+On the ipyleaflet plugin
+------------------------
 
 dask-geomodeling comes with a ipyleaflet plugin for `Jupyter<https://jupyter.org/>`_
 so that you can show your generated views on a mapviewer. If you want to use
 it, install some additional dependencies::
 
-    $ conda install jupyter ipyleaflet matplotlib pillow
+    $ conda [or pip] install jupyter ipyleaflet matplotlib pillow
 
 And start your notebook server with the plugin::
 
