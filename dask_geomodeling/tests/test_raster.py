@@ -1107,6 +1107,11 @@ class TestTemporalAggregate(unittest.TestCase):
             "stop": Datetime(2020, 1, 1),
             **self.request,
         }
+        self.request_empty = {
+            "start": Datetime(1970, 1, 1),
+            "stop": Datetime(1971, 1, 1),
+            **self.request,
+        }
 
     def test_period_day_agg(self):
         self.assertEqual(
@@ -1376,6 +1381,20 @@ class TestTemporalAggregate(unittest.TestCase):
         result = view.get_data(**self.request_all)
         self.assertEqual(result["values"].dtype, np.int32)
 
+    def test_get_data_empty_vals(self):
+        view = self.klass(self.raster, "D")
+        assert view.get_data(**self.request_empty) is None
+
+    def test_get_data_empty_time(self):
+        view = self.klass(self.raster, "D")
+        self.request_empty["mode"] = "time"
+        assert view.get_data(**self.request_empty) == {"time": []}
+
+    def test_get_data_empty_meta(self):
+        view = self.klass(self.raster, "D")
+        self.request_empty["mode"] = "meta"
+        assert view.get_data(**self.request_empty) == {"meta": []}
+
 
 class TestCumulative(unittest.TestCase):
     klass = raster.Cumulative
@@ -1407,6 +1426,11 @@ class TestCumulative(unittest.TestCase):
         self.request_all = {
             "start": Datetime(1970, 1, 1),
             "stop": Datetime(2020, 1, 1),
+            **self.request,
+        }
+        self.request_empty = {
+            "start": Datetime(1970, 1, 1),
+            "stop": Datetime(1971, 1, 1),
             **self.request,
         }
 
@@ -1492,6 +1516,16 @@ class TestCumulative(unittest.TestCase):
         view = self.klass(self.raster, frequency="M", statistic="count")
         result = view.get_data(**self.request_all)
         assert_equal(result["values"], [[[1, 1, 0]], [[2, 2, 0]], [[3, 3, 0]]])
+
+    def test_get_data_empty_vals(self):
+        view = self.klass(self.raster, frequency="D", statistic="sum")
+        assert view.get_data(**self.request_empty) is None
+
+
+    def test_get_data_empty_meta(self):
+        view = self.klass(self.raster, frequency="D", statistic="sum")
+        self.request_empty["mode"] = "meta"
+        assert view.get_data(**self.request_empty) == {"meta": []}
 
 
 class TestBase(unittest.TestCase):

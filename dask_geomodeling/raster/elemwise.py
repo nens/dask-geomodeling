@@ -265,6 +265,10 @@ def wrap_math_process_func(func):
                     nodata_mask = _nodata_mask
                 else:
                     nodata_mask |= _nodata_mask
+            else:
+                raise TypeError(
+                    "Cannot apply math function to value {}".format(data)
+                )
 
         if dtype == np.dtype("bool"):
             no_data_value = None
