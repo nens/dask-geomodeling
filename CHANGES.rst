@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.1.1 (unreleased)
+2.1.1 (2019-12-06)
 ------------------
 
 - Fix empty response of TemporalAggregate and Cumulative.
