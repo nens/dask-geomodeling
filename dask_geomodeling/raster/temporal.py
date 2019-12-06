@@ -509,7 +509,7 @@ class TemporalAggregate(BaseSingle):
 
         start, stop = self._snap_to_resampled_labels(start, stop)
         if start is None:
-            return [({"mode": "empty"}, None)]
+            return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source
         if mode == "time":
@@ -557,7 +557,7 @@ class TemporalAggregate(BaseSingle):
     def process(process_kwargs, time_data=None, data=None):
         mode = process_kwargs["mode"]
         # handle empty data
-        if mode == "empty":
+        if process_kwargs.get("empty"):
             return None if mode == "vals" else {mode: []}
         start = process_kwargs["start"]
         stop = process_kwargs["stop"]
@@ -745,7 +745,7 @@ class Cumulative(BaseSingle):
         time_data = self.source.get_data(mode="time", start=start, stop=stop)
         if time_data is None or not time_data.get("time"):
             # return early for an empty source
-            return [({"mode": "empty"}, None)]
+            return [({"empty": True, "mode": mode}, None)]
 
         # get the periods from the first and last timestamp
         start = time_data["time"][0]
@@ -783,7 +783,7 @@ class Cumulative(BaseSingle):
     def process(process_kwargs, time_data=None, data=None):
         mode = process_kwargs["mode"]
         # handle empty data
-        if mode == "empty":
+        if process_kwargs.get("empty"):
             return None if mode == "vals" else {mode: []}
         if mode == "time":
             return time_data

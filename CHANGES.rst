@@ -5,7 +5,9 @@ Changelog of dask-geomodeling
 2.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix empty response of TemporalAggregate and Cumulative.
+
+- Fix elementwise raster blocks in case of empty datasets.
 
 
 2.1.0 (2019-11-15)
