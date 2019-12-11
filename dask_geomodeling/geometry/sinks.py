@@ -13,6 +13,8 @@ __all__ = ["GeometryFileSink"]
 class GeometryFileSink(BaseSingle):
     """Write geometry data to files in a specified directory
 
+    Use GeometryFileSink.merge_files to merge tiles into one large file.
+
     Args:
       source: the block the data is coming from
       url: the target directory to put the files in
@@ -26,22 +28,22 @@ class GeometryFileSink(BaseSingle):
       >>> config.set({"geomodeling.root": '/my/output/data/path'})
     """
     SUPPORTED_EXTENSIONS = {k: v for k, v in (
-        (".shp", "ESRI Shapefile"),
-        (".gpkg", "GPKG"),
-        (".geojson", "GeoJSON"),
-        (".gml", "GML"),
+        ("shp", "ESRI Shapefile"),
+        ("gpkg", "GPKG"),
+        ("geojson", "GeoJSON"),
+        ("gml", "GML"),
     ) if v in fiona.supported_drivers}
 
-    def __init__(self, source, url, extension=".shp", fields=None):
+    def __init__(self, source, url, extension="shp", fields=None):
         safe_url = utils.safe_file_url(url)
         if not isinstance(extension, str):
             raise TypeError(
                 "'{}' object is not allowed".format(type(extension))
             )
-        if len(extension) > 0 and extension[0] != ".":
-            extension = "." + extension
+        if len(extension) > 0 and extension[0] == ".":
+            extension = extension[1:]  # shop off the dot
         if extension not in self.SUPPORTED_EXTENSIONS:
-            raise ValueError("Format '{}' is unsupported".format(ext))
+            raise ValueError("Format '{}' is unsupported".format(extension))
         if fields is None:
             fields = {x: x for x in source.columns if x != "geometry"}
         elif not isinstance(fields, dict):
@@ -78,7 +80,7 @@ class GeometryFileSink(BaseSingle):
                  "url": self.url,
                  "fields": self.fields,
                  "extension": self.extension,
-                 "hash": tokenize(request),
+                 "hash": tokenize(request)[:7],
              }, None)
         ]
 
@@ -99,7 +101,7 @@ class GeometryFileSink(BaseSingle):
         os.makedirs(path, exist_ok=True)
 
         # the target file path is a deterministic hash of the request
-        target = os.path.join(path, process_kwargs["hash"] + extension)
+        filename = ".".join([process_kwargs["hash"], extension])
 
         # add the index to the columns if necessary
         index_name = features.index.name
@@ -114,18 +116,21 @@ class GeometryFileSink(BaseSingle):
 
         # generate the file
         features.crs = crs  # be sure about the CRS
-        features.to_file(target, driver=driver)
+        features.to_file(os.path.join(path, filename), driver=driver)
 
         result = geopandas.GeoDataFrame(index=features.index)
         result['saved'] = True
         return {"features": result, "projection": projection}
 
     @staticmethod
-    def reduce_files(path, target, remove_source=False):
+    def merge_files(path, target, remove_source=False):
         """Merge files (the output of this Block) into one single file.
 
         Optionally removes the source files.
         """
+        path = utils.safe_abspath(path)
+        target = utils.safe_abspath(target)
+
         ext = os.path.splitext(target)[1]
         source_paths = [os.path.join(path, x) for x in os.listdir(path)]
         source_paths = [x for x in source_paths if
