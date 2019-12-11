@@ -58,7 +58,8 @@ class TestGeometryFileSink(unittest.TestCase):
         block = self.klass(self.source, self.path, "geojson")
         block.get_data(**self.request)
 
-        actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
+        filename = [x for x in os.listdir(self.path) if x.endswith(".geojson")][0]
+        actual = gpd.read_file(os.path.join(self.path, filename))
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
@@ -69,7 +70,8 @@ class TestGeometryFileSink(unittest.TestCase):
         block = self.klass(self.source, self.path, "gpkg")
         block.get_data(**self.request)
 
-        actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
+        filename = [x for x in os.listdir(self.path) if x.endswith(".gpkg")][0]
+        actual = gpd.read_file(os.path.join(self.path, filename))
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
@@ -80,7 +82,8 @@ class TestGeometryFileSink(unittest.TestCase):
         block = self.klass(self.source, self.path, "shp")
         block.get_data(**self.request)
 
-        actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
+        filename = [x for x in os.listdir(self.path) if x.endswith(".shp")][0]
+        actual = gpd.read_file(os.path.join(self.path, filename))
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
@@ -91,7 +94,8 @@ class TestGeometryFileSink(unittest.TestCase):
         block = self.klass(self.source, self.path, "gml")
         block.get_data(**self.request)
 
-        actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
+        filename = [x for x in os.listdir(self.path) if x.endswith(".gml")][0]
+        actual = gpd.read_file(os.path.join(self.path, filename))
 
         # GML writer adds an 'fid' column
         del actual["fid"]
@@ -108,7 +112,7 @@ class TestGeometryFileSink(unittest.TestCase):
         block = self.klass(
             self.source,
             self.path,
-            "shp",
+            "geojson",
             fields={"target": "str", "int1": "int", "int2": "int"},
         )
         block.get_data(**self.request)
