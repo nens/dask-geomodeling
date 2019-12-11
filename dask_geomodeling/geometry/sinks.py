@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 
 import fiona
@@ -40,6 +41,9 @@ class GeometryFileSink(BaseSingle):
         )
         if "w" in fiona.supported_drivers.get(v, "")
     }
+
+    if sys.platform == 'win32' and "gpkg" in SUPPORTED_EXTENSIONS:
+        del SUPPORTED_EXTENSIONS["gpkg"]
 
     def __init__(self, source, url, extension="shp", fields=None):
         safe_url = utils.safe_file_url(url)

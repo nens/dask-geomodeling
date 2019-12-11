@@ -1,5 +1,6 @@
 import os
 import unittest
+import sys
 
 import geopandas as gpd
 import pytest
@@ -67,6 +68,10 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare projections ('init' contains the EPSG code)
         assert actual.crs["init"] == self.expected.crs["init"]
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="The geopackage driver crashes on Win32"
+    )
     def test_geopackage(self):
         block = self.klass(self.source, self.path, "gpkg")
         block.get_data(**self.request)
