@@ -21,6 +21,12 @@ import fiona
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
 
 
+try:
+    from fiona import Env as fiona_env
+except ImportError:
+    from fiona import drivers as fiona_env
+
+
 def get_index(values, no_data_value):
     """ Return an index to access for data values in values. """
     equal = np.isclose if values.dtype.kind == "f" else np.equal
@@ -331,7 +337,17 @@ def get_crs(user_input):
     """
     Return fiona CRS dictionary for user input.
     """
-    return fiona.crs.from_string(get_sr(user_input).ExportToProj4())
+    wkt = osr.GetUserInputAsWKT(str(user_input))
+    sr = osr.SpatialReference(wkt)
+    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
+    name = sr.GetAuthorityName(key)
+    if name == "EPSG":
+        # we can specify CRS in EPSG code which is more compatible with output
+        # file types
+        return fiona.crs.from_epsg(int(sr.GetAuthorityCode(key)))
+    else:
+        # we have to go through Proj4
+        return fiona.crs.from_string(sr.ExportToProj4())
 
 
 def crs_to_srs(crs):

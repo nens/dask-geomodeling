@@ -5,7 +5,11 @@ Changelog of dask-geomodeling
 2.1.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- utils.get_crs now leaves EPSG codes instead of converting them to their Proj4
+  representation.
+
+- Implemented GeometryFileSink that writes ESRI Shapefile, GeoJSON, GML, and
+  geopackage.
 
 
 2.1.1 (2019-12-06)
