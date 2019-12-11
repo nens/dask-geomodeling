@@ -38,7 +38,7 @@ class GeometryFileSink(BaseSingle):
             ("geojson", "GeoJSON"),
             ("gml", "GML"),
         )
-        if v in fiona.supported_drivers
+        if "w" in fiona.supported_drivers.get(v, "")
     }
 
     def __init__(self, source, url, extension="shp", fields=None):
@@ -131,6 +131,9 @@ class GeometryFileSink(BaseSingle):
         path = utils.safe_abspath(path)
         target = utils.safe_abspath(target)
 
+        if os.path.isfile(target):
+            raise IOError("File '{}' already exists".format(target))
+
         ext = os.path.splitext(target)[1]
         source_paths = [os.path.join(path, x) for x in os.listdir(path)]
         source_paths = [x for x in source_paths if os.path.splitext(x)[1] == ext]
@@ -151,10 +154,11 @@ class GeometryFileSink(BaseSingle):
             with fiona.collection(source_paths[0], "r") as source:
                 kwargs = {
                     "driver": source.driver,
-                    "encoding": source.encoding,
                     "crs": source.crs,
                     "schema": source.schema,
                 }
+                if source.encoding:
+                    kwargs["encoding"] = source.encoding
 
             with fiona.collection(target, "w", **kwargs) as out:
                 for source_path in source_paths:

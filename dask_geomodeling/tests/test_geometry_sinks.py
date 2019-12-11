@@ -3,6 +3,7 @@ import unittest
 
 import geopandas as gpd
 import pytest
+import fiona
 from pandas.util.testing import assert_frame_equal
 from shapely.geometry import box
 
@@ -90,6 +91,10 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare projections ('init' contains the EPSG code)
         assert actual.crs["init"] == self.expected.crs["init"]
 
+    @pytest.mark.skipif(
+        "GML" not in fiona.supported_drivers,
+        reason="This version of GDAL does not support GML writing."
+    )
     def test_gml(self):
         block = self.klass(self.source, self.path, "gml")
         block.get_data(**self.request)
@@ -141,7 +146,7 @@ class TestGeometryFileSink(unittest.TestCase):
         block.get_data(**self.request_2)
 
         assert len(os.listdir(self.path)) == 2
-        filename = os.path.join(self.root, "combined.geojson")
+        filename = os.path.join(self.root, "combined2.geojson")
         sinks.GeometryFileSink.merge_files(self.path, filename, remove_source=True)
         assert not os.path.isdir(self.path)
 
