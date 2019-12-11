@@ -1,19 +1,15 @@
 import os
 import unittest
-import pytest
 
-from pandas.util.testing import  assert_frame_equal
-from shapely.geometry import box
 import geopandas as gpd
-
-from dask_geomodeling.tests.factories import (
-    setup_temp_root,
-    teardown_temp_root,
-    MockGeometry,
-)
+import pytest
+from pandas.util.testing import assert_frame_equal
+from shapely.geometry import box
 
 from dask_geomodeling import utils
-from dask_geomodeling.geometry import sinks, parallelize
+from dask_geomodeling.geometry import parallelize, sinks
+from dask_geomodeling.tests.factories import (MockGeometry, setup_temp_root,
+                                              teardown_temp_root)
 
 
 class TestGeometryFileSink(unittest.TestCase):
@@ -48,13 +44,11 @@ class TestGeometryFileSink(unittest.TestCase):
             {"int": 7, "float": 5.2, "str": "bla2"},
         ]
         self.source = MockGeometry(
-            self.polygons, projection="EPSG:3857", properties=self.properties,
+            self.polygons, projection="EPSG:3857", properties=self.properties
         )
         self.expected = self.source.get_data(**self.request)["features"]
         self.expected_combined = self.source.get_data(
-            mode="intersects",
-            projection="EPSG:3857",
-            geometry=box(0, 0, 12, 12),
+            mode="intersects", projection="EPSG:3857", geometry=box(0, 0, 12, 12)
         )["features"]
 
     def test_non_available_extension(self):
@@ -109,19 +103,18 @@ class TestGeometryFileSink(unittest.TestCase):
 
     def test_fields_non_available(self):
         with pytest.raises(ValueError):
-            self.klass(
-                self.source, self.path, "shp", fields={"target": "nonexisting"}
-            )
+            self.klass(self.source, self.path, "shp", fields={"target": "nonexisting"})
 
     def test_fields(self):
         block = self.klass(
-            self.source, self.path, "shp", fields={"target": "str", "int1": "int", "int2": "int"}
+            self.source,
+            self.path,
+            "shp",
+            fields={"target": "str", "int1": "int", "int2": "int"},
         )
         block.get_data(**self.request)
 
-        actual = gpd.read_file(
-            os.path.join(self.path, os.listdir(self.path)[0])
-        )
+        actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
         assert set(actual.columns) == {"geometry", "target", "int1", "int2"}
 
     def test_merge_files(self):
@@ -146,23 +139,19 @@ class TestGeometryFileSink(unittest.TestCase):
 
         assert len(os.listdir(self.path)) == 2
         filename = os.path.join(self.root, "combined.geojson")
-        sinks.GeometryFileSink.merge_files(
-            self.path, filename, remove_source=True
-        )
+        sinks.GeometryFileSink.merge_files(self.path, filename, remove_source=True)
         assert not os.path.isdir(self.path)
 
     def test_with_tiler(self):
         block = parallelize.GeometryTiler(
             self.klass(self.source, self.path, "geojson"),
-            size=10.,
-            projection="EPSG:3857"
+            size=10.0,
+            projection="EPSG:3857",
         )
 
         # this generates 4 tiles
         block.get_data(
-            mode="centroid",
-            projection="EPSG:3857",
-            geometry=box(0, 0, 20, 20),
+            mode="centroid", projection="EPSG:3857", geometry=box(0, 0, 20, 20)
         )
 
         # but only 2 of them contain data

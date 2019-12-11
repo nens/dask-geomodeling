@@ -63,7 +63,7 @@ class Difference(BaseSingle):
         a = source_data["features"]
         b = other_data["features"]
         if len(a) == 0 or len(b) == 0:
-            return source_data   # do nothing
+            return source_data  # do nothing
 
         a_series = a["geometry"]
         b_series = b["geometry"].reindex(a_series.index)

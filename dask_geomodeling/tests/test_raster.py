@@ -1521,7 +1521,6 @@ class TestCumulative(unittest.TestCase):
         view = self.klass(self.raster, frequency="D", statistic="sum")
         assert view.get_data(**self.request_empty) is None
 
-
     def test_get_data_empty_meta(self):
         view = self.klass(self.raster, frequency="D", statistic="sum")
         self.request_empty["mode"] = "meta"

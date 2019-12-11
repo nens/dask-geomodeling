@@ -114,7 +114,7 @@ class TestUtils(unittest.TestCase):
             assert f("../", "/tmp") == "file:///"
 
             # raise on path outside start when strict-file-paths=True
-            with config.set({'geomodeling.strict-file-paths': True}):
+            with config.set({"geomodeling.strict-file-paths": True}):
                 with pytest.raises(IOError):
                     f("file://../x", "/tmp")
                 with pytest.raises(IOError):
@@ -145,7 +145,7 @@ class TestUtils(unittest.TestCase):
             assert f("..\\", "C:\\tmp") == "file://C:\\"
 
             # raise on path outside start when strict-file-paths=True
-            with config.set({'geomodeling.strict-file-paths': True}):
+            with config.set({"geomodeling.strict-file-paths": True}):
                 with pytest.raises(IOError):
                     f("file://..\\x", "C:\\tmp")
                 with pytest.raises(IOError):

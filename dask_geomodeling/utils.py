@@ -700,7 +700,8 @@ def safe_file_url(url, start=None):
     if start is not None:
         warnings.warn(
             "Using the start argument in safe_file_url is deprecated. Use the "
-            "'geomodeling.root' in the dask config", DeprecationWarning
+            "'geomodeling.root' in the dask config",
+            DeprecationWarning,
         )
     else:
         start = config.get("geomodeling.root")

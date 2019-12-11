@@ -1,11 +1,13 @@
-from .base import BaseSingle
-from dask_geomodeling import utils
 import os
+import shutil
+
 import fiona
 import geopandas
-import shutil
 from dask.base import tokenize
 
+from dask_geomodeling import utils
+
+from .base import BaseSingle
 
 __all__ = ["GeometryFileSink"]
 
@@ -27,19 +29,22 @@ class GeometryFileSink(BaseSingle):
       >>> from dask import config
       >>> config.set({"geomodeling.root": '/my/output/data/path'})
     """
-    SUPPORTED_EXTENSIONS = {k: v for k, v in (
-        ("shp", "ESRI Shapefile"),
-        ("gpkg", "GPKG"),
-        ("geojson", "GeoJSON"),
-        ("gml", "GML"),
-    ) if v in fiona.supported_drivers}
+
+    SUPPORTED_EXTENSIONS = {
+        k: v
+        for k, v in (
+            ("shp", "ESRI Shapefile"),
+            ("gpkg", "GPKG"),
+            ("geojson", "GeoJSON"),
+            ("gml", "GML"),
+        )
+        if v in fiona.supported_drivers
+    }
 
     def __init__(self, source, url, extension="shp", fields=None):
         safe_url = utils.safe_file_url(url)
         if not isinstance(extension, str):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(extension))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(extension)))
         if len(extension) > 0 and extension[0] == ".":
             extension = extension[1:]  # shop off the dot
         if extension not in self.SUPPORTED_EXTENSIONS:
@@ -47,14 +52,11 @@ class GeometryFileSink(BaseSingle):
         if fields is None:
             fields = {x: x for x in source.columns if x != "geometry"}
         elif not isinstance(fields, dict):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(fields))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(fields)))
         else:
             missing = set(fields.values()) - source.columns
             if missing:
-                raise ValueError(
-                    "Columns {} are not available".format(missing))
+                raise ValueError("Columns {} are not available".format(missing))
         super().__init__(source, safe_url, extension, fields)
 
     @property
@@ -76,17 +78,20 @@ class GeometryFileSink(BaseSingle):
     def get_sources_and_requests(self, **request):
         return [
             (self.source, request),
-            ({
-                 "url": self.url,
-                 "fields": self.fields,
-                 "extension": self.extension,
-                 "hash": tokenize(request)[:7],
-             }, None)
+            (
+                {
+                    "url": self.url,
+                    "fields": self.fields,
+                    "extension": self.extension,
+                    "hash": tokenize(request)[:7],
+                },
+                None,
+            ),
         ]
 
     @staticmethod
     def process(data, process_kwargs):
-        if 'features' not in data or len(data['features']) == 0:
+        if "features" not in data or len(data["features"]) == 0:
             return data  # do nothing for non-feature or empty requests
 
         features = data["features"].copy()
@@ -119,7 +124,7 @@ class GeometryFileSink(BaseSingle):
         features.to_file(os.path.join(path, filename), driver=driver)
 
         result = geopandas.GeoDataFrame(index=features.index)
-        result['saved'] = True
+        result["saved"] = True
         return {"features": result, "projection": projection}
 
     @staticmethod
@@ -133,12 +138,11 @@ class GeometryFileSink(BaseSingle):
 
         ext = os.path.splitext(target)[1]
         source_paths = [os.path.join(path, x) for x in os.listdir(path)]
-        source_paths = [x for x in source_paths if
-                        os.path.splitext(x)[1] == ext]
+        source_paths = [x for x in source_paths if os.path.splitext(x)[1] == ext]
         if len(source_paths) == 0:
             raise IOError(
-                "No source files found with matching extension '{}'".format(
-                    ext))
+                "No source files found with matching extension '{}'".format(ext)
+            )
         elif len(source_paths) == 1:
             # shortcut for single file
             if remove_source:
