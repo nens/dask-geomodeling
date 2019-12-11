@@ -22,9 +22,9 @@ POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
 
 
 try:
-    from fiona import Env as fiona_env
+    from fiona import Env as fiona_env  # NOQA
 except ImportError:
-    from fiona import drivers as fiona_env
+    from fiona import drivers as fiona_env  # NOQA
 
 
 def get_index(values, no_data_value):

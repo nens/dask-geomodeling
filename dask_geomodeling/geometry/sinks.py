@@ -76,18 +76,13 @@ class GeometryFileSink(BaseSingle):
         return {"saved"}
 
     def get_sources_and_requests(self, **request):
-        return [
-            (self.source, request),
-            (
-                {
-                    "url": self.url,
-                    "fields": self.fields,
-                    "extension": self.extension,
-                    "hash": tokenize(request)[:7],
-                },
-                None,
-            ),
-        ]
+        process_kwargs = {
+            "url": self.url,
+            "fields": self.fields,
+            "extension": self.extension,
+            "hash": tokenize(request)[:7],
+        }
+        return [(self.source, request), (process_kwargs, None)]
 
     @staticmethod
     def process(data, process_kwargs):

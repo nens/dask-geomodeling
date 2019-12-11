@@ -7,7 +7,6 @@ from osgeo import gdal, gdal_array
 
 from datetime import datetime, timedelta
 
-from dask import config
 from dask_geomodeling import utils
 
 from .base import RasterBlock

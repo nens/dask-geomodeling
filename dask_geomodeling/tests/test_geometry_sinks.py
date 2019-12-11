@@ -6,7 +6,6 @@ import pytest
 from pandas.util.testing import assert_frame_equal
 from shapely.geometry import box
 
-from dask_geomodeling import utils
 from dask_geomodeling.geometry import parallelize, sinks
 from dask_geomodeling.tests.factories import (MockGeometry, setup_temp_root,
                                               teardown_temp_root)
