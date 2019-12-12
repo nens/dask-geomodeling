@@ -4,13 +4,15 @@ import shutil
 
 import fiona
 import geopandas
+import tempfile
+from dask.config import config
 from dask.base import tokenize
-
 from dask_geomodeling import utils
 
 from .base import BaseSingle
+from .parallelize import GeometryTiler
 
-__all__ = ["GeometryFileSink"]
+__all__ = ["GeometryFileSink", "to_file"]
 
 
 class GeometryFileSink(BaseSingle):
@@ -176,3 +178,51 @@ class GeometryFileSink(BaseSingle):
                     os.rmdir(path)
                 except IOError:  # directory not empty: do nothing
                     pass
+
+
+def to_file(source, url, fields=None, tile_size=None, **request):
+    """Utility function to export data from a GeometryBlock to a file on disk.
+
+    You need to specify the target file path as well as the extent geometry
+    you want to save.
+
+    Args:
+      source (GeometryBlock): the block the data is coming from
+      url (str): The target file path. The extension determines the format. For
+        supported formats, consult GeometryFileSink.supported_extensions.
+      fields (dict): a mapping that relates column names to output file field
+        names field names, ``{<output file field name>: <column name>, ...}``.
+      tile_size (int): Optionally use this for large exports to stay within
+        memory constraints. The export is split in tiles of given size (units
+        are determined by the projection). Finally the tiles are merged.
+      geometry (shapely Geometry): Limit exported objects to objects whose
+        centroid intersects with this geometry.
+      projection (str): projection to return the geometries in as WKT string
+        or EPSG code.
+      mode (str): one of ``{"intersects", "centroid"}``, default "centroid"
+      start (datetime): start date as UTC datetime
+      stop (datetime): stop date as UTC datetime
+      **request: see GeometryBlock request specification
+
+    Relevant settings can be adapted as follows:
+      >>> from dask import config
+      >>> config.set({"geomodeling.root": '/my/output/data/path'})
+      >>> config.set({"temporary_directory": '/my/alternative/tmp/dir'})
+    """
+    if "mode" not in request:
+        request["mode"] = "centroid"
+
+    path = utils.safe_abspath(url)
+    extension = os.path.splitext(path)[1]
+
+    with tempfile.TemporaryDirectory(
+        dir=config.get("temporary_directory", None)
+    ) as tmpdir:
+        sink = GeometryFileSink(source, tmpdir, extension=extension, fields=fields)
+        if tile_size is not None:
+            export_block = GeometryTiler(sink, tile_size, request["projection"])
+        else:
+            export_block = sink
+
+        export_block.get_data(**request)
+        GeometryFileSink.merge_files(tmpdir, path)

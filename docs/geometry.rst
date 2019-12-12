@@ -78,6 +78,14 @@ API Specification
    :exclude-members: get_sources_and_requests, process
 
 
+:mod:`dask_geomodeling.geometry.sinks`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: dask_geomodeling.geometry.sinks
+   :members:
+   :exclude-members: get_sources_and_requests, process
+
+
 :mod:`dask_geomodeling.geometry.text`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

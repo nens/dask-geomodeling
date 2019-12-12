@@ -11,6 +11,8 @@ Changelog of dask-geomodeling
 - Implemented GeometryFileSink that writes ESRI Shapefile, GeoJSON, GML, and
   geopackage.
 
+- Added a .to_file() method to all GeometryBlocks.
+
 
 2.1.1 (2019-12-06)
 ------------------

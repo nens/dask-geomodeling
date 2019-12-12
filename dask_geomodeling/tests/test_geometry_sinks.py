@@ -7,8 +7,11 @@ from pandas.util.testing import assert_frame_equal
 from shapely.geometry import box
 
 from dask_geomodeling.geometry import parallelize, sinks
-from dask_geomodeling.tests.factories import (MockGeometry, setup_temp_root,
-                                              teardown_temp_root)
+from dask_geomodeling.tests.factories import (
+    MockGeometry,
+    setup_temp_root,
+    teardown_temp_root,
+)
 
 
 class TestGeometryFileSink(unittest.TestCase):
@@ -32,6 +35,11 @@ class TestGeometryFileSink(unittest.TestCase):
             "mode": "intersects",
             "projection": "EPSG:3857",
             "geometry": box(10, 10, 12, 12),
+        }
+        self.request_tiled = {
+            "mode": "centroid",
+            "projection": "EPSG:3857",
+            "geometry": box(0, 0, 20, 20)
         }
         self.path = os.path.join(self.root, self._testMethodName)
         self.polygons = [
@@ -68,7 +76,7 @@ class TestGeometryFileSink(unittest.TestCase):
 
     @pytest.mark.skipif(
         "gpkg" not in sinks.GeometryFileSink.supported_extensions,
-        reason="This version of Fiona/GDAL does not support geopackages."
+        reason="This version of Fiona/GDAL does not support geopackages.",
     )
     def test_geopackage(self):
         block = self.klass(self.source, self.path, "gpkg")
@@ -96,7 +104,7 @@ class TestGeometryFileSink(unittest.TestCase):
 
     @pytest.mark.skipif(
         "gml" not in sinks.GeometryFileSink.supported_extensions,
-        reason="This version of Fiona/GDAL does not support GML."
+        reason="This version of Fiona/GDAL does not support GML.",
     )
     def test_gml(self):
         block = self.klass(self.source, self.path, "gml")
@@ -161,9 +169,7 @@ class TestGeometryFileSink(unittest.TestCase):
         )
 
         # this generates 4 tiles
-        block.get_data(
-            mode="centroid", projection="EPSG:3857", geometry=box(0, 0, 20, 20)
-        )
+        block.get_data(**self.request_tiled)
 
         # but only 2 of them contain data
         assert len(os.listdir(self.path)) == 2
@@ -172,3 +178,15 @@ class TestGeometryFileSink(unittest.TestCase):
             df = gpd.read_file(os.path.join(self.path, filename))
             assert len(df) == 1
             assert df.crs["init"] == "epsg:3857"
+
+    def test_to_file(self):
+        self.source.to_file(self.path + ".geojson", **self.request)
+        actual = gpd.read_file(self.path + ".geojson")
+        # compare dataframes without checking the order of records / columns
+        assert_frame_equal(actual, self.expected, check_like=True)
+
+    def test_to_file_with_tiling(self):
+        self.source.to_file(self.path + ".geojson", **self.request_tiled)
+        actual = gpd.read_file(self.path + ".geojson")
+        # compare dataframes without checking the order of records / columns
+        assert_frame_equal(actual, self.expected_combined, check_like=True)
