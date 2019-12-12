@@ -219,10 +219,13 @@ def to_file(source, url, fields=None, tile_size=None, **request):
         dir=config.get("temporary_directory", None)
     ) as tmpdir:
         sink = GeometryFileSink(source, tmpdir, extension=extension, fields=fields)
-        if tile_size is not None:
-            export_block = GeometryTiler(sink, tile_size, request["projection"])
-        else:
-            export_block = sink
 
-        export_block.get_data(**request)
+        # wrap the sink in a GeometryTiler
+        if tile_size is not None:
+            sink = GeometryTiler(sink, tile_size, request["projection"])
+
+        # export the dataset to the tmpdir (full dataset or multiple tiles)
+        sink.get_data(**request)
+
+        # copy the file / gather the tiles to the target location
         GeometryFileSink.merge_files(tmpdir, path)
