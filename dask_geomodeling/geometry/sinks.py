@@ -21,8 +21,8 @@ class GeometryFileSink(BaseSingle):
     Args:
       source: the block the data is coming from
       url: the target directory to put the files in
-      extension: the file extension (defines the format)
-        one of ``{"shp", "gpkg", "geojson", "gml"}``
+      extension: the file extension (defines the format), the options depend
+        on the platform. See GeometryFileSink.supported_extensions
       fields: a mapping that relates column names to output file field names
         field names, ``{<output file field name>: <column name>, ...}``.
 
@@ -31,7 +31,7 @@ class GeometryFileSink(BaseSingle):
       >>> config.set({"geomodeling.root": '/my/output/data/path'})
     """
 
-    SUPPORTED_EXTENSIONS = {
+    supported_extensions = {
         k: v
         for k, v in (
             ("shp", "ESRI Shapefile"),
@@ -39,11 +39,11 @@ class GeometryFileSink(BaseSingle):
             ("geojson", "GeoJSON"),
             ("gml", "GML"),
         )
+        # take only drivers which Fiona reports as writable
         if "w" in fiona.supported_drivers.get(v, "")
+        # skip GPKG and GML on Win32 platform as it yields a segfault
+        and not (sys.platform == "win32" and k in ("gpkg", "gml"))
     }
-
-    if sys.platform == 'win32' and "gpkg" in SUPPORTED_EXTENSIONS:
-        del SUPPORTED_EXTENSIONS["gpkg"]
 
     def __init__(self, source, url, extension="shp", fields=None):
         safe_url = utils.safe_file_url(url)
@@ -51,7 +51,7 @@ class GeometryFileSink(BaseSingle):
             raise TypeError("'{}' object is not allowed".format(type(extension)))
         if len(extension) > 0 and extension[0] == ".":
             extension = extension[1:]  # shop off the dot
-        if extension not in self.SUPPORTED_EXTENSIONS:
+        if extension not in self.supported_extensions:
             raise ValueError("Format '{}' is unsupported".format(extension))
         if fields is None:
             fields = {x: x for x in source.columns if x != "geometry"}
@@ -99,7 +99,7 @@ class GeometryFileSink(BaseSingle):
         path = utils.safe_abspath(process_kwargs["url"])
         fields = process_kwargs["fields"]
         extension = process_kwargs["extension"]
-        driver = GeometryFileSink.SUPPORTED_EXTENSIONS[extension]
+        driver = GeometryFileSink.supported_extensions[extension]
 
         # generate the directory if necessary
         os.makedirs(path, exist_ok=True)

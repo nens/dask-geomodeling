@@ -1,10 +1,8 @@
 import os
 import unittest
-import sys
 
 import geopandas as gpd
 import pytest
-import fiona
 from pandas.util.testing import assert_frame_equal
 from shapely.geometry import box
 
@@ -69,8 +67,8 @@ class TestGeometryFileSink(unittest.TestCase):
         assert actual.crs["init"] == self.expected.crs["init"]
 
     @pytest.mark.skipif(
-        sys.platform == "win32",
-        reason="The geopackage driver crashes on Win32"
+        "gpkg" not in sinks.GeometryFileSink.supported_extensions,
+        reason="This version of Fiona/GDAL does not support geopackages."
     )
     def test_geopackage(self):
         block = self.klass(self.source, self.path, "gpkg")
@@ -97,8 +95,8 @@ class TestGeometryFileSink(unittest.TestCase):
         assert actual.crs["init"] == self.expected.crs["init"]
 
     @pytest.mark.skipif(
-        "GML" not in fiona.supported_drivers,
-        reason="This version of GDAL does not support GML writing."
+        "gml" not in sinks.GeometryFileSink.supported_extensions,
+        reason="This version of Fiona/GDAL does not support GML."
     )
     def test_gml(self):
         block = self.klass(self.source, self.path, "gml")
