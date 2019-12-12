@@ -1,13 +1,12 @@
 from setuptools import setup
 import os
 
-version = '2.0.4.dev0'
+version = '2.1.2.dev0'
 
 long_description = "\n\n".join([open("README.rst").read(), open("CHANGES.rst").read()])
 
 install_requires = (
     [
-        "cityhash",  # optional, but speeds up hashing a lot
         "dask[delayed]>=0.18",
         "pandas>=0.19",
         "geopandas>=0.4",
@@ -54,6 +53,6 @@ setup(
     install_requires=install_requires,
     tests_require=tests_require,
     python_requires='>=3.5',
-    extras_require={"test": tests_require},
+    extras_require={"test": tests_require, "cityhash": ["cityhash"]},
     entry_points={"console_scripts": []},
 )

@@ -58,8 +58,9 @@ class BaseElementwise(RasterBlock):
         if start is not None and stop is not None:
             # limit request to self.period so that resulting data is aligned
             period = self.period
-            request["start"] = max(start, period[0])
-            request["stop"] = min(stop, period[1])
+            if period is not None:
+                request["start"] = max(start, period[0])
+                request["stop"] = min(stop, period[1])
 
         process_kwargs = {"dtype": self.dtype.name, "fillvalue": self.fillvalue}
         sources_and_requests = [(source, request) for source in self.args]
@@ -265,6 +266,10 @@ def wrap_math_process_func(func):
                     nodata_mask = _nodata_mask
                 else:
                     nodata_mask |= _nodata_mask
+            else:
+                raise TypeError(
+                    "Cannot apply math function to value {}".format(data)
+                )
 
         if dtype == np.dtype("bool"):
             no_data_value = None

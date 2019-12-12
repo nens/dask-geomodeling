@@ -305,7 +305,7 @@ class TestSetOperations(unittest.TestCase):
 
         # return only the intersection with the bbox
         result = view.get_data(**self.request)
-        self.assertAlmostEqual(1.0, result["features"].iloc[0]["geometry"].area)
+        self.assertAlmostEqual(1.0, result["features"]["geometry"].iloc[0].area)
 
         # return the intersected extent
         self.request["mode"] = "extent"
@@ -326,7 +326,7 @@ class TestSetOperations(unittest.TestCase):
         # the result should be the difference between the two polygons
         result = view.get_data(**self.request)
         self.assertEqual(1, len(result["features"]))
-        self.assertAlmostEqual(3.0, result["features"].iloc[0]["geometry"].area)
+        self.assertAlmostEqual(3.0, result["features"]["geometry"].iloc[0].area)
 
     def test_difference_with_empty_source(self):
         view = set_operations.Difference(self.empty, self.source)
@@ -352,7 +352,7 @@ class TestSetOperations(unittest.TestCase):
         # but the result should be unchanged
         result = view.get_data(**self.request)
         self.assertEqual(1, len(result["features"]))
-        self.assertAlmostEqual(4.0, result["features"].iloc[0]["geometry"].area)
+        self.assertAlmostEqual(4.0, result["features"]["geometry"].iloc[0].area)
 
     def test_difference_different_id(self):
         # Define a second datasource that produces a geometry with different ID
@@ -365,7 +365,7 @@ class TestSetOperations(unittest.TestCase):
         # the result should contain the original geometry, unchanged
         result = view.get_data(**self.request)
         self.assertEqual(1, len(result["features"]))
-        self.assertAlmostEqual(4.0, result["features"].iloc[0]["geometry"].area)
+        self.assertAlmostEqual(4.0, result["features"]["geometry"].iloc[0].area)
 
     def test_area(self):
         view = geom_operations.Area(self.source, projection="EPSG:3857")

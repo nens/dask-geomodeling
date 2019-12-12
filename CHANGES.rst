@@ -2,7 +2,41 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.0.4 (unreleased)
+2.1.2 (unreleased)
+------------------
+
+- Nothing changed yet.
+
+
+2.1.1 (2019-12-06)
+------------------
+
+- Fix empty response of TemporalAggregate and Cumulative.
+
+- Fix elementwise raster blocks in case of empty datasets.
+
+
+2.1.0 (2019-11-15)
+------------------
+
+- Added RasterFileSource.close_dataset to close the GDAL file handle.
+
+- Run unittests on windows.
+
+- Adapt safe_abspath and safe_file_url functions: they now automatically
+  interpret the geomodeling.root config instead of the 'start' kwarg.
+
+- Added a geomodeling.strict-file-paths that defaults to False. This changes
+  the default behaviour of all blocks that handle file paths: by default, the
+  path is not required to be in geomodeling.root.
+
+- Added installation instructions for windows.
+
+- Improved the ipyleaflet plugin so that it can deal with multiple notebook
+  servers on the same machine. The parameter 'hostname' was replaced by 'url'.
+
+
+2.0.4 (2019-11-01)
 ------------------
 
 - Fixed propagation of the 'extent' and 'geometry' attributes through the
@@ -23,6 +57,10 @@ Changelog of dask-geomodeling
   the arguments is a number and not a Block instance.
 
 - Implemented the geo_transform attribute of elementwise raster blocks.
+
+- Added an ipyleaflet plugin for visualizing RasterBlocks in jupyter notebook.
+
+- Changed the default geomodeling.root setting to the current working directory
 
 
 2.0.3 (2019-10-08)
