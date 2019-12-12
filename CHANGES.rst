@@ -13,6 +13,10 @@ Changelog of dask-geomodeling
 
 - Added a .to_file() method to all GeometryBlocks.
 
+- Start using google docstring convention.
+
+- Several minor doc fixes.
+
 
 2.1.1 (2019-12-06)
 ------------------

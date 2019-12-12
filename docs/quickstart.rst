@@ -25,7 +25,7 @@ complex views can be created by nesting block instances:
 Obtaining data from a view
 --------------------------
 
-To obtain data from a view directly, use the `get_data` method:
+To obtain data from a view directly, use the ``get_data`` method:
 
 .. code:: python
 
@@ -48,7 +48,7 @@ block type.
 Showing data on the map
 -----------------------
 
-If you a are using Jupyter and our ipyleaflet plugin (see `installation`__),
+If you a are using Jupyter and our ipyleaflet plugin,
 you can inspect your dask-geomodeling View on an interactive map widget.
 
 .. code:: python
@@ -72,7 +72,7 @@ you can inspect your dask-geomodeling View on an interactive map widget.
        layers=[osm_layer, geoomdeling_layer]
    )
 
-Please consult the `ipyleaflet<https://ipyleaflet.readthedocs.io>`_ docs for
+Please consult the `ipyleaflet <https://ipyleaflet.readthedocs.io>`_ docs for
 examples in how to add different basemaps, other layers, or add controls.
 
 
