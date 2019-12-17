@@ -117,9 +117,8 @@ class GeometryFileSource(GeometryBlock):
             f = f[mask]
 
         # convert the data to the requested crs
-        f["geometry"] = f["geometry"].apply(
-            utils.shapely_transform,
-            args=(utils.crs_to_srs(f["geometry"].crs), request["projection"]),
+        utils.geodataframe_transform(
+            f, utils.crs_to_srs(f.crs), request["projection"]
         )
 
         # compute the bounds of each geometry and filter on min_size

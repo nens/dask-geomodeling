@@ -57,17 +57,21 @@ class GeometryBlock(Block):
         you want to save.
 
         Args:
-          url (str): The target file path. The extension determines the format. For
-            supported formats, consult GeometryFileSink.supported_extensions.
-          fields (dict): a mapping that relates column names to output file field
-            names field names, ``{<output file field name>: <column name>, ...}``.
+          url (str): The target file path. The extension determines the format.
+            For supported formats, consult
+            GeometryFileSink.supported_extensions.
+          fields (dict): a mapping that relates column names to output file
+            field names field names,
+            ``{<output file field name>: <column name>, ...}``.
           tile_size (int): Optionally use this for large exports to stay within
-            memory constraints. The export is split in tiles of given size (units
-            are determined by the projection). Finally the tiles are merged.
+            memory constraints. The export is split in tiles of given size
+            (units are determined by the projection). Finally the tiles are
+            merged.
           geometry (shapely Geometry): Limit exported objects to objects whose
             centroid intersects with this geometry.
-          projection (str): projection to return the geometries in as WKT string
-            or EPSG code.
+          projection (str): The projection as a WKT string or EPSG code.
+            Sets the projection of the geometry argument, the target
+            projection of the data, and the tiling projection.
           start (datetime): start date as UTC datetime
           stop (datetime): stop date as UTC datetime
           **request: see GeometryBlock request specification

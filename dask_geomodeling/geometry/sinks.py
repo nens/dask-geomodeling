@@ -1,3 +1,4 @@
+import glob
 import os
 import sys
 import shutil
@@ -52,7 +53,7 @@ class GeometryFileSink(BaseSingle):
         if not isinstance(extension, str):
             raise TypeError("'{}' object is not allowed".format(type(extension)))
         if len(extension) > 0 and extension[0] == ".":
-            extension = extension[1:]  # shop off the dot
+            extension = extension[1:]  # chop off the dot
         if extension not in self.supported_extensions:
             raise ValueError("Format '{}' is unsupported".format(extension))
         if fields is None:
@@ -97,7 +98,6 @@ class GeometryFileSink(BaseSingle):
 
         features = data["features"].copy()
         projection = data["projection"]
-        crs = utils.get_crs(projection)
         path = utils.safe_abspath(process_kwargs["url"])
         fields = process_kwargs["fields"]
         extension = process_kwargs["extension"]
@@ -114,14 +114,13 @@ class GeometryFileSink(BaseSingle):
         if index_name in fields.values() and index_name not in features.columns:
             features[index_name] = features.index
 
-        # copy the dataframe and rename the columns
+        # copy the dataframe
         features = features[["geometry"] + list(fields.values())]
 
         # rename the columns
         features.columns = ["geometry"] + list(fields.keys())
 
         # generate the file
-        features.crs = crs  # be sure about the CRS
         features.to_file(os.path.join(path, filename), driver=driver)
 
         result = geopandas.GeoDataFrame(index=features.index)
@@ -137,12 +136,11 @@ class GeometryFileSink(BaseSingle):
         path = utils.safe_abspath(path)
         target = utils.safe_abspath(target)
 
-        if os.path.isfile(target):
-            raise IOError("File '{}' already exists".format(target))
+        if os.path.exists(target):
+            raise IOError("Target '{}' already exists".format(target))
 
         ext = os.path.splitext(target)[1]
-        source_paths = [os.path.join(path, x) for x in os.listdir(path)]
-        source_paths = [x for x in source_paths if os.path.splitext(x)[1] == ext]
+        source_paths = glob.glob(os.path.join(path, '*' + ext))
         if len(source_paths) == 0:
             raise IOError(
                 "No source files found with matching extension '{}'".format(ext)
@@ -150,7 +148,7 @@ class GeometryFileSink(BaseSingle):
         elif len(source_paths) == 1:
             # shortcut for single file
             if remove_source:
-                os.rename(source_paths[0], target)
+                shutil.move(source_paths[0], target)
             else:
                 shutil.copy(source_paths[0], target)
             return
@@ -197,8 +195,9 @@ def to_file(source, url, fields=None, tile_size=None, **request):
         are determined by the projection). Finally the tiles are merged.
       geometry (shapely Geometry): Limit exported objects to objects whose
         centroid intersects with this geometry.
-      projection (str): projection to return the geometries in as WKT string
-        or EPSG code.
+      projection (str): The projection as a WKT string or EPSG code.
+        Sets the projection of the geometry argument, the target
+        projection of the data, and the tiling projection.
       mode (str): one of ``{"intersects", "centroid"}``, default "centroid"
       start (datetime): start date as UTC datetime
       stop (datetime): stop date as UTC datetime

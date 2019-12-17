@@ -17,6 +17,8 @@ Changelog of dask-geomodeling
 
 - Several minor doc fixes.
 
+- Fix setting of the .crs property in the GeometryFileSource.
+
 
 2.1.1 (2019-12-06)
 ------------------
