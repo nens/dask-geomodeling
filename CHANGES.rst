@@ -19,6 +19,8 @@ Changelog of dask-geomodeling
 
 - Fix setting of the .crs property in the GeometryFileSource.
 
+- Fixed serialization of raster.Classify.
+
 
 2.1.1 (2019-12-06)
 ------------------
