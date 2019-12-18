@@ -270,7 +270,7 @@ class Classify(BaseSingle):
         bins_diff = np.diff(bins)
         if not np.all(bins_diff > 0) or np.all(bins_diff < 0):
             raise TypeError("'bins' should be monotonic")
-        super(Classify, self).__init__(store, bins_arr, right)
+        super(Classify, self).__init__(store, bins_arr.tolist(), right)
 
     @property
     def bins(self):
