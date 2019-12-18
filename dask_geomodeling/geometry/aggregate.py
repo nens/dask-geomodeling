@@ -364,8 +364,8 @@ class AggregateRaster(GeometryBlock):
         req_srs = process_kwargs["req_srs"]
         agg_srs = process_kwargs["agg_srs"]
 
-        agg_geometries = features["geometry"].apply(
-            utils.shapely_transform, args=(req_srs, agg_srs)
+        agg_geometries = utils.geoseries_transform(
+            features["geometry"], req_srs, agg_srs,
         )
 
         statistic = process_kwargs["statistic"]

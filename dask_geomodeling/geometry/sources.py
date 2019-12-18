@@ -9,11 +9,6 @@ from dask_geomodeling import utils
 from .base import GeometryBlock
 
 # this import is a copy from geopandas.io.files
-try:
-    from fiona import Env as fiona_env
-except ImportError:
-    from fiona import drivers as fiona_env
-
 
 __all__ = ["GeometryFileSource"]
 
@@ -63,7 +58,7 @@ class GeometryFileSource(GeometryBlock):
     @property
     def columns(self):
         # this is exactly how geopandas determines the columns
-        with fiona_env(), fiona.open(self.path) as reader:
+        with utils.fiona_env(), fiona.open(self.path) as reader:
             properties = reader.meta["schema"]["properties"]
             return set(properties.keys()) | {"geometry"}
 
@@ -122,9 +117,8 @@ class GeometryFileSource(GeometryBlock):
             f = f[mask]
 
         # convert the data to the requested crs
-        f["geometry"] = f["geometry"].apply(
-            utils.shapely_transform,
-            args=(utils.crs_to_srs(f["geometry"].crs), request["projection"]),
+        utils.geodataframe_transform(
+            f, utils.crs_to_srs(f.crs), request["projection"]
         )
 
         # compute the bounds of each geometry and filter on min_size

@@ -29,8 +29,7 @@ Anaconda (all platforms)
    recommend using Python 3.8 yet. If you need other python or GDAL versions
    on windows: while `dask-geomodeling` itself is compatible with all current
    versions, you may may have a hard time getting it to work via Anaconda and
-   it will probably be easier using the pip route listed below. Good luck out
-   there.
+   it will probably be easier using the pip route listed below.
 
 
 Windows (pip)
@@ -42,8 +41,8 @@ The following recipe is still a work in progress:
 2. `Install GDAL 2.* (MSVC 2015) <http://www.gisinternals.com/release.php>`_
 3. Add the GDAL installation path to your PATH variable
 4. Start the command prompt
-5. `pip install gdal==2.* dask-geomodeling ipyleaflet matplotlib pillow`
-6. (optionally) `pip install ipyleaflet matplotlib pillow`
+5. ``pip install gdal==2.* dask-geomodeling ipyleaflet matplotlib pillow``
+6. (optionally) ``pip install ipyleaflet matplotlib pillow``
 
 .. note::
 
@@ -53,7 +52,7 @@ The following recipe is still a work in progress:
 On the ipyleaflet plugin
 ------------------------
 
-dask-geomodeling comes with a ipyleaflet plugin for `Jupyter<https://jupyter.org/>`_
+dask-geomodeling comes with a ipyleaflet plugin for `Jupyter <https://jupyter.org/>`_
 so that you can show your generated views on a mapviewer. If you want to use
 it, install some additional dependencies::
 
@@ -64,13 +63,13 @@ And start your notebook server with the plugin::
     $ jupyter notebook --NotebookApp.nbserver_extensions="{'dask_geomodeling.ipyleaflet_plugin':True}"
 
 Alternatively, you can add this extension to your
-`Jupyter configuration<https://jupyter-notebook.readthedocs.io/en/stable/config_overview.html>`_
+`Jupyter configuration <https://jupyter-notebook.readthedocs.io/en/stable/config_overview.html>`_
 
 
 Advanced: local setup with system Python (Ubuntu)
 -------------------------------------------------
 
-These instructions make use of the system-wide Python 3 interpreter.
+These instructions make use of the system-wide Python 3 interpreter::
 
     $ sudo apt install python3-pip python3-gdal
 
@@ -84,7 +83,7 @@ Run the tests::
 
 
 Advanced: local setup for development (Ubuntu)
-------------------------------------
+----------------------------------------------
 
 These instructions assume that ``git``, ``python3``, ``pip``, and
 ``virtualenv`` are installed on your host machine.
