@@ -192,3 +192,9 @@ class TestGeometryFileSink(unittest.TestCase):
         actual = gpd.read_file(self.path + ".geojson")
         # because we lose the index in the saving process, just check the len
         assert len(actual) == 2
+
+    def test_to_file_dry_run(self):
+        self.source.to_file(
+            self.path + ".geojson", dry_run=True, **self.request
+        )
+        assert not os.path.exists(self.path)

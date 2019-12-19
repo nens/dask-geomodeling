@@ -13,6 +13,8 @@ Changelog of dask-geomodeling
 
 - Added a .to_file() method to all GeometryBlocks.
 
+- Added dry_run parameter (for validation) to .to_file().
+
 - Start using google docstring convention.
 
 - Several minor doc fixes.
