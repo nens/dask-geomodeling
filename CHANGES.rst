@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.1.2 (unreleased)
+2.2.0 (2019-12-20)
 ------------------
 
 - utils.get_crs now leaves EPSG codes instead of converting them to their Proj4
