@@ -140,18 +140,21 @@ class GeometryFileSink(BaseSingle):
         if os.path.exists(target):
             raise IOError("Target '{}' already exists".format(target))
 
-        ext = os.path.splitext(target)[1]
+        target_base, ext = os.path.splitext(target)
         source_paths = glob.glob(os.path.join(path, '*' + ext))
         if len(source_paths) == 0:
             raise IOError(
                 "No source files found with matching extension '{}'".format(ext)
             )
         elif len(source_paths) == 1:
-            # shortcut for single file
-            if remove_source:
-                shutil.move(source_paths[0], target)
-            else:
-                shutil.copy(source_paths[0], target)
+            # shortcut for single file. we need to copy/move all base_name.*
+            # files (e.g. shapefiles have multiple files)
+            source_base = os.path.splitext(source_paths[0])[0]
+            move_or_copy = shutil.move if remove_source else shutil.copy
+            for file_path in glob.glob(source_base + '.*'):
+                move_or_copy(
+                    file_path, target_base + os.path.splitext(file_path)[1]
+                )
             return
 
         with utils.fiona_env():

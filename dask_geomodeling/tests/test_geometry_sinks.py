@@ -179,13 +179,19 @@ class TestGeometryFileSink(unittest.TestCase):
             assert len(df) == 1
             assert df.crs["init"] == "epsg:3857"
 
-    def test_to_file(self):
+    def test_to_file_geojson(self):
         self.source.to_file(self.path + ".geojson", **self.request)
         actual = gpd.read_file(self.path + ".geojson")
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
 
-    def test_to_file_with_tiling(self):
+    def test_to_file_shapefile(self):
+        self.source.to_file(self.path + ".shp", **self.request)
+        actual = gpd.read_file(self.path + ".shp")
+        # compare dataframes without checking the order of records / columns
+        assert_frame_equal(actual, self.expected, check_like=True)
+
+    def test_to_file_with_tiling_geojson(self):
         self.source.to_file(
             self.path + ".geojson", tile_size=10, **self.request_tiled
         )
@@ -198,3 +204,11 @@ class TestGeometryFileSink(unittest.TestCase):
             self.path + ".geojson", dry_run=True, **self.request
         )
         assert not os.path.exists(self.path)
+
+    def test_to_file_with_tiling_shapefile(self):
+        self.source.to_file(
+            self.path + ".shp", tile_size=10, **self.request_tiled
+        )
+        actual = gpd.read_file(self.path + ".shp")
+        # because we lose the index in the saving process, just check the len
+        assert len(actual) == 2
