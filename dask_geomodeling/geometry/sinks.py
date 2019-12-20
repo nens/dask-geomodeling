@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 import shutil
+from contextlib import contextmanager
 
 import fiona
 import geopandas
@@ -181,7 +182,14 @@ class GeometryFileSink(BaseSingle):
                     pass
 
 
-def to_file(source, url, fields=None, tile_size=None, **request):
+@contextmanager
+def DryRunTempDir(*args, **kwargs):
+    yield "/tmp/dummy"
+
+
+def to_file(
+        source, url, fields=None, tile_size=None, dry_run=False, **request
+):
     """Utility function to export data from a GeometryBlock to a file on disk.
 
     You need to specify the target file path as well as the extent geometry
@@ -196,6 +204,7 @@ def to_file(source, url, fields=None, tile_size=None, **request):
       tile_size (int): Optionally use this for large exports to stay within
         memory constraints. The export is split in tiles of given size (units
         are determined by the projection). Finally the tiles are merged.
+      dry_run (bool): Do nothing, only validate the arguments.
       geometry (shapely Geometry): Limit exported objects to objects whose
         centroid intersects with this geometry.
       projection (str): The projection as a WKT string or EPSG code.
@@ -217,14 +226,18 @@ def to_file(source, url, fields=None, tile_size=None, **request):
     path = utils.safe_abspath(url)
     extension = os.path.splitext(path)[1]
 
-    with tempfile.TemporaryDirectory(
-        dir=config.get("temporary_directory", None)
-    ) as tmpdir:
-        sink = GeometryFileSink(source, tmpdir, extension=extension, fields=fields)
+    TmpDir = DryRunTempDir if dry_run else tempfile.TemporaryDirectory
+    with TmpDir(dir=config.get("temporary_directory", None)) as tmpdir:
+        sink = GeometryFileSink(
+            source, tmpdir, extension=extension, fields=fields
+        )
 
         # wrap the sink in a GeometryTiler
         if tile_size is not None:
             sink = GeometryTiler(sink, tile_size, request["projection"])
+
+        if dry_run:
+            return
 
         # export the dataset to the tmpdir (full dataset or multiple tiles)
         sink.get_data(**request)

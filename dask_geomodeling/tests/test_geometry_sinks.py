@@ -199,6 +199,12 @@ class TestGeometryFileSink(unittest.TestCase):
         # because we lose the index in the saving process, just check the len
         assert len(actual) == 2
 
+    def test_to_file_dry_run(self):
+        self.source.to_file(
+            self.path + ".geojson", dry_run=True, **self.request
+        )
+        assert not os.path.exists(self.path)
+
     def test_to_file_with_tiling_shapefile(self):
         self.source.to_file(
             self.path + ".shp", tile_size=10, **self.request_tiled
@@ -206,4 +212,3 @@ class TestGeometryFileSink(unittest.TestCase):
         actual = gpd.read_file(self.path + ".shp")
         # because we lose the index in the saving process, just check the len
         assert len(actual) == 2
-
