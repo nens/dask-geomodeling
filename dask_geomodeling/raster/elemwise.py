@@ -292,25 +292,27 @@ def wrap_math_process_func(func):
 
 class Add(BaseMath):
     """
-    Add a value.
+    Add two rasters together or add a constant value to a raster.
+    
+    Either one or both of the inputs should be a rasterblock. In case of one raster input adds a constant value to this raster. In case of two raster inputs adds these rasters together. In this case spatial and temporal properties of the rasters should be equal. 
+    
+    Args:
+      a (Rasterblock, number): Addition parameter a
+      b (Rasterblock, number): Addition parameter b
 
-    :param a: Addition parameter a
-    :param b: Addition parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
-    """
+    Returns:
+      Single raster that contains added values
+    
+	See also:
+	  :class:`dask_geomodeling.raster.elemwise.Subtract`
+	"""
 
     process = staticmethod(wrap_math_process_func(np.add))
 
 
 class Subtract(BaseMath):
     """
-    Subtract a constant value from a store or vice versa.
+    Subtract a constant value from a raster or subtract 
 
     :param a: Subtraction parameter a
     :param b: Subtraction parameter b
