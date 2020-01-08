@@ -18,9 +18,9 @@ Anaconda (all platforms)
 
 1. `Install anaconda / miniconda <https://docs.anaconda.com/anaconda/install/>`_
 2. Start the `Anaconda Prompt` via the start menu
-3. `conda config --add channels conda-forge`
-4. `conda update conda`
-5. `conda install python=3.6 gdal=2.4.1 scipy=1.3.1 dask-geomodeling ipyleaflet matplotlib pillow`
+3. ``conda config --add channels conda-forge``
+4. ``conda update conda``
+5. ``conda install python=3.6 gdal=2.4.1 scipy=1.3.1 dask-geomodeling ipyleaflet matplotlib pillow``
 
 .. note::
 
