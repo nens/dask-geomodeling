@@ -294,35 +294,31 @@ class Add(BaseMath):
     """
     Add two rasters together or add a constant value to a raster.
     
-    Either one or both of the inputs should be a rasterblock. In case of one raster input adds a constant value to this raster. In case of two raster inputs adds these rasters together. In this case spatial and temporal properties of the rasters should be equal. 
+    Either one or both of the inputs should be a rasterblock. In case of one raster input adds a constant value to this raster. In case of two raster inputs adds these rasters together. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
     
     Args:
-      a (Rasterblock, number): Addition parameter a
-      b (Rasterblock, number): Addition parameter b
+      a (RasterBlock, number): Addition parameter a
+      b (RasterBlock, number): Addition parameter b
 
     Returns:
-      Single raster that contains added values
-    
-	See also:
-	  :class:`dask_geomodeling.raster.elemwise.Subtract`
+      Rasterblock containing the result of function *(a+b)*
+	  
 	"""
-
     process = staticmethod(wrap_math_process_func(np.add))
 
 
 class Subtract(BaseMath):
     """
-    Subtract a constant value from a raster or subtract 
+    Subtract one raster from another or subtract a constant value from a raster.
+    
+    Either one or both of the inputs should be a rasterblock. In case of one raster input subtracts a constant value from this raster. In case of two raster inputs subtracts the second raster from the first raster. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
+    
+    Args:
+      a (RasterBlock, number): Raster or value which gets subtracted from
+      b (RasterBlock, number): Raster or value which is subtracted
 
-    :param a: Subtraction parameter a
-    :param b: Subtraction parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Returns:
+      Rasterblock containing the result of function *(a-b)*
     """
 
     process = staticmethod(wrap_math_process_func(np.subtract))
@@ -330,17 +326,16 @@ class Subtract(BaseMath):
 
 class Multiply(BaseMath):
     """
-    Multiply by a value.
+    Multiply the values of two rasters or multiply a raster by a constant value.
+    
+    Either one or both of the inputs should be a rasterblock. In case of one raster input multiplies this raster with a constant value. In case of two raster inputs multiplies the values of these two rasters. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
 
-    :param a: Multiplication parameter a
-    :param b: Multiplication parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Args:
+      a (RasterBlock, number): Multiplication parameter a
+      b (RasterBlock, number): Multiplication parameter b
+     
+    Returns:
+      Rasterblock containing the result of the multiplication.
     """
 
     process = staticmethod(wrap_math_process_func(np.multiply))
@@ -348,17 +343,16 @@ class Multiply(BaseMath):
 
 class Divide(BaseMath):
     """
-    Divide Store by a constant value or vice versa.
+    Divide one raster by another raster or divide a raster by a constant value.
 
-    :param a: Division parameter a
-    :param b: Division parameter b
+    Either one or both of the inputs should be a rasterblock. In case of one raster input divides this raster by a constant value. In case of two raster inputs divides the values of the first raster by the values of the second raster. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
 
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Args:
+      a (RasterBlock, number): Raster or value which is divided from
+      b (RasterBlock, number): Raster or value which is divided by
+     
+    Returns:
+      Rasterblock containing the result of the division.
     """
 
     process = staticmethod(wrap_math_process_func(np.divide))
@@ -371,17 +365,16 @@ class Divide(BaseMath):
 
 class Power(BaseMath):
     """
-    Raise each number in a to the power b.
-
-    :param a: base
-    :param b: exponent
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Exponential function, either with one raster and a constant value or two rasters. 
+    
+    Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, number): Raster or value used as base
+      b (RasterBlock, number): Raster or value used as exponent
+      
+    Returns:
+      Rasterblock containing the result of the exponential function. 
     """
 
     process = staticmethod(wrap_math_process_func(np.power))
@@ -396,19 +389,17 @@ class Power(BaseMath):
 
 class Equal(BaseComparison):
     """
-    Compares the values of two stores and returns True if they are equal.
+    Compares the values of two rasters and returns True if they are equal. 
 
-    Note that "no data" is not equal to "no data".
+    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean returning True if both inputs are the same value and False otherwise. 
+    Note that 'no data' is not equal to 'no data'. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
 
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Args:
+      a (RasterBlock, number): Comparison parameter a
+      b (RasterBlock, number): Comparison parameter b
+      
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.equal))
@@ -416,19 +407,17 @@ class Equal(BaseComparison):
 
 class NotEqual(BaseComparison):
     """
-    Compares the values of two stores and returns False if they are equal.
+    Compares the values of two rasters and returns False if they are equal.
 
-    Note that "no data" is not equal to "no data".
+    Opposite of ``dask_geomodeling.raster.elemwise.Equal``, this geoblock compares two rasters or a raster with a static value and returns False if they are equal, and true otherwise. 
+    Note that 'no data' is not equal to 'no data', and therefore returns True in this operation. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
 
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
+    Args:
+      a (RasterBlock, number): Comparison parameter a
+      b (RasterBlock, number): Comparison parameter b
 
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.not_equal))
@@ -436,19 +425,17 @@ class NotEqual(BaseComparison):
 
 class Greater(BaseComparison):
     """
-    Returns True if a is greater than b.
+    Compares the values of two rasters and returns True if the first is higher than the second.
+    
+    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean, returning True if the first input is a higher value than the second value. 
+    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, number): Comparison parameter a
+      b (RasterBlock, number): Comparison parameter b
 
-    Note that "no data" will always return False
-
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.greater))
@@ -456,19 +443,17 @@ class Greater(BaseComparison):
 
 class GreaterEqual(BaseComparison):
     """
-    Returns True if a is greater than or equal to b.
+    Compares the values of two rasters and returns True if the first is higher than the second, or equal to the second.
+    
+    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean, returning True if the first input is a higher value than the second value or equal to the second value. 
+    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, number): Comparison parameter a
+      b (RasterBlock, number): Comparison parameter b
 
-    Note that "no data" will always return False
-
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.greater_equal))
@@ -476,39 +461,34 @@ class GreaterEqual(BaseComparison):
 
 class Less(BaseComparison):
     """
-    Returns True if a is less than b.
+    Compares the values of two rasters and returns True if the first is smaller than the second.
+    
+    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean returning True if the first input is a lower value than the second value. 
+    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, number): Comparison parameter a
+      b (RasterBlock, number): Comparison parameter b
 
-    Note that "no data" will always return False
-
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
-
     process = staticmethod(wrap_math_process_func(np.less))
 
 
 class LessEqual(BaseComparison):
     """
-    Returns True if a is less than or equal to b.
+    Compares the values of two rasters and returns True if the first is lower than the second, or equal to the second.
+    
+    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean, returning True if the first input is a lower value than the second value or equal to the second value. 
+    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, number): Comparison parameter a
+      b (RasterBlock, number): Comparison parameter b
 
-    Note that "no data" will always return False
-
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
-
-    :type a: RasterBlock, scalar
-    :type b: RasterBlock, scalar
-
-    At least one of the parameters should be a RasterBlock. If the
-    params are both RasterBlocks, they should share exactly the
-    same time structure. The Snap block can be used to accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.less_equal))
@@ -516,10 +496,15 @@ class LessEqual(BaseComparison):
 
 class Invert(BaseSingle):
     """
-    Swaps False and True ("not x" or "~x").
+    Taken a raster with boolean values and swaps True and False.
+    
+    Takes a single input raster containing boolean values. Outputs a boolean raster with the same spatial and temportal properties.
 
-    :param x: raster data to invert
-    :type x: RasterBlock
+    Args:
+      x (RasterBlock): Boolean raster with values to invert
+
+    Returns:
+      Rasterblock with boolean values opposite to the input raster. 
     """
 
     def __init__(self, x):
@@ -540,10 +525,16 @@ class Invert(BaseSingle):
 
 
 class IsData(BaseSingle):
-    """Returns True where raster has data.
+    """
+    Returns True where raster has data.
+    
+    Takes a single input raster. Outputs a boolean raster with the same spatial and temportal properties, for cells where the input raster has data returns True, and False otherwise. 
 
-    :param store:
-    :type store: RasterBlock
+    Args:
+      store (RasterBlock): Single input raster
+
+    Returns:
+      Rasterblock with boolean values. 
     """
 
     def __init__(self, store):
@@ -569,10 +560,16 @@ class IsData(BaseSingle):
 
 
 class IsNoData(IsData):
-    """Returns True where raster has no data.
+    """
+    Returns True where raster has no data.
+    
+    Opposite of ``dask_geomodeling.raster.elemwise.IsData``, also takes a single input raster. But outputs False for cells with data in the input raster, and True otherwise.
 
-    :param store:
-    :type store: RasterBlock
+    Args:
+      store (RasterBlock): Single input raster
+
+    Returns:
+      Rasterblock with boolean values. 
     """
 
     @staticmethod
@@ -586,18 +583,17 @@ class IsNoData(IsData):
 
 class And(BaseLogic):
     """
-    Returns True where a and b are True.
+    Taken two boolean input rasters and returns True when both are True. 
 
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
+    Takes two boolean rasters or a boolean raster and a single boolean value. The resulting raster returns a True value if both inputs are True.
+    If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, boolean): Boolean input a
+      b (RasterBlock, boolean): Boolean input b
 
-    :type a: RasterBlock, boolean
-    :type b: RasterBlock, boolean
-
-    All input parameters should have a boolean dtype and at least one of the
-    parameters should be a RasterBlock. If both are RasterBlocks, they should
-    share exactly the same time structure. The Snap block can be used to
-    accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.logical_and))
@@ -605,18 +601,17 @@ class And(BaseLogic):
 
 class Or(BaseLogic):
     """
-    Returns True where a or b are True.
+    Taken two boolean input rasters and returns True when either or both are True. 
 
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
+    Takes two boolean rasters or a boolean raster and a single boolean value. The resulting raster returns a True value if either if the inputs is True, or if both of the inputs are True. 
+    If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, boolean): Boolean input a
+      b (RasterBlock, boolean): Boolean input b
 
-    :type a: RasterBlock, boolean
-    :type b: RasterBlock, boolean
-
-    All input parameters should have a boolean dtype and at least one of the
-    parameters should be a RasterBlock. If both are RasterBlocks, they should
-    share exactly the same time structure. The Snap block can be used to
-    accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.logical_or))
@@ -624,18 +619,17 @@ class Or(BaseLogic):
 
 class Xor(BaseLogic):
     """
-    Returns True where either a or b is True (exclusive-or)
+    Takes two boolean input rasters and returns True when either is True, but False if both are True. 
 
-    :param a: Comparison parameter a
-    :param b: Comparison parameter b
+    Takes two boolean rasters or a boolean raster and a single boolean value. The resulting raster returns True value if either if the inputs is True, but False if both are True. Also returns False when both inputs are False. 
+    If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    
+    Args:
+      a (RasterBlock, boolean): Boolean input a
+      b (RasterBlock, boolean): Boolean input b
 
-    :type a: RasterBlock, boolean
-    :type b: RasterBlock, boolean
-
-    All input parameters should have a boolean dtype and at least one of the
-    parameters should be a RasterBlock. If both are RasterBlocks, they should
-    share exactly the same time structure. The Snap block can be used to
-    accomplish this.
+    Returns:
+      Rasterblock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.logical_xor))
@@ -643,15 +637,18 @@ class Xor(BaseLogic):
 
 class FillNoData(BaseElementwise):
     """
-    Combines multiple rasters, filling in nodata values.
+    Combines multiple rasters, filling in 'no data' values.
 
-    :param args: list of raster sources to be combined.
-    :type args: list of RasterBlock
+    Values in the contributing rasters are considered left to
+    right. Therefore values from rasters that are more 'to the right' are shown in the resulting raster. 
+    However, 'no data' values are transparent and in this case underlying data values are
+    shown (of rasters 'more to the left')
 
-    Values at equal timesteps in the contributing rasters are pasted left to
-    right. Therefore values from rasters that are more 'to the left' are
-    shadowed by values from rasters more 'to the right'. However, 'no data'
-    values are transparent and do not shadow underlying data values.
+    Args:
+      a (list of rasters): list of rasters to be combined.
+      
+    Returns:
+      Rasterblock which shows input rasters from right to left, with 'no data' values being transparent
     """
 
     def __init__(self, *args):

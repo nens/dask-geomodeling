@@ -102,14 +102,20 @@ def expand_request_meters(request, radius_m=1):
 
 class Dilate(BaseSingle):
     """
-    Perform binary dilation on specific values. Dilation is done in the
-    order of the values parameter.
+    Perform spatial dilation on specific cell values.
 
-    :param store: raster to perform dilation on
-    :param values: only dilate pixels that have these values
+    Cells with values in the supplied list are spatially dilated by one cell in each direction (including diagonals). 
+    Dilation is performed in the order of the values parameter.
+    
+    Args:
+      store (RasterBlock): Raster to perform dilation on
+      values (list): Only cells with these values are dilated
 
-    :type store: RasterBlock
-    :type values: list
+    Returns:
+      Rasterblock where cells in values list are dilated
+    
+    See also:
+      https://homepages.inf.ed.ac.uk/rbf/HIPR2/dilate.htm
     """
 
     def __init__(self, store, values):
@@ -142,14 +148,15 @@ class Dilate(BaseSingle):
 class MovingMax(BaseSingle):
     """
     Apply a spatial maximum filter to the data using a circular footprint.
+    
+    Shows a spatial maximum for each cell, by looking in a circular foorprint around this cell. This can be used for visualization of sparse data.
 
-    :param store: raster to apply the maximum filter on
-    :param size: diameter of the circular footprint in pixels
-
-    :type store: RasterBlock
-    :type store: int
-
-    This block can be used for visualization of sparse data.
+    Args:
+      store (RasterBlock): raster to which the filter is applied
+      size (integer): diameter of the circular footprint. This should always be an odd number larger than 1.
+    
+    Returns:
+      Raster showing the the maximum value inside the footprint of each input cell. 
     """
 
     def __init__(self, store, size):
@@ -198,21 +205,20 @@ class MovingMax(BaseSingle):
 class Smooth(BaseSingle):
     """
     Smooth the values from a raster spatially using gaussian smoothing.
+    
+    Performs a spatial smoothing on the input raster. Uses a Gaussian smoothing algorithm. 
+    
+    Args:
+      store (RasterBlock): Raster to be smoothed
+      size (scalar): Input parameter for the smoothing algorithm. The 'sigma' value for the Gaussian kernal equals ``size / 3``
+      fill (scalar): Value used for 'no data' values in the smoothing process. Defaults to 0. 
 
-    :param store: raster to smooth
-    :param size: size of the smoothing in meters. the 'sigma' of the
-        gaussian kernel equals ``size / 3``.
-    :param fill: fill value to be used for 'no data' values during
-        smoothing. The output will not have 'no data' values.
+    Returns:
+      Smoothed raster
+      
+    See Also:
+      https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
 
-    :type store: Store
-    :type size: scalar
-    :type fill: scalar
-
-    The challenge is to mitigate the edge effects whilst remaining
-    performant. If the necessary margin for smoothing is more than 6 pixels in
-    any direction, the approach used here is requesting a zoomed out geometry,
-    smooth that and zoom back in to the original region of interest.
     """
 
     MARGIN_THRESHOLD = 6
@@ -293,21 +299,21 @@ class Smooth(BaseSingle):
 class HillShade(BaseSingle):
     """
     Calculate a hillshade from the raster values.
+    
+    Performs a hillshade algorithm on the input raster. 
 
-    :param store: RasterBlock object
-    :param size: size of the effect, in projected units
-    :param altitude: Light source altitude in degrees. Default 45.
-    :param azimuth: Light source azimuth in degrees. Default 315.
-    :param fill: fill value to be used for 'no data' values during hillshading
+    Args:
+      store (RasterBlock): Raster to which the hillshade is applied
+      size (scalar): size of the effect, in projected units
+      altitude (scalar): Light source altitude in degrees, default to 45
+      azimuth (scalar): Light source azimuth in degrees, default to 315
+      fill (scalar): fill value to be used for 'no data' values during hillshading
 
-    :type store: RasterBlock
-    :type size: scalar
-    :type altitude: scalar
-    :type azimuth: scalar
-    :type fill: scalar
+    Returns:
+      Hillshaded raster
 
-    Hillshade, adapted from gdal algorithm. Smooths prior to shading to
-    keep it good looking even when zoomed beyond 1:1.
+    See also:
+      https://pro.arcgis.com/en/pro-app/tool-reference/3d-analyst/how-hillshade-works.htm
     """
 
     def __init__(self, store, altitude=45, azimuth=315, fill=0):

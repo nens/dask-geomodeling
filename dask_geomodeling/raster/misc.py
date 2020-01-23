@@ -22,14 +22,18 @@ __all__ = ["Clip", "Classify", "Reclassify", "Mask", "MaskBelow", "Step", "Raste
 
 class Clip(BaseSingle):
     """
-    Make result values 'no data' if it is 'no data' in the source.
-    If source is a boolean mask, False values become 'no data'.
+    Clip one raster to the extent of another raster.
+    
+    Takes two raster inputs, one raster (store) whose values are returned in the output and one raster (source) which is used as the extent. 
+    Cells of the store raster are not returned if they fall outside of the extent of source.
+    Result values are no data if the source raster contains a no data value. Source may also be a boolean raster, in that case False values also result in no data values.
 
-    :param store: The store-like whose values are to be converted.
-    :param source: The store-like as the source for 'data or no data'
+    Args:
+      store (RasterBlock): Raster whose values are returned in the output raster
+      source (RasterBlock): Raster which is used as the extent of the output raster
 
-    :type store: RasterBlock
-    :type source: RasterBlock
+    Returns:
+      Rasterblock which has values from store and the extent of source. 
     """
 
     def __init__(self, store, source):
@@ -103,13 +107,17 @@ class Clip(BaseSingle):
 
 class Mask(BaseSingle):
     """
-    Convert 'data' values to a single constant value.
+    Convert 'data' values of a raster to a single constant value.
+    
+    Transforms all raster cells which carry a data value to a single, contant value.
 
-    :param store: The store whose values are to be converted.
-    :param value: The constant value to be given to 'data' values.
+    Args:
+      store (RasterBlock): The raster whose values are to be converted.
+      value (number): The constant value to be given to 'data' values.
+    
+    Returns:
+      A Rasterblock containing a single value
 
-    :type store: Store
-    :type value: number
     """
 
     def __init__(self, store, value):
@@ -148,11 +156,14 @@ class MaskBelow(BaseSingle):
     """
     Mask data below some value.
 
-    :param store: The store whose values are to be masked.
-    :param value: The threshold value. Values below this will be masked.
-
-    :type store: Store
-    :type value: number
+    Converts raster cells that are below the supplied value to no data. Raster cells with values equal to or higher than the supplied input value are returned unchanged. 
+    
+    Args:
+      store (RasterBlock): The raster whose values are to be masked.
+      value (number): The constant value below which values are masked.
+    
+    Returns:
+      A Rasterblock where cells below the input value are converted to 'no data'
     """
 
     def __init__(self, store, value):
@@ -170,24 +181,30 @@ class MaskBelow(BaseSingle):
 
 
 class Step(BaseSingle):
-    """Block for a constant step function with one discontinuity.
+    """
+    Classifies a raster by comparing cell values to a single value. 
 
-    The step function is defined as:
-    - left if x < location
-    - at if x == location
-    - right if x > location
+    This geoblock allows you to supply a value and classify an input raster into three categories.
+    One for cells below this value, one for cells equal to this value and one for cells higher than this value. 
+    
+    The step function is thus defined as follows, with x being the value of a raster cell
+    
+    - left if *x < value*
+    
+    - at if *x == value*
+    
+    - right if *x > value*
 
-    :param store: The raster whose values are the input to the step function.
-    :param left: value left of the discontinuity
-    :param right: value right of the discontinuity
-    :param location: location of the discontinuity
-    :param at: value at the discontinuity
+    Args:
+      store (RasterBlock): The raster whose cell values are the input to the step function
+      value (number): The constant value which raster cells are compared to, defaults to 0
+      left (number): Value given to cells lower than the input value, defaults to 0
+      right (number): Value given to cells higher than the input value, defaults to 1
+      at (number): Value given to cells equal to the inport value, defaults to the average of left and right
 
-    :type store: RasterBlock
-    :type left: number
-    :type right: number
-    :type location: number
-    :type at: number
+    Returns:
+      Rasterblock containing three values; left, right and at. 
+    
     """
 
     def __init__(self, store, left=0, right=1, location=0, at=None):
@@ -243,15 +260,19 @@ class Step(BaseSingle):
 
 class Classify(BaseSingle):
     """
-    Classify raster data into a binned categories
+    Classify raster data into binned categories
 
-    :param store: rasterdata to classify
-    :param bins: a 1-dimensional and monotonic list of bin edges
-    :param right: whether the intervals include the right or the left bin edge
+    Takes a Rasterblock and classifies its values based on bins. The bins are supplied as a list of ascending bin edges.
+    The cells of the resulting raster are integers based in which bin the input cell falls. The lowest possible output cell value is 0 (input value lower than lowest bin edge). 
+    The highest possible output cell value is equal to the amount of supplied bin edges (input value higher than highest bin edge).
 
-    :type store: RasterBlock
-    :type bins: list
-    :type right: boolean
+    Args:
+      store (RasterBlock): The raster whose cell values are to be classified
+      bins (list): An ascending list of bin edges 
+      right (boolean): whether the intervals include the right or the left bin edge, defaults to the left bin edge
+    
+    Returns:
+      Rasterblock with classified values
 
     See also:
       https://docs.scipy.org/doc/numpy/reference/generated/numpy.digitize.html
@@ -307,18 +328,19 @@ class Classify(BaseSingle):
 
 class Reclassify(BaseSingle):
     """
-    Reclassify integer data to integers or floats.
-
-    :param store: rasterdata to reclassify
-    :param data: list of (from, to) values defining the reclassification
-        the from values can be of bool or int datatype; the to values can be
-        of int or float datatype
-    :param select: leave only reclassified values, set others to 'no data'.
-      Default False.
-
-    :type store: RasterBlock
-    :type data: list
-    :type select: bool
+    Reclassify a raster of integers.
+    
+    This geoblocks can be used to reclassify a classified raster into desired values. Can for example be used to reclassify a raster resulting from ``dask_geomodeling.raster.misc.Classify``. 
+    Reclassification is done by supplying a list of [from, to] pairs. In this pair from is the cell values of the input raster and to is the desired cell value of the output raster.
+    
+    Args:
+      store (RasterBlock): The raster whose cell values are to be reclassified
+      bins (list): A list of [from,to] pairs defining the reclassification.
+        The from values can be of bool or int datatype; the to values can be of int or float datatype
+      select (boolean): Selection to only keep reclassified values, and set all other cells to 'no data'. Defaults to False. 
+    
+    Returns:
+      Rasterblock with reclassified values
     """
 
     def __init__(self, store, data, select=False):
@@ -414,24 +436,19 @@ class Reclassify(BaseSingle):
 
 
 class Rasterize(RasterBlock):
-    """Converts geometry source to raster
+    """
+    Converts geometry source to raster
 
-    :param source: geometry source
-    :param column_name: column from the geometry source to rasterize. If
-      column_name is not provided, a boolean raster will be returned indicating
-      where there are geometries.
-    :param dtype: a numpy datatype specification to return the array. Defaults
-      to 'int32' if column_name is not, else it defaults to 'bool'.
-    :param limit: the maximum number of geometries. Defaults to the
-      geomodeling.goemetry-limit setting.
-    :returns: a raster containing values from 'column_name' or True/False.
-
-    :type source: GeometryBlock
-    :type column_name: string
-    :type dtype: string
-    :type limit: int
-
+    This geoblock can be used to link geometry blocks to raster blocks. Here geometries (shapefiles) or converted to a raster, using the values from one of the columns. 
     To rasterize floating point values, it is necessary to pass dtype='float'.
+    
+    Args:
+      source (GeometryBlock): The geometry to be rasterized
+      column_name (string): The name of the column whose values will be returned in the raster. If column_name is not provided, a boolean raster will be returned indicating where there are geometries.
+      dtype (string): a numpy datatype specification to return the array. Defaults to 'int32' if column_name is provided, else it defaults to 'bool'.
+    
+    Returns: 
+      a raster containing values from 'column_name' or a boolean raster if 'column_name' is not provided. 
 
     See also:
       https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html
