@@ -7,7 +7,7 @@ from dask_geomodeling import Block
 __all__ = ["GeometryBlock", "GetSeriesBlock", "SetSeriesBlock"]
 
 
-class GeometryBlock(Block):
+class GeometryBlock(Block): #TODO
     """ The base block for geometries
 
     All geometry blocks must be derived from this base class and must implement
@@ -87,7 +87,7 @@ class GeometryBlock(Block):
 
 
 class SeriesBlock(Block):
-    """ A helper block for GeometryBlocks, representing one single field"""
+    """ A block which represents one column from a geometryBlock. In here it is posible to store values which can be modified or coupled to a (different) geometryBlock."""
 
     def __add__(self, other):
         from . import Add
@@ -181,14 +181,17 @@ class SeriesBlock(Block):
 
 
 class GetSeriesBlock(SeriesBlock):
-    """Get a column from a GeometryBlock.
+    """Obtains the values within a column from a GeometryBlock.
+    
+    Provide a geometry block with one or more columns. One of these columns can be read from the source into a seriesblock. This seriesblock can be used to run for example classifications.
 
-    :param source: GeometryBlock
-    :param name: name of the column to get
-    :returns: SeriesBlock containing the property column
+    Args:
+      a (GeometryBlock): geometryblock with the column you want to load into the series block, datatype: geometryBlock
+      b (column name): Name of the column to load into the seriesblock, datatype: string
+      
+    Returns: 
+    SeriesBlock containing the property column
 
-    :type source: GeometryBlock
-    :type name: string
     """
 
     def __init__(self, source, name):
@@ -212,20 +215,19 @@ class GetSeriesBlock(SeriesBlock):
 
 
 class SetSeriesBlock(GeometryBlock):
-    """Set one or multiple columns (SeriesBlocks) in a GeometryBlock.
+    """Add one or multiple columns (SeriesBlocks) to a GeometryBlock.
+    
+    Provide the geometryBlock which you want to add more data to. Then provide the seriesBlock(s) which you want to add to the geometryBlock. The values of the seriesblock will be added to the right features in the GeometryBlock automatically (assuming they are either constant or derived from the same geometries in previous operations).
 
-    :param source: source to add the extra columns to
-    :param column: name of the column to be set
-    :param value: series or constant value to set
-    :param args: string, SeriesBlock, ..., repeated multiple times
-    :returns: the source GeometryBlock with additional property columns
+    Args:
+      a (source geometryBlock): The base geometryblock where the seriesblock is added to as a new column, datatype: geometryBlock
+      b (Destination column name): The name of the new column where the seriesblock is inserted, datatype: string
+      c (Value to be inserted): The seriesblock or constant value which has to filled in the destination column. Datatype: string or seriesBlock
+      optional: It is posible to repeat b and c multiple times (i.e. "SetSeriesBlock(source GeometryBlock, 'column_1', series_1, 'column_2', series_2)"). Like this it is possible to set multiple columns in one operation. 
 
-    :type source: GeometryBlock
-    :type column: string
-    :type value: SeriesBlock, scalar
+    Returns:
+    The source GeometryBlock with additional property columns
 
-    Example:
-      >>> SetSeriesBlock(view, 'column_1', series_1, 'column_2', series_2)
     """
 
     def __init__(self, source, column, value, *args):

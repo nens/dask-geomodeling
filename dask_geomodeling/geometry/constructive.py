@@ -11,18 +11,19 @@ __all__ = ["Buffer", "Simplify"]
 
 
 class Buffer(BaseSingle):
-    """Buffer geometries.
+    """Operation to buffer geometries with a given value.
+    
+    A geometryBlock and a buffer distance are provided. Each feature in the geometryblock is buffered with the distance provided, resulting in updated geometries. 
 
-    :param source: the geometry source
-    :param distance: a distance measure in the given projection.
-    :param projection: an EPSG or WKT string, e.g. EPSG:28992.
-    :param resolution: quarter circle segments. Default is 16.
+    Args:
+      a (Source GeometryBlock): The source geometryBlock whose geometry will be updated. Datatype: geometryBlock
+      b (Buffer distance): The distance used to buffer all features. The distance is measured in the unit of the given projection (i.e. meters or degrees), datatype: float
+      c (Projection): The projection used in the operation provided in the format: "EPSG:28992". Datatype: string
+      d (Resolution): The resolution of the buffer provided as the number of points used to represent a quarter of a circle. The default value is 16. Datatype: integer
 
-    :type source: GeometryBlock
-    :type distance: float
-    :type projection: string
-    :type resolution: int
-    """
+    Returns:
+    GeometryBlock with buffered geometries.
+      """
 
     def __init__(self, source, distance, projection, resolution=16):
         if not isinstance(distance, numbers.Real):
@@ -88,17 +89,18 @@ class Buffer(BaseSingle):
 
 
 class Simplify(BaseSingle):
-    """Simplify geometries up to given tolerance.
+    """Simplify geometries, mainly to make them computationally more efficient. 
+    
+    Provide a geometryBlock and a tolerance value to simplify the geometries. As a result all features in the geometryBlock are simplified either with topological preservence or without.
 
-    :param source: the geometry source
-    :param tolerance: the simplification tolerance. if no tolerance is given,
-       the ``min_size`` request param is used.
-    :param preserve_topology: whether to preserve topology. Default True.
+    Args:
+      a (Geometry Source): Source of the geometric features to be simplified, datatype: geometryBlock
+      b (Tolerance): The tolerance used in the simplification. If no tolerance is given the 'min_size' request parameter is used, datatype: float
+      c (Preserve topology): Determines whether the topology should be preserved in the operation. Datatype: boolean
 
-    :type source: GeometryBlock
-    :type tolerance: float
-    :type preserve_topology: boolean
-    """
+    Returns:
+    geometryBlock which was provided as input with a simplified geometry.
+      """
 
     def __init__(self, source, tolerance=None, preserve_topology=True):
         if tolerance is not None:

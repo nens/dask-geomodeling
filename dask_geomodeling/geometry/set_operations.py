@@ -10,14 +10,16 @@ __all__ = ["Difference", "Intersection"]
 
 
 class Difference(BaseSingle):
-    """Block that calculates the difference of two GeometryBlocks.
+    """Calculate the geometric difference of two geometryBlocks.
+    
+    Provide two geometryBlocks. All geometries in the source geometryBlock will be adapted by geometries with the same id from the second geometryBlock. The adaptation is a so called difference which means that the geometry of the source geometryBlock which does not overlap with the second geometryBlock is preserved. Any overlap is removed from the geometry.
 
-    The resulting GeometryBlock will have all geometries in ``source``, and if
-    there are geometries with the same ID in ``other``, the geometries will be
-    adapted using the Difference operation.
-
-    :type source: GeometryBlock
-    :type other: GeometryBlock
+    Args:
+      a (Source geometryBlock): Input geometry source, datatype: geometryBlock
+      b (second geometryBlock): The geometry source which is used to adapt the source geometryBlock. Any overlap between this block and the source block is removed from the source geometry. Datatype: geometryBlock
+      
+    Returns:
+    The source geometryBlock with its original features is returned. Only the geometries are altered.
     """
 
     def __init__(self, source, other):
@@ -77,11 +79,17 @@ class Difference(BaseSingle):
 
 
 class Intersection(BaseSingle):
-    """Block that intersects geometries with the requested geometry.
+    """Calculate the geometric overlap/intersaction of two geometryBlocks.
+    
+    Provide two geometryBlocks. All geometries in the source geometryBlock will be adapted by geometries with the same id from the second geometryBlock. The adaptation is a so called intersection which means that only the part of the geometry which overlaps with the geometry in the second geometryBlock is preserved. Non overlapping areas are removed from the geometry.
 
-    :param source: the source of geometry data
-    :type source: GeometryBlock
-    """
+    Args:
+      a (Source geometryBlock): Input geometry source, datatype: geometryBlock
+      b (second geometryBlock): The geometry source which is used to adapt the source geometryBlock. Any overlap between this block and the source block is preserved. Any areas from the source geometryBlock which fall outside this geometryBlock are removed. Datatype: geometryBlock
+
+    Returns:
+    Source geometryBlock with altered geometries. Only the overlapping part of the geometry with the second geometryBlock is preserved.
+      """
 
     # TODO There are three modes, of which only one is currently implemented:
     #
