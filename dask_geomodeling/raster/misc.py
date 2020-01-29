@@ -2,17 +2,13 @@
 Module containing miscellaneous raster blocks.
 """
 import numpy as np
+from geopandas import GeoSeries
 
 import shapely
 
 from dask import config
 from dask_geomodeling.geometry import GeometryBlock
-from dask_geomodeling.utils import (
-    get_uint_dtype,
-    get_dtype_max,
-    get_index,
-    rasterize_geoseries,
-)
+from dask_geomodeling import utils
 
 from .base import RasterBlock, BaseSingle
 
@@ -134,7 +130,7 @@ class Mask(BaseSingle):
         if data is None or "values" not in data:
             return data
 
-        index = get_index(values=data["values"], no_data_value=data["no_data_value"])
+        index = utils.get_index(values=data["values"], no_data_value=data["no_data_value"])
 
         fillvalue = 1 if value == 0 else 0
         dtype = "float32" if isinstance(value, float) else "uint8"
@@ -284,11 +280,11 @@ class Classify(BaseSingle):
     def dtype(self):
         # with 254 bin edges, we have 255 bins, and we need 256 possible values
         # to include no_data
-        return get_uint_dtype(len(self.bins) + 2)
+        return utils.get_uint_dtype(len(self.bins) + 2)
 
     @property
     def fillvalue(self):
-        return get_dtype_max(self.dtype)
+        return utils.get_dtype_max(self.dtype)
 
     @staticmethod
     def process(data, bins, right):
@@ -296,8 +292,8 @@ class Classify(BaseSingle):
             return data
 
         values = data["values"]
-        dtype = get_uint_dtype(len(bins) + 2)
-        fillvalue = get_dtype_max(dtype)
+        dtype = utils.get_uint_dtype(len(bins) + 2)
+        fillvalue = utils.get_dtype_max(dtype)
 
         result_values = np.digitize(values, bins, right).astype(dtype)
         result_values[values == data["no_data_value"]] = fillvalue
@@ -366,7 +362,7 @@ class Reclassify(BaseSingle):
 
     @property
     def fillvalue(self):
-        return get_dtype_max(self.dtype)
+        return utils.get_dtype_max(self.dtype)
 
     def get_sources_and_requests(self, **request):
         process_kwargs = {
@@ -419,7 +415,7 @@ class Rasterize(RasterBlock):
     :param source: geometry source
     :param column_name: column from the geometry source to rasterize. If
       column_name is not provided, a boolean raster will be returned indicating
-      where there are geometries.
+      where there are geometries. ``dask_geomodeling.raster.elemwise.FillNoData``
     :param dtype: a numpy datatype specification to return the array. Defaults
       to 'int32' if column_name is not, else it defaults to 'bool'.
     :param limit: the maximum number of geometries. Defaults to the
@@ -474,7 +470,7 @@ class Rasterize(RasterBlock):
 
     @property
     def fillvalue(self):
-        return None if self.dtype == np.bool else get_dtype_max(self.dtype)
+        return None if self.dtype == np.bool else utils.get_dtype_max(self.dtype)
 
     @property
     def period(self):
@@ -579,7 +575,7 @@ class Rasterize(RasterBlock):
             values = np.full((1, height, width), no_data_value, dtype=dtype)
             return {"values": values, "no_data_value": no_data_value}
 
-        result = rasterize_geoseries(
+        result = utils.rasterize_geoseries(
             geoseries=f["geometry"] if "geometry" in f else None,
             values=values,
             bbox=process_kwargs["bbox"],
@@ -598,3 +594,108 @@ class Rasterize(RasterBlock):
             cast_values[values == result["no_data_value"]] = no_data_value
 
         return {"values": cast_values, "no_data_value": no_data_value}
+
+
+class RasterizeWKT(RasterBlock):
+    """Converts a single geometry to a raster mask
+
+    Args:
+      wkt (string): the WKT representation of a geometry
+      projection (string): the projection of the geometry
+
+    Returns:
+      RasterBlock with True for cells that are inside the geometry.
+    """
+
+    def __init__(self, wkt, projection):
+        if not isinstance(wkt, str):
+            raise TypeError("'{}' object is not allowed".format(type(wkt)))
+        if not isinstance(projection, str):
+            raise TypeError("'{}' object is not allowed".format(type(projection)))
+        try:
+            shapely.wkt.loads(wkt)
+        except shapely.errors.WKTReadingError:
+            raise ValueError("The provided geometry is not a valid WKT")
+        try:
+            utils.get_sr(projection)
+        except TypeError:
+            raise ValueError("The provided projection is not a valid WKT")
+        super().__init__(wkt, projection)
+
+    @property
+    def wkt(self):
+        return self.args[0]
+
+    @property
+    def projection(self):
+        return self.args[1]
+
+    @property
+    def dtype(self):
+        return np.dtype("bool")
+
+    @property
+    def fillvalue(self):
+        return None
+
+    @property
+    def period(self):
+        return (self.DEFAULT_ORIGIN,) * 2
+
+    @property
+    def extent(self):
+        return tuple(utils.shapely_transform(self.geometry, self.projection, "EPSG:4326").bounds)
+
+    @property
+    def timedelta(self):
+        return None
+
+    @property
+    def geometry(self):
+        if getattr(self, "_geometry", None) is None:
+            self._geometry = shapely.wkt.loads(self.wkt)
+        return self._geometry
+
+    @property
+    def geo_transform(self):
+        return None
+
+    def get_sources_and_requests(self, **request):
+        # first handle the 'time' and 'meta' requests
+        mode = request["mode"]
+        if mode == "time":
+            data = self.period[-1]
+        elif mode == "meta":
+            data = None
+        elif mode == "vals":
+            data = {"wkt": self.wkt, "projection": self.projection}
+        else:
+            raise ValueError("Unknown mode '{}'".format(mode))
+        return [(data, None), (request, None)]
+
+    @staticmethod
+    def process(data, request):
+        mode = request["mode"]
+        if mode == "time":
+            return {"time": [data]}
+        elif mode == "meta":
+            return {"meta": [None]}
+        # load the geometry and transform it into the requested projection
+        geometry = shapely.wkt.loads(data["wkt"])
+        if data["projection"] != request["projection"]:
+            geometry = utils.shapely_transform(
+                geometry, data["projection"], request["projection"]
+            )
+        # intersect with requested geometry
+        geometry = geometry.intersection(shapely.geometry.box(*request["bbox"]))
+        # shortcut in case there is no intersection
+        if geometry.is_empty:
+            return
+
+        return utils.rasterize_geoseries(
+            geoseries=GeoSeries(geometry=[geometry]) if not geometry.is_empty else None,
+            bbox=request["bbox"],
+            projection=request["projection"],
+            height=request["height"],
+            width=request["width"],
+        )
