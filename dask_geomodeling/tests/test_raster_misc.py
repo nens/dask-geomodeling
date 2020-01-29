@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
+from shapely.geometry import box
 
 from dask_geomodeling import raster
 from dask_geomodeling.raster.sources import MemorySource
@@ -67,6 +68,22 @@ def vals_request():
         "width": 4,
         "height": 6,
         "bbox": (135000, 456000 - 3, 135000 + 2, 456000),
+        "projection": "EPSG:28992",
+    }
+
+
+@pytest.fixture
+def point_request():
+    bands = 3
+    time_first = datetime(2000, 1, 1)
+    time_delta = timedelta(hours=1)
+    yield {
+        "mode": "vals",
+        "start": time_first,
+        "stop": time_first + bands * time_delta,
+        "width": 1,
+        "height": 1,
+        "bbox": (135001, 455999, 135001, 455999),
         "projection": "EPSG:28992",
     }
 
@@ -277,3 +294,42 @@ def test_reclassify_time_request(source, vals_request, expected_time):
     view = raster.Reclassify(store=source, data=[[7, 1000]])
     vals_request["mode"] = "time"
     assert view.get_data(**vals_request)["time"] == expected_time
+
+
+def test_rasterize_wkt_vals(vals_request):
+    # vals_request has width=4, height=6 and cell size of 0.5
+    # we place a rectangle of 2 x 3 with corner at x=1, y=2
+    view = raster.RasterizeWKT(
+        box(135000.5, 455998, 135001.5, 455999.5).wkt, "EPSG:28992"
+    )
+    vals_request["start"] = vals_request["stop"] = None
+    actual = view.get_data(**vals_request)
+    assert actual["values"][0].astype(int).tolist() == [
+        [0, 0, 0, 0],
+        [0, 1, 1, 0],
+        [0, 1, 1, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+    ]
+
+
+def test_rasterize_wkt_vals_no_intersection(vals_request):
+    view = raster.RasterizeWKT(box(135004, 455995, 135004.5, 455996).wkt, "EPSG:28992")
+    vals_request["start"] = vals_request["stop"] = None
+    actual = view.get_data(**vals_request)
+    assert ~actual["values"].any()
+
+
+@pytest.mark.parametrize(
+    "bbox,expected",
+    [
+        [(135000.5, 455998, 135001.5, 455999.5), True],
+        [(135000.5, 455998, 135000.9, 455998.9), False],
+    ],
+)
+def test_rasterize_wkt_point(point_request, bbox, expected):
+    view = raster.RasterizeWKT(box(*bbox).wkt, "EPSG:28992")
+    point_request["start"] = point_request["stop"] = None
+    actual = view.get_data(**point_request)
+    assert actual["values"].tolist() == [[[expected]]]

@@ -4,7 +4,9 @@ Module containing miscellaneous raster blocks.
 import numpy as np
 from geopandas import GeoSeries
 
-import shapely
+from shapely.geometry import box
+from shapely.errors import WKTReadingError
+from shapely.wkt import loads as load_wkt
 
 from dask import config
 from dask_geomodeling.geometry import GeometryBlock
@@ -13,7 +15,16 @@ from dask_geomodeling import utils
 from .base import RasterBlock, BaseSingle
 
 
-__all__ = ["Clip", "Classify", "Reclassify", "Mask", "MaskBelow", "Step", "Rasterize"]
+__all__ = [
+    "Clip",
+    "Classify",
+    "Reclassify",
+    "Mask",
+    "MaskBelow",
+    "Step",
+    "Rasterize",
+    "RasterizeWKT",
+]
 
 
 class Clip(BaseSingle):
@@ -130,7 +141,9 @@ class Mask(BaseSingle):
         if data is None or "values" not in data:
             return data
 
-        index = utils.get_index(values=data["values"], no_data_value=data["no_data_value"])
+        index = utils.get_index(
+            values=data["values"], no_data_value=data["no_data_value"]
+        )
 
         fillvalue = 1 if value == 0 else 0
         dtype = "float32" if isinstance(value, float) else "uint8"
@@ -524,7 +537,7 @@ class Rasterize(RasterBlock):
 
         geom_request = {
             "mode": "intersects",
-            "geometry": shapely.geometry.box(*request["bbox"]),
+            "geometry": box(*request["bbox"]),
             "projection": request["projection"],
             "min_size": min_size,
             "limit": limit,
@@ -613,8 +626,8 @@ class RasterizeWKT(RasterBlock):
         if not isinstance(projection, str):
             raise TypeError("'{}' object is not allowed".format(type(projection)))
         try:
-            shapely.wkt.loads(wkt)
-        except shapely.errors.WKTReadingError:
+            load_wkt(wkt)
+        except WKTReadingError:
             raise ValueError("The provided geometry is not a valid WKT")
         try:
             utils.get_sr(projection)
@@ -644,7 +657,9 @@ class RasterizeWKT(RasterBlock):
 
     @property
     def extent(self):
-        return tuple(utils.shapely_transform(self.geometry, self.projection, "EPSG:4326").bounds)
+        return tuple(
+            utils.shapely_transform(self.geometry, self.projection, "EPSG:4326").bounds
+        )
 
     @property
     def timedelta(self):
@@ -653,7 +668,7 @@ class RasterizeWKT(RasterBlock):
     @property
     def geometry(self):
         if getattr(self, "_geometry", None) is None:
-            self._geometry = shapely.wkt.loads(self.wkt)
+            self._geometry = load_wkt(self.wkt)
         return self._geometry
 
     @property
@@ -681,19 +696,21 @@ class RasterizeWKT(RasterBlock):
         elif mode == "meta":
             return {"meta": [None]}
         # load the geometry and transform it into the requested projection
-        geometry = shapely.wkt.loads(data["wkt"])
+        geometry = load_wkt(data["wkt"])
         if data["projection"] != request["projection"]:
             geometry = utils.shapely_transform(
                 geometry, data["projection"], request["projection"]
             )
-        # intersect with requested geometry
-        geometry = geometry.intersection(shapely.geometry.box(*request["bbox"]))
-        # shortcut in case there is no intersection
-        if geometry.is_empty:
-            return
-
+        # take a shortcut when the geometry does not intersect the bbox
+        if not geometry.intersects(box(*request["bbox"])):
+            return {
+                "values": np.full(
+                    (1, request["height"], request["width"]), False, dtype=np.bool
+                ),
+                "no_data_value": None,
+            }
         return utils.rasterize_geoseries(
-            geoseries=GeoSeries(geometry=[geometry]) if not geometry.is_empty else None,
+            geoseries=GeoSeries([geometry]) if not geometry.is_empty else None,
             bbox=request["bbox"],
             projection=request["projection"],
             height=request["height"],
