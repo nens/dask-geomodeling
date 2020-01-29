@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_almost_equal
 from shapely.geometry import box
 
 from dask_geomodeling import raster
+from dask_geomodeling.utils import shapely_transform, get_sr
 from dask_geomodeling.raster.sources import MemorySource
 
 
@@ -296,11 +297,15 @@ def test_reclassify_time_request(source, vals_request, expected_time):
     assert view.get_data(**vals_request)["time"] == expected_time
 
 
-def test_rasterize_wkt_vals(vals_request):
+@pytest.mark.parametrize("projection", ["EPSG:28992", "EPSG:4326", "EPSG:3857"])
+def test_rasterize_wkt_vals(vals_request, projection):
     # vals_request has width=4, height=6 and cell size of 0.5
     # we place a rectangle of 2 x 3 with corner at x=1, y=2
     view = raster.RasterizeWKT(
-        box(135000.5, 455998, 135001.5, 455999.5).wkt, "EPSG:28992"
+        shapely_transform(
+            box(135000.5, 455998, 135001.5, 455999.5), "EPSG:28992", projection
+        ).wkt,
+        projection,
     )
     vals_request["start"] = vals_request["stop"] = None
     actual = view.get_data(**vals_request)
@@ -333,3 +338,18 @@ def test_rasterize_wkt_point(point_request, bbox, expected):
     point_request["start"] = point_request["stop"] = None
     actual = view.get_data(**point_request)
     assert actual["values"].tolist() == [[[expected]]]
+
+
+def test_rasterize_wkt_attrs():
+    geom = box(135004, 455995, 135004.5, 455996)
+    view = raster.RasterizeWKT(geom.wkt, "EPSG:28992")
+    assert view.projection == "EPSG:28992"
+    assert_almost_equal(view.geometry.GetEnvelope(), [135004, 135004.5, 455995, 455996])
+    assert view.geometry.GetSpatialReference().IsSame(get_sr("EPSG:28992"))
+    assert view.dtype == np.bool
+    assert view.fillvalue is None
+    assert_almost_equal(
+        view.extent, shapely_transform(geom, "EPSG:28992", "EPSG:4326").bounds
+    )
+    assert view.timedelta is None
+    assert view.period == (datetime(1970, 1, 1), datetime(1970, 1, 1))

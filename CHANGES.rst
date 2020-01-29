@@ -5,7 +5,7 @@ Changelog of dask-geomodeling
 2.2.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Implemented raster.RasterizeWKT
 
 
 2.2.0 (2019-12-20)

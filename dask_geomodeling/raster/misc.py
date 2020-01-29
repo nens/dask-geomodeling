@@ -1,6 +1,7 @@
 """
 Module containing miscellaneous raster blocks.
 """
+from osgeo import ogr
 import numpy as np
 from geopandas import GeoSeries
 
@@ -428,7 +429,7 @@ class Rasterize(RasterBlock):
     :param source: geometry source
     :param column_name: column from the geometry source to rasterize. If
       column_name is not provided, a boolean raster will be returned indicating
-      where there are geometries. ``dask_geomodeling.raster.elemwise.FillNoData``
+      where there are geometries.
     :param dtype: a numpy datatype specification to return the array. Defaults
       to 'int32' if column_name is not, else it defaults to 'bool'.
     :param limit: the maximum number of geometries. Defaults to the
@@ -658,7 +659,7 @@ class RasterizeWKT(RasterBlock):
     @property
     def extent(self):
         return tuple(
-            utils.shapely_transform(self.geometry, self.projection, "EPSG:4326").bounds
+            utils.shapely_transform(load_wkt(self.wkt), self.projection, "EPSG:4326").bounds
         )
 
     @property
@@ -667,9 +668,8 @@ class RasterizeWKT(RasterBlock):
 
     @property
     def geometry(self):
-        if getattr(self, "_geometry", None) is None:
-            self._geometry = load_wkt(self.wkt)
-        return self._geometry
+        # convert shapely to OGR
+        return ogr.CreateGeometryFromWkt(self.wkt, utils.get_sr(self.projection))
 
     @property
     def geo_transform(self):
