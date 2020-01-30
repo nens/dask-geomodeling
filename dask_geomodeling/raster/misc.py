@@ -668,7 +668,6 @@ class RasterizeWKT(RasterBlock):
 
     @property
     def geometry(self):
-        # convert shapely to OGR
         return ogr.CreateGeometryFromWkt(self.wkt, utils.get_sr(self.projection))
 
     @property
