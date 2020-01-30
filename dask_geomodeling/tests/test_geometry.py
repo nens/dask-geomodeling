@@ -5,7 +5,6 @@ from datetime import timedelta as Timedelta
 
 from numpy.testing import assert_almost_equal
 from osgeo import ogr
-from pandas.testing import assert_series_equal
 from shapely.geometry import box, Point, Polygon
 import geopandas as gpd
 import numpy as np
@@ -29,6 +28,11 @@ from dask_geomodeling.geometry import parallelize
 from dask_geomodeling.geometry import merge
 from dask_geomodeling.geometry import text
 from dask_geomodeling import geometry
+
+try:
+    from pandas.testing import assert_series_equal
+except ImportError:
+    from pandas.util.testing import assert_series_equal
 
 
 def create_geojson(abspath, polygons=10, bbox=None, ndim=2, projection="EPSG:4326"):
