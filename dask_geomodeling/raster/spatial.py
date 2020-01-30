@@ -112,10 +112,10 @@ class Dilate(BaseSingle):
       values (list): Only cells with these values are dilated
 
     Returns:
-      Rasterblock where cells in values list are dilated
+      RasterBlock where cells in values list are dilated
     
     See also:
-      https://homepages.inf.ed.ac.uk/rbf/HIPR2/dilate.htm
+      https://en.wikipedia.org/wiki/Dilation_%28morphology%29
     """
 
     def __init__(self, store, values):
@@ -210,14 +210,14 @@ class Smooth(BaseSingle):
     
     Args:
       store (RasterBlock): Raster to be smoothed
-      size (scalar): Input parameter for the smoothing algorithm. The 'sigma' value for the Gaussian kernal equals ``size / 3``
-      fill (scalar): Value used for 'no data' values in the smoothing process. Defaults to 0. 
+      size (number): Input parameter for the smoothing algorithm. The 'sigma' value for the Gaussian kernal equals ``size / 3``
+      fill (number): Value used for 'no data' values in the smoothing process. Defaults to 0. 
 
     Returns:
       Smoothed raster
       
     See Also:
-      https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
+      https://en.wikipedia.org/wiki/Gaussian_blur
 
     """
 
@@ -304,10 +304,10 @@ class HillShade(BaseSingle):
 
     Args:
       store (RasterBlock): Raster to which the hillshade is applied
-      size (scalar): size of the effect, in projected units
-      altitude (scalar): Light source altitude in degrees, default to 45
-      azimuth (scalar): Light source azimuth in degrees, default to 315
-      fill (scalar): fill value to be used for 'no data' values during hillshading
+      size (number): size of the effect, in projected units
+      altitude (number): Light source altitude in degrees, default to 45
+      azimuth (number): Light source azimuth in degrees, default to 315
+      fill (number): fill value to be used for 'no data' values during hillshading
 
     Returns:
       Hillshaded raster

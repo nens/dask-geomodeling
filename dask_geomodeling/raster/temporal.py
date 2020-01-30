@@ -33,7 +33,7 @@ class Snap(RasterBlock):
       index (RasterBlock): Snap values to the times from this block
 
     Returns: 
-      Temporal rasterblock with spatial properties of the store and temporal properties of the index 
+      Temporal RasterBlock with spatial properties of the store and temporal properties of the index 
     """
 
     def __init__(self, store, index):

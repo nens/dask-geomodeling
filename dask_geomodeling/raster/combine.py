@@ -158,7 +158,7 @@ class Group(BaseCombine):
       a (list of rasters): list of rasters to be combined.
       
     Returns:
-      Rasterblack which combines all input rasters
+      Rasterblock which combines all input rasters
     """
 
     def get_stores(self, start, stop):

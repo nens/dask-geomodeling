@@ -33,7 +33,7 @@ class Clip(BaseSingle):
       source (RasterBlock): Raster which is used as the extent of the output raster
 
     Returns:
-      Rasterblock which has values from store and the extent of source. 
+      RasterBlock which has values from store and the extent of source. 
     """
 
     def __init__(self, store, source):
@@ -116,7 +116,7 @@ class Mask(BaseSingle):
       value (number): The constant value to be given to 'data' values.
     
     Returns:
-      A Rasterblock containing a single value
+      A RasterBlock containing a single value
 
     """
 
@@ -163,7 +163,7 @@ class MaskBelow(BaseSingle):
       value (number): The constant value below which values are masked.
     
     Returns:
-      A Rasterblock where cells below the input value are converted to 'no data'
+      A RasterBlock where cells below the input value are converted to 'no data'
     """
 
     def __init__(self, store, value):
@@ -203,7 +203,7 @@ class Step(BaseSingle):
       at (number): Value given to cells equal to the inport value, defaults to the average of left and right
 
     Returns:
-      Rasterblock containing three values; left, right and at. 
+      RasterBlock containing three values; left, right and at. 
     
     """
 
@@ -262,8 +262,8 @@ class Classify(BaseSingle):
     """
     Classify raster data into binned categories
 
-    Takes a Rasterblock and classifies its values based on bins. The bins are supplied as a list of ascending bin edges.
-    The cells of the resulting raster are integers based in which bin the input cell falls. The lowest possible output cell value is 0 (input value lower than lowest bin edge). 
+    Takes a RasterBlock and classifies its values based on bins. The bins are supplied as a list of ascending bin edges.
+    For each raster cell this operation returns the index of the bin to which the raster cell belongs. The lowest possible output cell value is 0 (input value lower than lowest bin edge). 
     The highest possible output cell value is equal to the amount of supplied bin edges (input value higher than highest bin edge).
 
     Args:
@@ -272,7 +272,7 @@ class Classify(BaseSingle):
       right (boolean): whether the intervals include the right or the left bin edge, defaults to the left bin edge
     
     Returns:
-      Rasterblock with classified values
+      RasterBlock with classified values
 
     See also:
       https://docs.scipy.org/doc/numpy/reference/generated/numpy.digitize.html
@@ -340,7 +340,7 @@ class Reclassify(BaseSingle):
       select (boolean): Selection to only keep reclassified values, and set all other cells to 'no data'. Defaults to False. 
     
     Returns:
-      Rasterblock with reclassified values
+      RasterBlock with reclassified values
     """
 
     def __init__(self, store, data, select=False):

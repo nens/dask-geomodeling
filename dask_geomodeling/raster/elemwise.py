@@ -294,14 +294,14 @@ class Add(BaseMath):
     """
     Add two rasters together or add a constant value to a raster.
     
-    Either one or both of the inputs should be a rasterblock. In case of one raster input adds a constant value to this raster. In case of two raster inputs adds these rasters together. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
+    Either one or both of the inputs should be a RasterBlock. In case of one raster input adds a constant value to this raster. In case of two raster inputs adds these rasters together. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
     
     Args:
       a (RasterBlock, number): Addition parameter a
       b (RasterBlock, number): Addition parameter b
 
     Returns:
-      Rasterblock containing the result of function *(a+b)*
+      RasterBlock containing the result of function *(a+b)*
 	  
 	"""
     process = staticmethod(wrap_math_process_func(np.add))
@@ -318,7 +318,7 @@ class Subtract(BaseMath):
       b (RasterBlock, number): Raster or value which is subtracted
 
     Returns:
-      Rasterblock containing the result of function *(a-b)*
+      RasterBlock containing the result of function *(a-b)*
     """
 
     process = staticmethod(wrap_math_process_func(np.subtract))
@@ -335,7 +335,7 @@ class Multiply(BaseMath):
       b (RasterBlock, number): Multiplication parameter b
      
     Returns:
-      Rasterblock containing the result of the multiplication.
+      RasterBlock containing the result of the multiplication.
     """
 
     process = staticmethod(wrap_math_process_func(np.multiply))
@@ -348,11 +348,11 @@ class Divide(BaseMath):
     Either one or both of the inputs should be a rasterblock. In case of one raster input divides this raster by a constant value. In case of two raster inputs divides the values of the first raster by the values of the second raster. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
 
     Args:
-      a (RasterBlock, number): Raster or value which is divided from
-      b (RasterBlock, number): Raster or value which is divided by
+      a (RasterBlock, number): Fraction numerator
+      b (RasterBlock, number): Fraction denominator
      
     Returns:
-      Rasterblock containing the result of the division.
+      RasterBlock containing the result of the division.
     """
 
     process = staticmethod(wrap_math_process_func(np.divide))
@@ -374,7 +374,7 @@ class Power(BaseMath):
       b (RasterBlock, number): Raster or value used as exponent
       
     Returns:
-      Rasterblock containing the result of the exponential function. 
+      RasterBlock containing the result of the exponential function. 
     """
 
     process = staticmethod(wrap_math_process_func(np.power))
@@ -399,7 +399,7 @@ class Equal(BaseComparison):
       b (RasterBlock, number): Comparison parameter b
       
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.equal))
@@ -417,7 +417,7 @@ class NotEqual(BaseComparison):
       b (RasterBlock, number): Comparison parameter b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.not_equal))
@@ -435,7 +435,7 @@ class Greater(BaseComparison):
       b (RasterBlock, number): Comparison parameter b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.greater))
@@ -453,7 +453,7 @@ class GreaterEqual(BaseComparison):
       b (RasterBlock, number): Comparison parameter b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.greater_equal))
@@ -471,7 +471,7 @@ class Less(BaseComparison):
       b (RasterBlock, number): Comparison parameter b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
     process = staticmethod(wrap_math_process_func(np.less))
 
@@ -488,7 +488,7 @@ class LessEqual(BaseComparison):
       b (RasterBlock, number): Comparison parameter b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.less_equal))
@@ -504,7 +504,7 @@ class Invert(BaseSingle):
       x (RasterBlock): Boolean raster with values to invert
 
     Returns:
-      Rasterblock with boolean values opposite to the input raster. 
+      RasterBlock with boolean values opposite to the input raster. 
     """
 
     def __init__(self, x):
@@ -534,7 +534,7 @@ class IsData(BaseSingle):
       store (RasterBlock): Single input raster
 
     Returns:
-      Rasterblock with boolean values. 
+      RasterBlock with boolean values. 
     """
 
     def __init__(self, store):
@@ -569,7 +569,7 @@ class IsNoData(IsData):
       store (RasterBlock): Single input raster
 
     Returns:
-      Rasterblock with boolean values. 
+      RasterBlock with boolean values. 
     """
 
     @staticmethod
@@ -593,7 +593,7 @@ class And(BaseLogic):
       b (RasterBlock, boolean): Boolean input b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.logical_and))
@@ -611,7 +611,7 @@ class Or(BaseLogic):
       b (RasterBlock, boolean): Boolean input b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.logical_or))
@@ -629,7 +629,7 @@ class Xor(BaseLogic):
       b (RasterBlock, boolean): Boolean input b
 
     Returns:
-      Rasterblock containing boolean values
+      RasterBlock containing boolean values
     """
 
     process = staticmethod(wrap_math_process_func(np.logical_xor))
@@ -648,7 +648,7 @@ class FillNoData(BaseElementwise):
       a (list of rasters): list of rasters to be combined.
       
     Returns:
-      Rasterblock which shows input rasters from right to left, with 'no data' values being transparent
+      RasterBlock which shows input rasters from right to left, with 'no data' values being transparent
     """
 
     def __init__(self, *args):
