@@ -10,6 +10,8 @@ Changelog of dask-geomodeling
 
 - Compatibility fixes for pandas 1.0.0.
 
+- Implemented raster.RasterizeWKT
+
 
 2.2.0 (2019-12-20)
 ------------------
