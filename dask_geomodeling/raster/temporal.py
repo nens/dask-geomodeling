@@ -298,7 +298,7 @@ def _get_closest_label(dt, frequency, closed, label, timezone, side="both"):
         differences = differences[differences >= pd.Timedelta(0)]
     elif side == "left":
         differences = differences[differences <= pd.Timedelta(0)]
-    result = differences.abs().argmin()
+    result = differences.abs().idxmin()
     return _ts_to_dt(result, timezone)
 
 
