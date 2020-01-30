@@ -3,32 +3,32 @@ import unittest
 from datetime import datetime as Datetime
 from datetime import timedelta as Timedelta
 
-from numpy.testing import assert_almost_equal
-from osgeo import ogr
-from pandas.util.testing import assert_series_equal
-from shapely.geometry import box, Point, Polygon
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-
 from dask import config
+from numpy.testing import assert_almost_equal
+from osgeo import ogr
+from pandas.util.testing import assert_series_equal
+from shapely.geometry import Point, Polygon, box
 
-from dask_geomodeling.utils import Extent, get_sr, shapely_transform
+from dask_geomodeling import geometry
+from dask_geomodeling.geometry import (
+    aggregate,
+    field_operations,
+    geom_operations,
+    merge,
+    parallelize,
+    set_operations,
+    text,
+)
 from dask_geomodeling.tests.factories import (
-    setup_temp_root,
-    teardown_temp_root,
     MockGeometry,
     MockRaster,
+    setup_temp_root,
+    teardown_temp_root,
 )
-
-from dask_geomodeling.geometry import aggregate
-from dask_geomodeling.geometry import set_operations
-from dask_geomodeling.geometry import field_operations
-from dask_geomodeling.geometry import geom_operations
-from dask_geomodeling.geometry import parallelize
-from dask_geomodeling.geometry import merge
-from dask_geomodeling.geometry import text
-from dask_geomodeling import geometry
+from dask_geomodeling.utils import Extent, get_sr, shapely_transform
 
 
 def create_geojson(abspath, polygons=10, bbox=None, ndim=2, projection="EPSG:4326"):
@@ -153,6 +153,32 @@ class TestGeometryFileSource(unittest.TestCase):
         self.assertEqual("EPSG:3857", result["projection"])
         self.assertEqual("epsg:3857", result["features"].crs["init"])
         self.assertEqual(10, len(result["features"]))
+
+    def test_reproject_3857_28992(self):
+        # this reproduces a reprojection bug
+        path = os.path.join(self.root, "test28992.json")
+        bbox = 139250, 470250, 139500, 470500
+
+        # for squares at the bbox corners
+        gpd.GeoDataFrame(
+            {
+                "geometry": [
+                    box(bbox[0], bbox[1], bbox[0] + 1, bbox[1] + 1),
+                    box(bbox[0], bbox[3] - 1, bbox[0] + 1, bbox[3]),
+                    box(bbox[2] - 1, bbox[1], bbox[2], bbox[1] + 1),
+                    box(bbox[2] - 1, bbox[3] - 1, bbox[2], bbox[3]),
+                ],
+                "id": [0, 1, 2, 3],
+            },
+            crs={"init": "epsg:28992"},
+        ).to_file(path, driver="GeoJSON")
+        self.source = geometry.GeometryFileSource(path)
+
+        # request the data in the same bbox, but now in epsg:3857
+        geom = shapely_transform(box(*bbox), "EPSG:28992", "EPSG:3857")
+        result = self.source.get_data(geometry=geom, projection="EPSG:3857")
+        self.assertEqual("EPSG:3857", result["projection"])
+        self.assertEqual(4, len(result["features"]))
 
     def test_limit(self):
         result = self.source.get_data(
