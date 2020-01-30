@@ -5,7 +5,8 @@ Changelog of dask-geomodeling
 2.2.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Suppressed "invalid value encountered in greater than" warning in
+  ClassifyFromColumns.
 
 
 2.2.0 (2019-12-20)
