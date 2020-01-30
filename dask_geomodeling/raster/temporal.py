@@ -8,6 +8,7 @@ from pandas.tseries.frequencies import to_offset
 
 import numpy as np
 import pandas as pd
+import warnings
 
 from dask_geomodeling.utils import (
     get_dtype_max,
@@ -251,7 +252,7 @@ def _ts_to_dt(timestamp, timezone):
         timestamp = timestamp.tz_localize(timezone)
     except TypeError:
         pass
-    return timestamp.tz_convert("UTC").tz_localize(None).to_pydatetime()
+    return timestamp.tz_convert("UTC").tz_localize(None).to_pydatetime(warn=False)
 
 
 def _get_bin_label(dt, frequency, closed, label, timezone):
@@ -632,7 +633,10 @@ class TemporalAggregate(BaseSingle):
             inds = indices[timestamp]
             if len(inds) == 0:
                 continue
-            aggregated = agg_func(values[inds], axis=0)
+            with warnings.catch_warnings():
+                # the agg_func could give use 'All-NaN slice encountered'
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                aggregated = agg_func(values[inds], axis=0)
             # keep track of NaN or inf values before casting to target dtype
             no_data_mask = ~np.isfinite(aggregated)
             # cast to target dtype
