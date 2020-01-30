@@ -197,9 +197,9 @@ class Step(BaseSingle):
 
     Args:
       store (RasterBlock): The raster whose cell values are the input to the step function
-      value (number): The constant value which raster cells are compared to, defaults to 0
       left (number): Value given to cells lower than the input value, defaults to 0
       right (number): Value given to cells higher than the input value, defaults to 1
+      value (number): The constant value which raster cells are compared to, defaults to 0
       at (number): Value given to cells equal to the inport value, defaults to the average of left and right
 
     Returns:

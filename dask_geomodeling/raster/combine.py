@@ -155,7 +155,7 @@ class Group(BaseCombine):
     shown (of rasters 'more to the left')
 
     Args:
-      a (list of rasters): list of rasters to be combined.
+      *args (list of rasters): list of rasters to be combined.
       
     Returns:
       Rasterblock which combines all input rasters

@@ -645,7 +645,7 @@ class FillNoData(BaseElementwise):
     shown (of rasters 'more to the left')
 
     Args:
-      a (list of rasters): list of rasters to be combined.
+      *args (list of rasters): list of rasters to be combined.
       
     Returns:
       RasterBlock which shows input rasters from right to left, with 'no data' values being transparent
