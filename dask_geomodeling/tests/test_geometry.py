@@ -5,7 +5,7 @@ from datetime import timedelta as Timedelta
 
 from numpy.testing import assert_almost_equal
 from osgeo import ogr
-from pandas.util.testing import assert_series_equal
+from pandas.testing import assert_series_equal
 from shapely.geometry import box, Point, Polygon
 import geopandas as gpd
 import numpy as np

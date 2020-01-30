@@ -8,6 +8,8 @@ Changelog of dask-geomodeling
 - Suppressed "invalid value encountered in greater than" warning in
   ClassifyFromColumns.
 
+- Compatibility fixes for pandas 1.0.0.
+
 
 2.2.0 (2019-12-20)
 ------------------
