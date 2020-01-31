@@ -579,7 +579,9 @@ class TemporalAggregate(BaseSingle):
         times = time_data["time"]
 
         # convert times to a pandas series
-        series = pd.Series(index=times).tz_localize("UTC").tz_convert(timezone)
+        series = (
+            pd.Series(index=times, dtype=float).tz_localize("UTC").tz_convert(timezone)
+        )
 
         # localize the labels so we can use it as an index
         labels = labels.tz_localize("UTC").tz_convert(timezone)
@@ -801,7 +803,9 @@ class Cumulative(BaseSingle):
         closed = process_kwargs["closed"]
         label = process_kwargs["label"]
         times = (
-            pd.Series(index=time_data["time"]).tz_localize("UTC").tz_convert(timezone)
+            pd.Series(index=time_data["time"], dtype=float)
+            .tz_localize("UTC")
+            .tz_convert(timezone)
         )
 
         if frequency is None:
