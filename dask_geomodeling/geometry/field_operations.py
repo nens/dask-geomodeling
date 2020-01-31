@@ -171,7 +171,7 @@ class ClassifyFromColumns(SeriesBlock):
     @staticmethod
     def process(data, value_column, bin_columns, labels, right):
         if "features" not in data or len(data["features"]) == 0:
-            return pd.Series([])
+            return pd.Series([], dtype=float)
         features = data["features"]
         values = features[value_column].values
         bins = features[bin_columns].values
