@@ -416,9 +416,8 @@ class AggregateRaster(GeometryBlock):
 
             # if there is a threshold, generate a raster with thresholds
             if threshold_name:
-                thresholds = features.loc[
-                    labels.ravel(), threshold_name
-                ].values.reshape(labels.shape)
+                thresholds = features[threshold_name].reindex(labels.ravel())\
+                    .values.reshape(labels.shape)
             else:
                 thresholds = None
 

@@ -5,6 +5,11 @@ Changelog of dask-geomodeling
 2.2.1 (unreleased)
 ------------------
 
+- Suppressed "invalid value encountered in greater than" warning in
+  ClassifyFromColumns.
+
+- Compatibility fixes for pandas 1.0.0.
+
 - Implemented raster.RasterizeWKT
 
 

@@ -207,7 +207,7 @@ class GetSeriesBlock(SeriesBlock):
     @staticmethod
     def process(data, name):
         if "features" not in data or name not in data["features"].columns:
-            return pd.Series([])
+            return pd.Series([], dtype=float)
         return data["features"][name]
 
 

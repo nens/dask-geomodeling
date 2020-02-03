@@ -3,7 +3,6 @@ import unittest
 
 import geopandas as gpd
 import pytest
-from pandas.util.testing import assert_frame_equal
 from shapely.geometry import box
 
 from dask_geomodeling.geometry import parallelize, sinks
@@ -12,6 +11,10 @@ from dask_geomodeling.tests.factories import (
     setup_temp_root,
     teardown_temp_root,
 )
+try:
+    from pandas.testing import assert_frame_equal
+except ImportError:
+    from pandas.util.testing import assert_frame_equal
 
 
 class TestGeometryFileSink(unittest.TestCase):
