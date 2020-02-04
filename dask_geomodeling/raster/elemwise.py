@@ -28,6 +28,7 @@ __all__ = [
     "Xor",
     "IsData",
     "IsNoData",
+    "Round"
 ]
 
 
@@ -690,3 +691,20 @@ class FillNoData(BaseElementwise):
             values[index] = data[index]
 
         return {"values": values, "no_data_value": fillvalue}
+
+
+class Round(BaseElementwise):
+    """Rounds raster data to the specified number of digits.
+
+    :param a: base
+    :param b: number of digits
+
+    :type a: RasterBlock, scalar
+    :type b: RasterBlock, scalar
+
+    """
+
+    process = staticmethod(wrap_math_process_func(np.round))
+
+    def __init__(self, a, b):
+        super(Round, self).__init__(a, b)
