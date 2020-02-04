@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.2.1 (unreleased)
+2.2.1 (2020-02-04)
 ------------------
 
 - Suppressed "invalid value encountered in greater than" warning in
