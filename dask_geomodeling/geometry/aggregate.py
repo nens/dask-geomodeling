@@ -115,25 +115,25 @@ class AggregateRaster(GeometryBlock):
     """
     Compute statistical value (i.e. mean, max) of a raster within a geometry source.
     
-    Provide a geometry source and a raster source to determine the statistical value for each polygon in the geometry source. It is possible to run several statistics (see below). The results are stored in a new column in the geometry source.
+    Provide a GeometryBlock and a raster source to determine the statistical value for each polygon in the GeometryBlock. It is possible to run several statistics (see below). The results are stored in a new column in the GeometryBlock.
 
     Args:
-      a (GeometryBlock): The geometry source for which the statistics are determined, datatype: GeometryBlock
-      b (RasterBlock): The raster source which is sampled, datatype: RasterBlock
-      c (Statistic): The type of statistical analysis which should be performed. The options are:'sum', 'count', 'min', 'max', 'mean', 'median', 'p<percentile>'. Percentiles are provided as follows: 'p50'. Datatype: string
-      d (Projection): Projection to perform the aggregation in provided in the format: "EPSG:28992", datatype: string or None
-      e (Pixel size): The pixel size used in the aggregation (usually the raster pixel size), datatype: float or None
-      f (Max number of pixels): The maximum number of pixels used in the aggregation. Defaults to the total number of pixels in the raster. Datatype: int or None
-      g (Result column name): The name of the column where the result should be placed. Datatype: string
-      h (auto pixel size): Determines whether the pixel size is adjusted when a raster is too large. Default is False. Datatype: Boolean
+      a source geometry (GeometryBlock): The geometry source for which the statistics are determined.
+      b raster (RasterBlock): The raster source which is sampled.
+      c Statistic (string): The type of statistical analysis which should be performed. The options are:``sum``, ``count``, ``min``, ``max``, ``mean``, ``median``, ``p<percentile>``. Percentiles are provided as follows: ``p50``.
+      d Projection (float or None): Projection to perform the aggregation in provided in the format: "EPSG:28992".
+      e Pixel size (float or None): The pixel size used in the aggregation (usually the raster pixel size).
+      f Max number of pixels (integer or None): The maximum number of pixels used in the aggregation. Defaults to the global raster limit of 12 million pixels.
+      g Result column name (string): The name of the column where the result should be placed. Defaults to ``agg``.
+      h Auto pixel size (Boolean): Determines whether the pixel size is adjusted when a raster is too large.
    
 
-   Returns: 
-        GeometryBlock with aggregation results in ``Result column name``. Please note that these results are not usable before applying a GetSeriesBlock.
+    Returns: 
+      GeometryBlock with aggregation results in ``Result column name``. Please note that for any operation on the result a GetSeriesBlock should be used on this column.
 
 
     The currently implemented statistics are sum, count, min, max, mean,
-    median, and percentile. If projection or max_resolution are not
+    median, and percentile. If ``projection`` or ``pixel_size`` are not
     given, these are taken from the provided RasterBlock.
 
     The count statistic calculates the number of active cells in the raster. A

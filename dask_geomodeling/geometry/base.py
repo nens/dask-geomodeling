@@ -87,7 +87,10 @@ class GeometryBlock(Block): #TODO
 
 
 class SeriesBlock(Block):
-    """ A block which represents one column from a geometryBlock. In here it is posible to store values which can be modified or coupled to a (different) geometryBlock."""
+    """ A block which represents one column from a GeometryBlock. 
+    
+    
+    In here it is posible to store values which can be modified or coupled to a (different) GeometryBlock."""
 
     def __add__(self, other):
         from . import Add
@@ -183,14 +186,14 @@ class SeriesBlock(Block):
 class GetSeriesBlock(SeriesBlock):
     """Obtains the values within a column from a GeometryBlock.
     
-    Provide a geometry block with one or more columns. One of these columns can be read from the source into a seriesblock. This seriesblock can be used to run for example classifications.
+    Provide a GeometryBlock with one or more columns. One of these columns can be read from the source into a SeriesBlock. This SeriesBlock can be used to run for example classifications.
 
     Args:
-      a (GeometryBlock): geometryblock with the column you want to load into the series block, datatype: geometryBlock
-      b (column name): Name of the column to load into the seriesblock, datatype: string
-      
+      a source (GeometryBlock): GeometryBlock with the column you want to load into the SeriesBlock.
+      b column name (string): Name of the column to load into the SeriesBlock.
+
     Returns: 
-    SeriesBlock containing the property column
+      SeriesBlock containing the property column
 
     """
 
@@ -217,16 +220,19 @@ class GetSeriesBlock(SeriesBlock):
 class SetSeriesBlock(GeometryBlock):
     """Add one or multiple columns (SeriesBlocks) to a GeometryBlock.
     
-    Provide the geometryBlock which you want to add more data to. Then provide the seriesBlock(s) which you want to add to the geometryBlock. The values of the seriesblock will be added to the right features in the GeometryBlock automatically (assuming they are either constant or derived from the same geometries in previous operations).
+    Provide the GeometryBlock which you want to add more data to. Then provide the SeriesBlock(s) which you want to add to the GeometryBlock. The values of the SeriesBlock will be added to the right features in the GeometryBlock automatically (assuming they are either constant or derived from the same geometries in previous operations).
 
     Args:
-      a (source geometryBlock): The base geometryblock where the seriesblock is added to as a new column, datatype: geometryBlock
-      b (Destination column name): The name of the new column where the seriesblock is inserted, datatype: string
-      c (Value to be inserted): The seriesblock or constant value which has to filled in the destination column. Datatype: string or seriesBlock
-      optional: It is posible to repeat b and c multiple times (i.e. "SetSeriesBlock(source GeometryBlock, 'column_1', series_1, 'column_2', series_2)"). Like this it is possible to set multiple columns in one operation. 
+      a source (GeometryBlock): The base GeometryBlock where the SeriesBlock is added to as a new column.
+      b destination column name(string): The name of the new column where the SeriesBlock is inserted.
+      c value to be inserted (string or SeriesBlock): The seriesblock or constant value which has to filled in the destination column. 
+      *args: It is posible to repeat b and c multiple times 
+
+    Example:
+      SetSeriesBlock(view, 'column_1', series_1, 'column_2', series_2). Like this it is possible to set multiple columns in one operation. 
 
     Returns:
-    The source GeometryBlock with additional property columns
+      The source GeometryBlock with additional property columns
 
     """
 

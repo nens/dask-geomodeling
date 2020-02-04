@@ -38,13 +38,13 @@ class Classify(BaseSingleSeries):
     Provide a seriesBlock with values and the desired classification. The classification consists of two lists, one with the edges of the classification bins (i.e. 3,5) and one with the desired class output (i.e. 'low','middle',high'). The input data is then compared to the classification bins. For example a value 1 is below 3 so it gets label 'low'. A value 4 is between 3 and 5 so it gets label 'middle' etc.
 
     Args:
-      a (Data to classify): The (float) data which should be classified. Datatype: seriesBlock
-      b (Classification bins): The edges of the classification intervalls specified as a list (i.e. "[1,2,3]").
-      c (output labels): The label/classification returned if a value falls in a specific bin supplied as a list (i.e. "['A','B','C']"). How values outside of the bins are classified, depends on the length of the labels. If the length of the labels equals the length of the bins minus 1, then values outside of the bins are classified to NaN. If the length of the labels equals the length of the bins plus 1, then values outside of the bins are classified to the first and last elements of the labels list.
-      d (right): Determines whether the labels should be assigned to values below or above a bin edge in case the label and classification lists are equally long. Datatype: boolean
+      a data to classify (SeriesBlock): The (float) data which should be classified.
+      b classification bins (list): The edges of the classification intervalls specified as a list (i.e. "[1,2,3]").
+      c output labels (list): The label/classification returned if a value falls in a specific bin supplied as a list (i.e. "['A','B','C']"). How values outside of the bins are classified, depends on the length of the labels. If the length of the labels equals the length of the bins minus 1, then values outside of the bins are classified to no data. If the length of the labels equals the length of the bins plus 1, then values outside of the bins are classified to the first and last elements of the labels list.
+      d right (boolean): Determines in what bin a value is classified when it is exactly on a bin edge. Defaults to True (a value is assigned to the bin on the right).
 
     Returns:
-    A seriesBlock with classified values instead of the original floats.
+      A SeriesBlock with classified values instead of the original floats.
       """
 
     def __init__(self, source, bins, labels, right=True):
@@ -100,17 +100,17 @@ class Classify(BaseSingleSeries):
 class ClassifyFromColumns(SeriesBlock):
     """Classify a continuous-valued geometry property based on bins located in different columns. 
     
-    Classifies the value of a column for all features in a geometryBlock. The classification bins may differ per feature as they are provided through different columns in the geometryBlock. To classify the field the columns with the bins and the resultant labels are provided.
+    Classifies the value of a column for all features in a GeometryBlock. The classification bins may differ per feature as they are provided through different columns in the GeometryBlock. To classify the field the columns with the bins and the resultant labels are provided.
 
     Args:
-      a (Geometry datasource):The geometryBlock which contains the column which should be clasified as well as columns with the bin edges. Datatype: geometryBlock
-      b (Data to classify): The column with (float) data which should be classified. Datatype: string
-      c (Classification bins): A list of columns which contain the bins for the classification. The data should be supplied as list (i.e. "["column_1","column_2","column_3"]"). The order of the columns should be from low to high values.
-      d (output labels): The label/classification returned if a value falls in a specific bin supplied as a list (i.e. "['A','B','C']"). How values outside of the bins are classified, depends on the length of the labels. If the length of the labels equals the length of the bins minus 1, then values outside of the bins are classified to NaN. If the length of the labels equals the length of the bins plus 1, then values outside of the bins are classified to the first and last elements of the labels list.
-      e (right): Determines whether the labels should be assigned to values below or above a bin edge in case the label and classification lists are equally long. Datatype: boolean
+      a datasource (GeometryBlock):The GeometryBlock which contains the column which should be clasified as well as columns with the bin edges.
+      b data to classify (String): The column with (float) data which should be classified.
+      c classification bins (List): A list of columns which contain the bins for the classification. The data should be supplied as list (i.e. "["column_1","column_2","column_3"]"). The order of the columns should be from low to high values.
+      d output labels (List): The label/classification returned if a value falls in a specific bin supplied as a list (i.e. "['A','B','C']"). How values outside of the bins are classified, depends on the length of the labels. If the length of the labels equals the length of the bins minus 1, then values outside of the bins are classified to no data. If the length of the labels equals the length of the bins plus 1, then values outside of the bins are classified to the first and last elements of the labels list.
+      e right (boolean): Determines in what bin a value is classified when it is exactly on a bin edge. Defaults to True (a value is assigned to the bin on the right).
 
     Returns:
-    A seriesBlock with classified values instead of the original floats.
+      A seriesBlock with classified values instead of the original floats.
     
     """
 
@@ -204,96 +204,98 @@ class BaseFieldOperation(BaseSingleSeries):
 
 
 class Add(BaseFieldOperation):
-    """ Addition of constant value or seriesblock to a different seriesblock (element-wise).
+    """ Addition of constant value or SeriesBlock to a different SeriesBlock (element-wise).
     
-    Supply a seriesblock and either a second seriesBlock or a constant value to be added to its data. The data are added.
+    Supply a SeriesBlock and either a second SeriesBlock or a constant value to be added to its data. The data are added.
 
     Args:
-      a (input seriesBlock 1): The seriesblock which is used in the calculation. Datatype: seriesBlock
-      b (value to add): Either a second seriesblock or a constant value which is added to the first one. Datatype: seriesBlock or float
+      a input (SeriesBlock): The SeriesBlock which is used in the calculation.
+      b value to add (SeriesBlock or float): Either a second SeriesBlock or a constant value which is added to the first one.
     
     Returns:
-      seriesBlock where the values are summed.
+      SeriesBlock where the values are summed.
     """
 
     process = staticmethod(operator.add)
 
 
 class Subtract(BaseFieldOperation):
-    """ Subtract scalar or seriesBlock from another seriesBlock.
+    """ Subtract scalar or SeriesBlock from another SeriesBlock.
     
-    Supply a seriesBlock and either a second seriesBlock or a constant value to be subtracted from its data. 
+    Supply a SeriesBlock and either a second SeriesBlock or a constant value to be subtracted from its data. 
 
     Args:
-      a (Input seriesBlock 1): The seriesblock which is used in the calculation. Datatype: seriesBlock
-      b (value to subtract): Either a second seriesblock or a constant value which is subtracted from the first one. Datatype: seriesBlock or float
+      a input (SeriesBlock): The SeriesBlock which is used in the calculation.
+      b value to subtract (SeriesBlock or float): Either a second SeriesBlock or a constant value which is subtracted from the first one.
       
     Returns:
-      seriesBlock where the values are subtracted.
+      SeriesBlock where the values are subtracted.
+    
+    Note that if you want to subtract a SeriesBlock from a constant value (like 4 - series, you have to do Add(Multiply(series, -1), 4)
     """
 
     process = staticmethod(operator.sub)
 
 
 class Multiply(BaseFieldOperation):
-    """Multiplication of a seriesBlock with a constant value or a second seriesBlock (element-wise)
+    """Multiplication of a SeriesBlock with a constant value or a second SeriesBlock (element-wise)
     
-    Provide a seriesblock and a second seriesblock or a constant value to be multiplied together. 
+    Provide a SeriesBlock and a second SeriesBlock or a constant value to be multiplied together. 
 
     Args:
-      a (Input seriesBlock 1): The seriesblock which is used in the calculation. Datatype: seriesBlock
-      b (value to multiply): Either a second seriesBlock or a constant value. The multiplication is performed element-wise. 
+      a input (SeriesBlock): The SeriesBlock which is used in the calculation.
+      b value to multiply (SeriesBlock or float): Either a second SeriesBlock or a constant value. The multiplication is performed element-wise. 
       
     Returns:
-      seriesBlock where the values are multiplied.
+      SeriesBlock where the values are multiplied.
     """
 
     process = staticmethod(operator.mul)
 
 
 class Divide(BaseFieldOperation):
-    """ Division of a seriesBlock by a constant value or a second seriesBlock (element-wise)
+    """ Division of a SeriesBlock by a constant value or a second SeriesBlock (element-wise)
     
-    Provide a seriesblock and a second seriesblock or a constant value to divide the first seriesBlock by.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value to divide the first SeriesBlock by.
 
     Args:
-      a (Input seriesBlock 1): The seriesblock which is used in the calculation. Datatype: seriesBlock
-      b (value to be devided by): Either a second seriesblock or a constant value. The division is performed element-wise
-      
+      a input/numerator (SeriesBlock): The SeriesBlock which is used in the calculation.
+      b denominator (SeriesBlock or float): Either a second SeriesBlock or a constant value. The division is performed element-wise
+
     Returns:
-      seriesBlock where the values are divided.
+      SeriesBlock where the values are divided.
     """
 
     process = staticmethod(operator.truediv)
 
 
 class FloorDivide(BaseFieldOperation):
-    """ Divide a seriesBlock by a second seriesBlock or constant value (element-wise) and round to the closest integer below (i.e. 3.4 becomes 3, 3.9 becomes 3 and -3.4 becomes -4)
+    """ Divide a SeriesBlock by a second SeriesBlock or constant value (element-wise) and round to the closest integer below (i.e. 3.4 becomes 3, 3.9 becomes 3 and -3.4 becomes -4)
 
-    Provide a seriesblock and a second seriesBlock or a constant value to divide the first seriesBlock by. The outcome is rounded to the nearest integer below.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value to divide the first SeriesBlock by. The outcome is rounded to the nearest integer below.
 
     Args:
-      a (Input seriesBlock 1): The seriesblock which is used in the calculation. Datatype: seriesBlock
-      b (value to be devided by): Either a second seriesblock or a constant value. The division is performed element-wise
+      a input/numerator (SeriesBlock): The seriesblock which is used in the calculation.
+      b denominator (SeriesBlock): Either a second SeriesBlock or a constant value. The division is performed element-wise.
       
     Returns:
-      seriesBlock where the values are divided and rounded to the nearest integer below.
+      SeriesBlock where the values are divided and rounded to the nearest integer below.
     """
 
     process = staticmethod(operator.floordiv)
 
 
 class Power(BaseFieldOperation):
-    """ Provide a seriesBlock which is taken to the power of a constant value or a second seriesBlock. For example input: [2,4] and 2 gives output [4,16]. Input [2,4] and [2,1] gives [4,4] as output.
+    """ Provide a SeriesBlock which is taken to the power of a constant value or a second SeriesBlock. For example input: [2,4] and 2 gives output [4,16]. Input [2,4] and [2,1] gives [4,4] as output.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. The (first) input seriesBlock is taken to the power of the second seriesBlock or the constant value. In case two seriesblocks are provided the power i computed element-wise.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. The (first) input SeriesBlock is taken to the power of the second SeriesBlock or the constant value. In case two SeriesBlocks are provided the power i computed element-wise.
  
     Args:
-      a (input seriesblock): The seriesblock which is used as the base of the power operation. Datatype: seriesBlock
-      b (power value): The value which is used as the exponent/power value. Datatype: seriesBlock or float
+      a input/base (SeriesBlock): The SeriesBlock which is used as the base of the power operation.
+      b exponent (SeriesBlock or float): The value which is used as the exponent/power value.
       
     Returns:
-    Seriesblock with new values.
+      SeriesBlock with new values.
     
     """
 
@@ -305,112 +307,114 @@ class Power(BaseFieldOperation):
 
 
 class Modulo(BaseFieldOperation):
-    """Determines the whole number of a seriesBlock expressed in modular mathematics. The second seriesBlock or constant value sets the modulus. 
+    """Compute the modulo (remainder after division) of two series or one series and a constant value.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. The first seriesBlock is expressed as a function of the second seriesBlock or constant value. The second value functions as the modulus of the system. Example: the input value = 5, the second input value (modulus) = 3. The possible values in the new system become 0,1,2. These values are repeted infinitely, i.e. the number sequence becomes 0,1,2,0,1,2,0. Any value exceeding the modulus is thus becoming smaller. Example: if 5 is expressed with a modulus 3 it becomes the 3rd value past the hightest value of the sequence which is in this case 2 (0,1,2,0,1,2). The easiest way to determine the outcome is to repeatedly subtract the modulus from the input until the outcome is below the modulus. Example: input 15, modulus 4: 15-4=11, 11-4=7, 7-4=3, the outcome = 3.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. The first SeriesBlock is expressed as a function of the second SeriesBlock or constant value. The second value functions as the modulus of the system. Example: the input value = 5, the second input value (modulus) = 3. The possible values in the new system become 0,1,2. These values are repeted infinitely, i.e. the number sequence becomes 0,1,2,0,1,2,0. Any value exceeding the modulus is thus becoming smaller. Example: if 5 is expressed with a modulus 3 it becomes the 3rd value past the hightest value of the sequence which is in this case 2 (0,1,2,0,1,2). The easiest way to determine the outcome is to repeatedly subtract the modulus from the input until the outcome is below the modulus. Example: input 15, modulus 4: 15-4=11, 11-4=7, 7-4=3, the outcome = 3.
 
     Args:
-      a (input seriesBlock): The seriesBlock which is converted into its modular representation. Datatype: seriesBlock. 
-      b (modulus): The value which is used as the modulus of the system. If a seriesBlock is provided the operations take place element-wise. Datatype seriesBlock or float.
+      a input (SeriesBlock): The SeriesBlock which is converted into its modular representation.
+      b modulus (SeriesBlock or float): The value which is used as the modulus of the system. If a SeriesBlock is provided the operations take place element-wise.
     
     Returns:
-     seriesBlock with values expressed as function of the modulus. 
+     SeriesBlock with values expressed as function of the modulus. 
     """
 
     process = staticmethod(operator.mod)
 
 
 class Equal(BaseFieldOperation):
-    """Determines whether a seriesBlock and a second seriesBlock or a constant value are equal.
+    """Determines whether a SeriesBlock and a second SeriesBlock or a constant value are equal.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. If both are equal the operation returns True and if not a False is returned. 
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. If both are equal the operation returns True and if not a False is returned. 
 
     Args:
-      a (input seriesBlock): The input seriesBlock which is compared to the second input value. Datatype: seriesBlock
-      b (comparison value): The input seriesBlock or constant which is used to compare the first seriesBlock to.
-      
+      a input (SeriesBlock): The input seriesBlock which is compared to the second input value.
+      b comparison value (SeriesBlock or constant): The input SeriesBlock or constant which is used to compare the first SeriesBlock to.
+
     Returns:
-    Boolean seriesBlock with values True or False for each feature. Outcome is determined by whether they are equal to the comparison value or not.
+      Boolean SeriesBlock with values True or False for each feature. Outcome is determined by whether they are equal to the comparison value or not.
+      
+    Note that 'no data' does not equal 'no data'
     """
 
     process = staticmethod(operator.eq)
 
 
 class NotEqual(BaseFieldOperation):
-    """Determines whether a seriesBlock and a second seriesBlock or a constant value are different.
+    """Determines whether a SeriesBlock and a second SeriesBlock or a constant value are different.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. If both are different the operation returns True and if not a False is returned. 
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. If both are different the operation returns True and if not a False is returned. 
 
     Args:
-      a (input seriesBlock): The input seriesBlock which is compared to the second input value. Datatype: seriesBlock
-      b (comparison value): The input seriesBlock or constant which is used to compare the first seriesBlock to.
-      
+      a input (SeriesBlock): The input SeriesBlock which is compared to the second input value.
+      b comparison value (SeriesBlock or constant): The input SeriesBlock or constant which is used to compare the first SeriesBlock to.
+
     Returns:
-    Boolean seriesBlock with values True or False for each feature. Outcome is determined by whether they are different from the comparison value or not.
+      Boolean SeriesBlock with values True or False for each feature. Outcome is determined by whether they are different from the comparison value or not.
     """
 
     process = staticmethod(operator.ne)
 
 
 class Greater(BaseFieldOperation):
-    """Determines for each value in a seriesBlock whether it is larger than a comparison value from a seriesBlock or constant.
+    """Determines for each value in a SeriesBlock whether it is larger than a comparison value from a SeriesBlock or constant.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. For each feature in the first input seriesBlock is determined whether its value exceeds the value in the second seriesBlock.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each feature in the first input SeriesBlock is determined whether its value exceeds the value in the second SeriesBlock.
 
     Args:
-      a (input seriesBlock): The input seriesBlock which is compared to the second input value. Datatype: seriesBlock
-      b (comparison value): The input seriesBlock or constant which is used to compare the first seriesBlock to.
+      a input (SeriesBlock): The input SeriesBlock which is compared to the second input value.
+      b comparison value (SeriesBlock or constant): The input SeriesBlock or constant which is used to compare the first SeriesBlock to.
       
     Returns:
-    Boolean seriesBlock with values True or False for each feature. Outcome is determined by whether the value exceeds the comparison value or not.
+      Boolean SeriesBlock with values True or False for each feature. Outcome is determined by whether the value exceeds the comparison value or not.
     """
 
     process = staticmethod(operator.gt)
 
 
 class GreaterEqual(BaseFieldOperation):
-    """Determines for each value in a seriesBlock whether it is larger than or equal to a comparison value from a seriesBlock or constant.
+    """Determines for each value in a SeriesBlock whether it is larger than or equal to a comparison value from a SeriesBlock or constant.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. For each feature in the first input seriesBlock is determined whether its value exceeds or equals the value in the second seriesBlock.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each feature in the first input SeriesBlock is determined whether its value exceeds or equals the value in the second SeriesBlock.
 
     Args:
-      a (input seriesBlock): The input seriesBlock which is compared to the second input value. Datatype: seriesBlock
-      b (comparison value): The input seriesBlock or constant which is used to compare the first seriesBlock to.
+      a input (SeriesBlock): The input SeriesBlock which is compared to the second input value.
+      b comparison value (SeriesBlock or constant): The input SeriesBlock or constant which is used to compare the first SeriesBlock to.
       
     Returns:
-    Boolean seriesBlock with values True or False for each feature. Outcome is determined by whether the value exceeds or equals the comparison value or not.
+      Boolean SeriesBlock with values True or False for each feature. Outcome is determined by whether the value exceeds or equals the comparison value or not.
     """
 
     process = staticmethod(operator.ge)
 
 
 class Less(BaseFieldOperation):
-    """Determines for each value in a seriesBlock whether it is below a comparison value from a seriesBlock or constant.
+    """Determines for each value in a SeriesBlock whether it is below a comparison value from a SeriesBlock or constant.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. For each feature in the first input seriesBlock is determined whether its value falls below the value in the second seriesBlock.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each feature in the first input SeriesBlock is determined whether its value falls below the value in the second seriesBlock.
 
     Args:
-      a (input seriesBlock): The input seriesBlock which is compared to the second input value. Datatype: seriesBlock
-      b (comparison value): The input seriesBlock or constant which is used to compare the first seriesBlock to.
+      a input (SeriesBlock): The input SeriesBlock which is compared to the second input value.
+      b comparison value (SeriesBlock or constant): The input SeriesBlock or constant which is used to compare the first SeriesBlock to.
       
     Returns:
-    Boolean seriesBlock with values True or False for each feature. Outcome is determined by whether the value falls below the comparison value or not.
+      Boolean SeriesBlock with values True or False for each feature. Outcome is determined by whether the value falls below the comparison value or not.
     """
 
     process = staticmethod(operator.lt)
 
 
 class LessEqual(BaseFieldOperation):
-    """Determines for each value in a seriesBlock whether it is below or equal to a comparison value from a seriesBlock or constant.
+    """Determines for each value in a SeriesBlock whether it is below or equal to a comparison value from a SeriesBlock or constant.
     
-    Provide a seriesBlock and a second seriesBlock or a constant value. For each feature in the first input seriesBlock is determined whether its value falls below or equals the value in the second seriesBlock.
+    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each feature in the first input SeriesBlock is determined whether its value falls below or equals the value in the second SeriesBlock.
 
     Args:
-      a (input seriesBlock): The input seriesBlock which is compared to the second input value. Datatype: seriesBlock
-      b (comparison value): The input seriesBlock or constant which is used to compare the first seriesBlock to.
+      a input (SeriesBlock): The input SeriesBlock which is compared to the second input value.
+      b comparison value (SeriesBlock or constant): The input SeriesBlock or constant which is used to compare the first SeriesBlock to.
       
     Returns:
-    Boolean seriesBlock with values True or False for each feature. Outcome is determined by whether the value falls below or equals the comparison value or not.
+      Boolean SeriesBlock with values True or False for each feature. Outcome is determined by whether the value falls below or equals the comparison value or not.
     """
 
     process = staticmethod(operator.le)
@@ -426,80 +430,80 @@ class BaseLogicOperation(BaseFieldOperation):
 
 
 class And(BaseLogicOperation): #WIP: TE ONDUIDELIJK.
-    """Determines whether a value is True in two provided (boolean) seriesBlocks. 
+    """Determines whether a value is True in two provided (boolean) SeriesBlocks. 
 
-    Provide two seriesBlocks with boolean values (True/False). If a feature has a True value in both seriesblocks, True is returned else False is returned. 
+    Provide two SeriesBlocks with boolean values (True/False). If a feature has a True value in both SeriesBlocks, True is returned else False is returned. 
 
     Args:
-      a (seriesBlock 1): First boolean (True/False) seriesblock.
-      b (seriesBlock 2): second boolean (True/False) seriesblock.
+      a input (SeriesBlock): First boolean (True/False) SeriesBlock.
+      b second input (SeriesBlock): second boolean (True/False) SeriesBlock.
     
     Returns:
-    Boolean seriesblock with True value where both input blocks were True. All other values become false.
+      Boolean SeriesBlock with True value where both input blocks were True. All other values become false.
     """
 
     process = staticmethod(operator.and_)
 
 
 class Or(BaseLogicOperation):
-    """Determines whether at least 1 of 2 provided (boolean) seriesBlocks is True.
+    """Determines whether at least 1 of 2 provided (boolean) SeriesBlocks is True.
     
-    Provide two seriesBlocks with boolean values (True/False). If one or both features in the seriesblocks are True the result will be True. If both are False the outcome will be False.
+    Provide two SeriesBlocks with boolean values (True/False). If one or both features in the SeriesBlocks are True the result will be True. If both are False the outcome will be False.
     
     Args:
-      a (seriesBlock 1): First boolean (True/False) seriesblock
-      b (seriesBlcok 2): Second boolean (True/False) seriesblock
+      a input (SeriesBlock): First boolean (True/False) SeriesBlock
+      b second input (SeriesBlock): Second boolean (True/False) SeriesBlock
       
     Returns:
-    Boolean seriesBlock with True value where at least one or both of the two seriesblocks are True. If both are False, False is returned.
+      Boolean SeriesBlock with True value where at least one or both of the two SeriesBlocks are True. If both are False, False is returned.
     """
 
     process = staticmethod(operator.or_)
 
 
 class Xor(BaseLogicOperation):
-    """Determines whether one value (and one value only) is True out of two (boolean) seriesBlocks.
+    """Determines whether one value (and one value only) is True out of two (boolean) SeriesBlocks.
     
-    Provide two boolean (True/False) seriesblocks. If only one of the features in the blocks is True, True is returned. If either both blocks are True or both blocks are False, False is returned.
-    
+    Provide two boolean (True/False) SeriesBlocks. If only one of the features in the blocks is True, True is returned. If either both blocks are True or both blocks are False, False is returned.
+
     Args:
-      a (seriesBlock 1): First boolean (True/False) seriesblock
-      b (seriesBlcok 2): Second boolean (True/False) seriesblock
+      a input (SeriesBlock): First boolean (True/False) SeriesBlock
+      b second input (SeriesBlock): Second boolean (True/False) SeriesBlock
       
     Returns:
-    Boolean seriesBlock with True values when only one of the two input seriesBlocks was True. Else False is returned. 
+      Boolean SeriesBlock with True values when only one of the two input SeriesBlocks was True. Else False is returned. 
     """
 
     process = staticmethod(operator.xor)
 
 
 class Invert(BaseSingleSeries):
-    """Inverts a boolean seriesBlock (i.e. True becomes False and vice versa).
+    """Inverts a boolean SeriesBlock (i.e. True becomes False and vice versa).
     
-    Provide a boolean seriesBlock which is inverted.
+    Provide a boolean SeriesBlock which is inverted.
     
     Args:
-      a (Boolean seriesBlock): seriesBlock with boolean values, datatype: seriesBlock.
+      a boolean (SeriesBlock): SeriesBlock with boolean values, datatype: SeriesBlock.
       
     Returns:
-    Inverted, boolean, seriesBlock.
+      Inverted, boolean, SeriesBlock.
     """
 
     process = staticmethod(operator.inv)
 
 
 class Where(BaseSingleSeries):
-    """Replace values in a seriesBlock with either a constant value or values from a second seriesBlock. The values are replaced where the values in a boolean seriesBlock (True/False) are false.
+    """Replace values in a SeriesBlock with either a constant value or values from a second SeriesBlock. The values are replaced where the values in a boolean SeriesBlock (True/False) are false.
 
-    Provide a base seriesblock, a conditional seriesBlock (True/False) and a replacement value which can be a seriesBlock or a constant value. All entries in the base seriesBlock which correspond to a True value in the conditional seriesBlock are not changed. The values in the base seriesBlock which correspond to a False value are replaced with the replacement value. If the replacement value is a seriesBlock, the replacement happens element-wise.
+    Provide a base SeriesBlock, a conditional SeriesBlock (True/False) and a replacement value which can be a SeriesBlock or a constant value. All entries in the base SeriesBlock which correspond to a True value in the conditional SeriesBlock are not changed. The values in the base SeriesBlock which correspond to a False value are replaced with the replacement value. If the replacement value is a SeriesBlock, the replacement happens element-wise.
     
     Args:
-      a (input seriesBlock): Base data which is going to be updated for certain features. Datatype: seriesBlock
-      b (conditional seriesBlock): True/False seriesBlock which determines whether features in the base seriesBlock should be updated. Datatype: seriesBlock (boolean)
-      c (replacement value): The value which should be used as a replacement for the base seriesblock when the conditional seriesBlock is False. Datatype: seriesBlock or constant (scalar)
+      a input (SeriesBlock): Base data which is going to be updated for certain features.
+      b conditional (SeriesBlock): True/False SeriesBlock which determines whether features in the base SeriesBlock should be updated.
+      c replacement value (SeriesBlock or constant): The value which should be used as a replacement for the base SeriesBlock when the conditional SeriesBlock is False.
       
     Returns:
-    SeriesBlock with updated values where condition is false. 
+      SeriesBlock with updated values where condition is false. 
     """
 
     def __init__(self, source, cond, other):
@@ -521,17 +525,17 @@ class Where(BaseSingleSeries):
 
 
 class Mask(BaseSingleSeries):
-    """Replace values in a seriesBlock with either a constant value or values from a second seriesBlock. The values are replaced where the values in a boolean seriesBlock (True/False) are True.
+    """Replace values in a SeriesBlock with either a constant value or values from a second SeriesBlock. The values are replaced where the values in a boolean SeriesBlock (True/False) are True.
 
-    Provide a base seriesblock, a conditional seriesBlock (True/False) and a replacement value which can be a seriesBlock or a constant value. All entries in the base seriesBlock which correspond to a False value in the conditional seriesBlock are not changed. The values in the base seriesBlock which correspond to a True value are replaced with the replacement value. If the replacement value is a seriesBlock, the replacement happens element-wise.
+    Provide a base SeriesBlock, a conditional SeriesBlock (True/False) and a replacement value which can be a SeriesBlock or a constant value. All entries in the base SeriesBlock which correspond to a False value in the conditional SeriesBlock are not changed. The values in the base SeriesBlock which correspond to a True value are replaced with the replacement value. If the replacement value is a SeriesBlock, the replacement happens element-wise.
     
     Args:
-      a (input seriesBlock): Base data which is going to be updated for certain features. Datatype: seriesBlock
-      b (conditional seriesBlock): True/False seriesBlock which determines whether features in the base seriesBlock should be updated. Datatype: seriesBlock (boolean)
-      c (replacement value): The value which should be used as a replacement for the base seriesblock when the conditional seriesBlock is True. Datatype: seriesBlock or constant (scalar)
+      a input (SeriesBlock): Base data which is going to be updated for certain features.
+      b conditional (SeriesBlock): True/False SeriesBlock which determines whether features in the base SeriesBlock should be updated.
+      c replacement value (SeriesBlock or constant): The value which should be used as a replacement for the base SeriesBlock when the conditional SeriesBlock is True.
       
     Returns:
-    SeriesBlock with updated values where condition is True. 
+      SeriesBlock with updated values where condition is True. 
     """
 
     def __init__(self, source, cond, other):
@@ -555,14 +559,14 @@ class Mask(BaseSingleSeries):
 class Round(BaseSingleSeries):
     """Round each value in a SeriesBlock to the given number of decimals
     
-    Provide a seriesBlock with float data. The data is rounded to the provided number of decimals.
+    Provide a SeriesBlock with float data. The data is rounded to the provided number of decimals.
     
     Args:
-      a (input seriesBlock): seriesBlock with float data which is rounded to the provided number of decimals. Datatype: seriesBlock
-      b (number of decimals): number of decimal places to round to (default: 0). If decimals is negative, it specifies the number of positions to the left of the decimal point. Datatype: integer.
+      a input (SeriesBlock): SeriesBlock with float data which is rounded to the provided number of decimals.
+      b number of decimals (integer): number of decimal places to round to (default: 0). If decimals is negative, it specifies the number of positions to the left of the decimal point.
       
     Returns:
-    seriesBlock with rounded values. 
+      SeriesBlock with rounded values. 
     """
 
     def __init__(self, source, decimals=0):
