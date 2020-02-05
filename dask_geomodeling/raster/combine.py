@@ -147,18 +147,21 @@ class Group(BaseCombine):
     """
     Combine multiple rasters into a single one.
 
-    Operation to combine multiple rasters into one along all three axes (x, y and temporal).
-    To only fill 'no data' values without temporal combination ``dask_geomodeling.raster.elemwise.FillNoData`` is preferred.
-    Values at equal timesteps in the contributing rasters are considered left to
-    right. Therefore values from rasters that are more 'to the right' are shown in the resulting raster. 
-    However, 'no data' values are transparent and in this case underlying data values are
-    shown (of rasters 'more to the left')
+    Operation to combine multiple rasters into one along all three axes (x, y
+    and temporal). To only fill 'no data' values of input rasters that have the
+    same temporal resolution ``dask_geomodeling.raster.elemwise.FillNoData``
+    is preferred.
+
+    Values at equal timesteps in the contributing rasters are considered
+    starting with the leftmost input raster. Therefore, values from rasters
+    that are more 'to the right' are shown in the result. 'no data' values are
+    transparent and will show data of rasters more 'to the left'.
 
     Args:
-      *args (list of rasters): list of rasters to be combined.
-      
+      *args (list of RasterBlocks): list of rasters to be combined.
+
     Returns:
-      Rasterblock which combines all input rasters
+      RasterBlock that combines all input rasters
     """
 
     def get_stores(self, start, stop):

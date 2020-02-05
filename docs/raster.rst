@@ -1,13 +1,15 @@
 Raster Blocks
 =============
 
-RasterBlocks are the main component of geoblocks raster operations. 
-Every raster operation takes one or more rasterblocks as input and produces
-a single rasterblock as output.
+RasterBlocks are the main component of raster operations. Most raster
+operations take one or more RasterBlocks as input and produce a single
+RasterBlock as output.
+
 Raster-type blocks contain rasters with data in three dimensions. Besides the
 x- and y-axes they also have a temporal axis.
 
-Internally, dask-geomodeling stores the raster data as `NumPy <https://numpy.org/>`_ arrays.
+Internally, dask-geomodeling stores the raster data as
+`NumPy <https://numpy.org/>`_ arrays.
 
 API Specification
 -----------------

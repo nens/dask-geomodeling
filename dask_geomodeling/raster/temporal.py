@@ -26,15 +26,20 @@ class Snap(RasterBlock):
     """
     Snap the time structure of a raster to that of another raster.
 
-    This operations allows to take the cell values from one raster (the store) and the temporal properties of another raster (the index). 
-    If the store is not a temporal raster, its cell values are copied to each timestep of the index raster. If the store is also a temporal raster, this operation looks at each index timestamp and takes the closest store timestamp as cell values.
-    
+    This operations allows to take the cell values from one raster ('store')
+    and the temporal properties of another raster ('index').
+
+    If the store is not a temporal raster, its cell values are copied to each
+    timestep of the index raster. If the store is also a temporal raster, this
+    operation looks at each 'index' timestamp and takes the closest 'store'
+    timestamp as cell values.
+
     Args:
-      store (RasterBlock): Return cell values from this block
-      index (RasterBlock): Snap values to the times from this block
+      store (RasterBlock): Return cell values from this raster
+      index (RasterBlock): Snap values to the timestamps from this raster
 
     Returns: 
-      Temporal RasterBlock with spatial properties of the store and temporal properties of the index 
+      RasterBlock with temporal properties of the index.
     """
 
     def __init__(self, store, index):
@@ -165,16 +170,17 @@ class Snap(RasterBlock):
 
 class Shift(BaseSingle):
     """
-    Shift a raster by some timedelta.
+    Shift a temporal raster by some timedelta.
 
-    Shifts all timestamps of a raster by a constant amount of time. A positivie timedelta shifts into the future and a negative timedelta shifts into the past. 
-    
+    A positive timedelta shifts into the future and a negative timedelta shifts
+    into the past.
+
     Args:
       store (RasterBlock): The store whose timestamps are to be shifted
-      time (integer): The timedelta to shift the store, supplied in milliseconds. 
+      time (integer): The timedelta to shift the store, in milliseconds.
 
     Returns:
-      RasterBlock with the same values as the input, but its timestamps shifted. 
+      RasterBlock with its timestamps shifted.
     """
 
     def __init__(self, store, time):
@@ -328,21 +334,31 @@ def count_not_nan(x, *args, **kwargs):
 
 class TemporalAggregate(BaseSingle):
     """
-    Resample raster in time.
+    Resample a raster in time.
     
-    This geoblock allows you to perform temporal aggregation of rasters. The timestep of the resuling raster is equal to the supplied frequency. 
-    An example application is calculating monthly averages of data which is gridded daily. 
+    This operation performs temporal aggregation of rasters, for example a
+    hourly average of data that has a 5 minute resolution.. The timedelta of
+    the resulting raster is determined by the 'frequency' parameter.
 
     Args:
       source (RasterBlock): The input raster whose timesteps are aggregated
-      frequency (string or None): the frequency to resample to, as pandas offset string (see references under 'See Also'). If this value is None, this block will return the temporal statistic over the complete time range, with output timestamp at the end of the source raster period. Defaults to None.
-      statistic (string): the type of statistic to perform. Can be one of ``'sum', 'count', 'min', 'max', 'mean', 'median', 'p<percentile>'``. Defaults to ``sum``
-      closed (string or None): Can be one of ``None``, ``'left'``, ``'right'``. Determines what side of the interval is closed when resampling. Defaults to None
-      label (string or None): Determines what side of the interval is used as output datetime. Defaults to None.
-      timezone (string): timezone to perform the resampling in, defaults to UTC.
-      
+      frequency (string or None): The frequency to resample to, as pandas
+        offset string (see the references below). If this value is None, this
+        block will return the temporal statistic over the complete time range,
+        with output timestamp at the end of the source raster period.
+        Defaults to None.
+      statistic (string): The type of statistic to perform. Can be one of
+        ``{"sum", "count", "min", "max", "mean", "median", "p<percentile>"}``.
+        Defaults to ``"sum"``.
+      closed (string or None): Determines what side of the interval is closed.
+        Can be ``"left"`` or ``"right"``. The default depends on the frequency.
+      label (string or None): Determines what side of the interval is closed.
+        Can be ``"left"`` or ``"right"``. The default depends on the frequency.
+      timezone (string): Timezone to perform the resampling in, defaults to
+        ``"UTC"``.
+
     Returns:
-      Temporally aggregated raster
+      RasterBlock with temporally aggregated data.
 
     See also:
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.resample.html
@@ -645,20 +661,27 @@ def accumulate_count_not_nan(x, *args, **kwargs):
 
 class Cumulative(BaseSingle):
     """
-    Geoblock that computes a cumulative of a raster over time.
-    
-    Contrary to ``dask_geomodeling.raster.temporal.TemporalAggregate``, in this geoblock the timestep of the resulting raster equals the timestep of the input raster. 
-    Cell values are accumulated over the supplied period. At the end of each period the accumulation is reset. 
-    
+    Compute the cumulative of a raster over time.
+
+    Contrary to ``dask_geomodeling.raster.temporal.TemporalAggregate``, in this
+    operation the timedelta of the resulting raster equals the timedelta of the
+    input raster. Cell values are accumulated over the supplied period. At the
+    end of each period the accumulation is reset.
+
     Args:
-      source (RasterBlock): The input raster whose cell values are accumulated.
-      statistic (string): The method of accumulation. Possibilities are ``sum`` and ``count``. Defaults to ``sum``.
-      period (string or None): the period over which the accumulation is performed. Supplied as a pandas offset string (see references under 'See Also'). If this value is None, the accumulation will continue indefinitely. Defaults to None.
-      timezone (string): Timezone in which the accumulation is performed, defaults to UTC.
+      source (RasterBlock): The input raster whose timesteps are accumulated.
+      statistic (string): The type of accumulation to perform. Can be ``"sum"``
+        or ``"count"``. Defaults to ``"sum"``.
+      frequency (string or None): The period over which accumulation is
+        performed. Supply a pandas offset string (see the references below). If
+        this value is None, the accumulation will continue indefinitely.
+        Defaults to None.
+      timezone (string): Timezone in which the accumulation is performed,
+        defaults to ``"UTC"``.
 
     Returns:
-      Temporal raster which is accumulated over the supplied period. 
-      
+      RasterBlock with temporally accumulated data.
+
     See also:
       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
     """

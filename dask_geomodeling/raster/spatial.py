@@ -104,15 +104,17 @@ class Dilate(BaseSingle):
     """
     Perform spatial dilation on specific cell values.
 
-    Cells with values in the supplied list are spatially dilated by one cell in each direction (including diagonals). 
+    Cells with values in the supplied list are spatially dilated by one cell
+    in each direction, including diagonals.
+
     Dilation is performed in the order of the values parameter.
     
     Args:
-      store (RasterBlock): Raster to perform dilation on
-      values (list): Only cells with these values are dilated
+      store (RasterBlock): Raster to perform dilation on.
+      values (list): Only cells with these values are dilated.
 
     Returns:
-      RasterBlock where cells in values list are dilated
+      RasterBlock where cells in values list are dilated.
     
     See also:
       https://en.wikipedia.org/wiki/Dilation_%28morphology%29
@@ -149,14 +151,15 @@ class MovingMax(BaseSingle):
     """
     Apply a spatial maximum filter to the data using a circular footprint.
     
-    Shows a spatial maximum for each cell, by looking in a circular foorprint around this cell. This can be used for visualization of sparse data.
+    This can be used for visualization of sparse data.
 
     Args:
-      store (RasterBlock): raster to which the filter is applied
-      size (integer): diameter of the circular footprint. This should always be an odd number larger than 1.
+      store (RasterBlock): Raster to which the filter is applied
+      size (integer): Diameter of the circular footprint. This should always be
+        an odd number larger than 1.
     
     Returns:
-      Raster showing the the maximum value inside the footprint of each input cell. 
+      RasterBlock with maximum values inside the footprint of each input cell.
     """
 
     def __init__(self, store, size):
@@ -204,17 +207,17 @@ class MovingMax(BaseSingle):
 
 class Smooth(BaseSingle):
     """
-    Smooth the values from a raster spatially using gaussian smoothing.
-    
-    Performs a spatial smoothing on the input raster. Uses a Gaussian smoothing algorithm. 
-    
+    Smooth the values from a raster spatially using Gaussian smoothing.
+
     Args:
       store (RasterBlock): Raster to be smoothed
-      size (number): Input parameter for the smoothing algorithm. The 'sigma' value for the Gaussian kernal equals ``size / 3``
-      fill (number): Value used for 'no data' values in the smoothing process. Defaults to 0. 
+      size (number): The extent of the smoothing in meters. The 'sigma' value
+        for the Gaussian kernal equals ``size / 3``.
+      fill (number): 'no data' are replaced by this value during smoothing,
+        defaults to 0.
 
     Returns:
-      Smoothed raster
+      RasterBlock with spatially smoothed values.
       
     See Also:
       https://en.wikipedia.org/wiki/Gaussian_blur
@@ -299,15 +302,13 @@ class Smooth(BaseSingle):
 class HillShade(BaseSingle):
     """
     Calculate a hillshade from the raster values.
-    
-    Performs a hillshade algorithm on the input raster. 
 
     Args:
-      store (RasterBlock): Raster to which the hillshade is applied
-      size (number): size of the effect, in projected units
-      altitude (number): Light source altitude in degrees, default to 45
-      azimuth (number): Light source azimuth in degrees, default to 315
-      fill (number): fill value to be used for 'no data' values during hillshading
+      store (RasterBlock): Raster to which the hillshade algorithm is applied.
+      size (number): Size of the effect in projected units.
+      altitude (number): Light source altitude in degrees, defaults to 45.
+      azimuth (number): Light source azimuth in degrees, defaults to 315.
+      fill (number): Fill value to be used for 'no data' values.
 
     Returns:
       Hillshaded raster

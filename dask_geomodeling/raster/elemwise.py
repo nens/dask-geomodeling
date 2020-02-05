@@ -293,16 +293,17 @@ def wrap_math_process_func(func):
 class Add(BaseMath):
     """
     Add two rasters together or add a constant value to a raster.
-    
-    Either one or both of the inputs should be a RasterBlock. In case of one raster input adds a constant value to this raster. In case of two raster inputs adds these rasters together. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
-    
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
+
     Args:
-      a (RasterBlock, number): Addition parameter a
-      b (RasterBlock, number): Addition parameter b
+      a (RasterBlock, number): Addition term a
+      b (RasterBlock, number): Addition term b
 
     Returns:
-      RasterBlock containing the result of function *(a+b)*
-	  
+      RasterBlock containing the result of the addition.
 	"""
 
     process = staticmethod(wrap_math_process_func(np.add))
@@ -310,16 +311,18 @@ class Add(BaseMath):
 
 class Subtract(BaseMath):
     """
-    Subtract one raster from another or subtract a constant value from a raster.
-    
-    Either one or both of the inputs should be a rasterblock. In case of one raster input subtracts a constant value from this raster. In case of two raster inputs subtracts the second raster from the first raster. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
-    
+    Subtract two rasters or subtract a constant value from a raster
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
+
     Args:
-      a (RasterBlock, number): Raster or value which gets subtracted from
-      b (RasterBlock, number): Raster or value which is subtracted
+      a (RasterBlock, number): Term be subtracted from
+      b (RasterBlock, number): Term to be subtracted
 
     Returns:
-      RasterBlock containing the result of function *(a-b)*
+      RasterBlock containing the result of the function subtract.
     """
 
     process = staticmethod(wrap_math_process_func(np.subtract))
@@ -327,13 +330,15 @@ class Subtract(BaseMath):
 
 class Multiply(BaseMath):
     """
-    Multiply the values of two rasters or multiply a raster by a constant value.
-    
-    Either one or both of the inputs should be a rasterblock. In case of one raster input multiplies this raster with a constant value. In case of two raster inputs multiplies the values of these two rasters. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
+    Multiply two rasters or multiply a raster by a constant value.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
 
     Args:
-      a (RasterBlock, number): Multiplication parameter a
-      b (RasterBlock, number): Multiplication parameter b
+      a (RasterBlock, number): Multiplication factor a
+      b (RasterBlock, number): Multiplication factor b
      
     Returns:
       RasterBlock containing the result of the multiplication.
@@ -344,13 +349,15 @@ class Multiply(BaseMath):
 
 class Divide(BaseMath):
     """
-    Divide one raster by another raster or divide a raster by a constant value.
+    Divide two rasters or divide a raster by a constant value.
 
-    Either one or both of the inputs should be a rasterblock. In case of one raster input divides this raster by a constant value. In case of two raster inputs divides the values of the first raster by the values of the second raster. In this case the temporal properties of the rasters should be equal, however spatial properties may be different. 
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
 
     Args:
-      a (RasterBlock, number): Fraction numerator
-      b (RasterBlock, number): Fraction denominator
+      a (RasterBlock, number): Numerator
+      b (RasterBlock, number): Denominator
      
     Returns:
       RasterBlock containing the result of the division.
@@ -366,13 +373,15 @@ class Divide(BaseMath):
 
 class Power(BaseMath):
     """
-    Exponential function, either with one raster and a constant value or two rasters. 
-    
-    Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
-    
+    Exponential function with either a raster and a number or two rasters.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
+
     Args:
-      a (RasterBlock, number): Raster or value used as base
-      b (RasterBlock, number): Raster or value used as exponent
+      a (RasterBlock, number): Base
+      b (RasterBlock, number): Exponent
       
     Returns:
       RasterBlock containing the result of the exponential function. 
@@ -390,14 +399,19 @@ class Power(BaseMath):
 
 class Equal(BaseComparison):
     """
-    Compares the values of two rasters and returns True if they are equal. 
+    Compares the values of two rasters and returns True for equal elements.
 
-    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean returning True if both inputs are the same value and False otherwise. 
-    Note that 'no data' is not equal to 'no data'. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    This operation can be used to compare two rasters or to compare a raster
+    with a static value. Note that 'no data' is not equal to 'no data':
+    False is returned if any of the two terms is 'no data'.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
 
     Args:
-      a (RasterBlock, number): Comparison parameter a
-      b (RasterBlock, number): Comparison parameter b
+      a (RasterBlock, number): Comparison term a
+      b (RasterBlock, number): Comparison term b
       
     Returns:
       RasterBlock containing boolean values
@@ -408,14 +422,19 @@ class Equal(BaseComparison):
 
 class NotEqual(BaseComparison):
     """
-    Compares the values of two rasters and returns False if they are equal.
+    Compares the values of two rasters and returns False for equal elements.
 
-    Opposite of ``dask_geomodeling.raster.elemwise.Equal``, this geoblock compares two rasters or a raster with a static value and returns False if they are equal, and true otherwise. 
-    Note that 'no data' is not equal to 'no data', and therefore returns True in this operation. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    This operation can be used to compare two rasters or to compare a raster
+    with a static value. Note that 'no data' is not equal to 'no data':
+    True is returned if any of the two terms is 'no data'.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
 
     Args:
-      a (RasterBlock, number): Comparison parameter a
-      b (RasterBlock, number): Comparison parameter b
+      a (RasterBlock, number): Comparison term a
+      b (RasterBlock, number): Comparison term b
 
     Returns:
       RasterBlock containing boolean values
@@ -426,14 +445,20 @@ class NotEqual(BaseComparison):
 
 class Greater(BaseComparison):
     """
-    Compares the values of two rasters and returns True if the first is higher than the second.
-    
-    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean, returning True if the first input is a higher value than the second value. 
-    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
-    
+    Compares the values of two rasters and returns True if an element in the
+    first term is greater.
+
+    This operation can be used to compare two rasters or to compare a raster
+    with a static value. Note that False is returned if any of the two terms is
+    'no data'.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
+
     Args:
-      a (RasterBlock, number): Comparison parameter a
-      b (RasterBlock, number): Comparison parameter b
+      a (RasterBlock, number): Comparison term a
+      b (RasterBlock, number): Comparison term b
 
     Returns:
       RasterBlock containing boolean values
@@ -443,15 +468,21 @@ class Greater(BaseComparison):
 
 
 class GreaterEqual(BaseComparison):
-    """
-    Compares the values of two rasters and returns True if the first is higher than the second, or equal to the second.
-    
-    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean, returning True if the first input is a higher value than the second value or equal to the second value. 
-    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    """"
+    Compares the values of two rasters and returns True if an element in the
+    first term is greater or equal.
+
+    This operation can be used to compare two rasters or to compare a raster
+    with a static value. Note that False is returned if any of the two terms is
+    'no data'.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
     
     Args:
-      a (RasterBlock, number): Comparison parameter a
-      b (RasterBlock, number): Comparison parameter b
+      a (RasterBlock, number): Comparison term a
+      b (RasterBlock, number): Comparison term b
 
     Returns:
       RasterBlock containing boolean values
@@ -462,14 +493,20 @@ class GreaterEqual(BaseComparison):
 
 class Less(BaseComparison):
     """
-    Compares the values of two rasters and returns True if the first is smaller than the second.
-    
-    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean returning True if the first input is a lower value than the second value. 
-    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    Compares the values of two rasters and returns True if an element in the
+    first term is less.
+
+    This operation can be used to compare two rasters or to compare a raster
+    with a static value. Note that False is returned if any of the two terms is
+    'no data'.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
     
     Args:
-      a (RasterBlock, number): Comparison parameter a
-      b (RasterBlock, number): Comparison parameter b
+      a (RasterBlock, number): Comparison term a
+      b (RasterBlock, number): Comparison term b
 
     Returns:
       RasterBlock containing boolean values
@@ -480,14 +517,20 @@ class Less(BaseComparison):
 
 class LessEqual(BaseComparison):
     """
-    Compares the values of two rasters and returns True if the first is lower than the second, or equal to the second.
-    
-    This geoblock can be used to compare two rasters or to compare a raster with a static value. The resulting raster is boolean, returning True if the first input is a lower value than the second value or equal to the second value. 
-    Herein 'no data' values will always return False. Either one or both of the inputs should be a rasterblock. If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    Compares the values of two rasters and returns True if an element in the
+    first term is less or equal.
+
+    This operation can be used to compare two rasters or to compare a raster
+    with a static value. Note that False is returned if any of the two terms is
+    'no data'.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
     
     Args:
-      a (RasterBlock, number): Comparison parameter a
-      b (RasterBlock, number): Comparison parameter b
+      a (RasterBlock, number): Comparison term a
+      b (RasterBlock, number): Comparison term b
 
     Returns:
       RasterBlock containing boolean values
@@ -498,9 +541,10 @@ class LessEqual(BaseComparison):
 
 class Invert(BaseSingle):
     """
-    Taken a raster with boolean values and swaps True and False.
+    Logically invert a raster (swap True and False).
     
-    Takes a single input raster containing boolean values. Outputs a boolean raster with the same spatial and temportal properties.
+    Takes a single input raster containing boolean values and outputs a boolean
+    raster with the same spatial and temportal properties.
 
     Args:
       x (RasterBlock): Boolean raster with values to invert
@@ -530,10 +574,11 @@ class IsData(BaseSingle):
     """
     Returns True where raster has data.
     
-    Takes a single input raster. Outputs a boolean raster with the same spatial and temportal properties, for cells where the input raster has data returns True, and False otherwise. 
+    Takes a single input raster and outputs a boolean raster with the same
+    spatial and temporal properties.
 
     Args:
-      store (RasterBlock): Single input raster
+      store (RasterBlock): Input raster
 
     Returns:
       RasterBlock with boolean values. 
@@ -564,11 +609,12 @@ class IsData(BaseSingle):
 class IsNoData(IsData):
     """
     Returns True where raster has no data.
-    
-    Opposite of ``dask_geomodeling.raster.elemwise.IsData``, also takes a single input raster. But outputs False for cells with data in the input raster, and True otherwise.
+
+    Takes a single input raster and outputs a boolean raster with the same
+    spatial and temporal properties.
 
     Args:
-      store (RasterBlock): Single input raster
+      store (RasterBlock): Input raster
 
     Returns:
       RasterBlock with boolean values. 
@@ -585,14 +631,15 @@ class IsNoData(IsData):
 
 class And(BaseLogic):
     """
-    Taken two boolean input rasters and returns True when both are True. 
+    Returns True where both inputs are True.
 
-    Takes two boolean rasters or a boolean raster and a single boolean value. The resulting raster returns a True value if both inputs are True.
-    If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
+    Either one or both of the inputs should be a boolean RasterBlock. In case
+    of two raster inputs the temporal properties of the rasters should be
+    equal, however spatial properties can be different.
     
     Args:
-      a (RasterBlock, boolean): Boolean input a
-      b (RasterBlock, boolean): Boolean input b
+      a (RasterBlock, boolean): Logical term a
+      b (RasterBlock, boolean): Logical term b
 
     Returns:
       RasterBlock containing boolean values
@@ -603,14 +650,15 @@ class And(BaseLogic):
 
 class Or(BaseLogic):
     """
-    Taken two boolean input rasters and returns True when either or both are True. 
+    Returns True where any of inputs is True.
 
-    Takes two boolean rasters or a boolean raster and a single boolean value. The resulting raster returns a True value if either if the inputs is True, or if both of the inputs are True. 
-    If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
-    
+    Either one or both of the inputs should be a boolean RasterBlock. In case
+    of two raster inputs the temporal properties of the rasters should be
+    equal, however spatial properties can be different.
+
     Args:
-      a (RasterBlock, boolean): Boolean input a
-      b (RasterBlock, boolean): Boolean input b
+      a (RasterBlock, boolean): Logical term a
+      b (RasterBlock, boolean): Logical term b
 
     Returns:
       RasterBlock containing boolean values
@@ -621,14 +669,17 @@ class Or(BaseLogic):
 
 class Xor(BaseLogic):
     """
-    Takes two boolean input rasters and returns True when either is True, but False if both are True. 
+    Exclusive or: returns True where exactly one of the inputs is True.
 
-    Takes two boolean rasters or a boolean raster and a single boolean value. The resulting raster returns True value if either if the inputs is True, but False if both are True. Also returns False when both inputs are False. 
-    If both inputs are rasterblocks their temporal properties should be equal, however spatial properties may be different.
-    
+    Where both inputs are True, False is returned.
+
+    Either one or both of the inputs should be a boolean RasterBlock. In case
+    of two raster inputs the temporal properties of the rasters should be
+    equal, however spatial properties can be different.
+
     Args:
-      a (RasterBlock, boolean): Boolean input a
-      b (RasterBlock, boolean): Boolean input b
+      a (RasterBlock, boolean): Logical term a
+      b (RasterBlock, boolean): Logical term b
 
     Returns:
       RasterBlock containing boolean values
@@ -639,18 +690,21 @@ class Xor(BaseLogic):
 
 class FillNoData(BaseElementwise):
     """
-    Combines multiple rasters, filling in 'no data' values.
+    Combines multiple rasters filling 'no data' values.
 
-    Values in the contributing rasters are considered left to
-    right. Therefore values from rasters that are more 'to the right' are shown in the resulting raster. 
-    However, 'no data' values are transparent and in this case underlying data values are
-    shown (of rasters 'more to the left')
+    Values at equal timesteps in the contributing rasters are considered
+    starting with the leftmost input raster. Therefore, values from rasters
+    that are more 'to the right' are shown in the result. 'no data' values are
+    transparent and will show data of rasters more 'to the left'.
+
+    The temporal properties of the rasters should be equal, however spatial
+    properties can be different.
 
     Args:
-      *args (list of rasters): list of rasters to be combined.
+      *args (list of RasterBlocks): Rasters to be combined.
       
     Returns:
-      RasterBlock which shows input rasters from right to left, with 'no data' values being transparent
+      RasterBlock that combines values from the inputs.
     """
 
     def __init__(self, *args):
