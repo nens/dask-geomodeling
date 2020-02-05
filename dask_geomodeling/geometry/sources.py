@@ -3,6 +3,7 @@ Module containing geometry sources.
 """
 import fiona
 import geopandas as gpd
+from shapely.geometry import box
 
 from dask import config
 from dask_geomodeling import utils
@@ -170,7 +171,7 @@ class GeometryWKTSource(GeometryBlock):
       Geometry source
     """
 
-    def __init__(self, wkt, projection, column_name="geometry"):
+    def __init__(self, wkt, projection):
         if not isinstance(wkt, str):
             raise TypeError("'{}' object is not allowed".format(type(wkt)))
         if not isinstance(projection, str):
@@ -183,7 +184,7 @@ class GeometryWKTSource(GeometryBlock):
             utils.get_sr(projection)
         except TypeError:
             raise ValueError("The provided projection is not a valid WKT")
-        super().__init__(wkt, projection, column_name)
+        super().__init__(wkt, projection)
 
     @property
     def wkt(self):
@@ -194,21 +195,41 @@ class GeometryWKTSource(GeometryBlock):
         return self.args[1]
 
     @property
-    def column_name(self):
-        return self.args[2]
-
-    @property
     def columns(self):
-        return {self.column_name}
+        return {"geometry"}
 
     def get_sources_and_requests(self, **request):
-        # mode
         mode = request.get("mode", "intersects").lower()
         if mode not in ("extent", "intersects", "centroid"):
             raise ValueError("Unknown mode '{}'".format(mode))
         request["mode"] = mode
+        data = {"wkt": self.wkt, "projection": self.projection}
+        return [(data, None), (request, None)]
 
-        # just pass on the args and request here
-        request["layer"] = self.layer
-        request["id_field"] = self.id_field
-        return [(self.url, None), (request, None)]
+    @staticmethod
+    def process(data, request):
+        # check the filters: this block does not support lookups
+        if request.get("filters") is None:
+            request["filters"] = dict()
+        if request["filters"]:
+            for field, value in request["filters"].items():
+                if "__" in field:
+                    raise ValueError("Filter '{}' is not supported".format(field))
+
+        # TODO mode??
+        mode = request.get("mode", "intersects").lower()
+        if mode not in ("extent", "intersects", "centroid"):
+            raise ValueError("Unknown mode '{}'".format(mode))
+
+        # load the geometry and transform it into the requested projection
+        geometry = load_wkt(data["wkt"])
+        if data["projection"] != request["projection"]:
+            geometry = utils.shapely_transform(
+                geometry, data["projection"], request["projection"]
+            )
+        # take a shortcut when the geometry does not intersect the bbox
+        if not geometry.intersects(box(*request["geometry"])):
+            return {"values": None,"no_data_value": None}
+
+        values = gpd.GeoDataFrame(geometry=geometry, crs=request["projection"])
+        return {"values": values, "no_data_value": None}
