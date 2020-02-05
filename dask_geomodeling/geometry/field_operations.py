@@ -171,7 +171,7 @@ class ClassifyFromColumns(SeriesBlock):
     @staticmethod
     def process(data, value_column, bin_columns, labels, right):
         if "features" not in data or len(data["features"]) == 0:
-            return pd.Series([])
+            return pd.Series([], dtype=float)
         features = data["features"]
         values = features[value_column].values
         bins = features[bin_columns].values
@@ -180,10 +180,11 @@ class ClassifyFromColumns(SeriesBlock):
         # Check in which bin every value is. because bins may be different for
         # each value, searchsorted is not an option. We assume that bins are
         # sorted in increasing order. Checking that would be costly.
-        if right:
-            indices = np.sum(values[:, np.newaxis] > bins, axis=1)
-        else:
-            indices = np.sum(values[:, np.newaxis] >= bins, axis=1)
+        with np.errstate(invalid='ignore'):  # comparison to NaN is OK here
+            if right:
+                indices = np.sum(values[:, np.newaxis] > bins, axis=1)
+            else:
+                indices = np.sum(values[:, np.newaxis] >= bins, axis=1)
 
         # If we have e.g. 2 labels and 3 bins, the outside intervals are closed
         # any index that is 0 or 3 should become -1 (unclassified).

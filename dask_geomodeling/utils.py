@@ -610,7 +610,7 @@ def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None)
             values = None  # discard values
     elif str(values.dtype) == "category":
         # transform pandas Categorical dtype to normal dtype
-        values = pd.Series(values.get_values(), index=values.index)
+        values = pd.Series(np.asarray(values), index=values.index)
 
     if values is not None:
         if np.issubdtype(values.dtype, np.floating):

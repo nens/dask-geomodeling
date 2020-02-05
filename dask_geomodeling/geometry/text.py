@@ -120,7 +120,7 @@ class ParseTextColumn(BaseSingle):
         # Align the generated dataframe with the original. Pandas versions
         # later than 0.19 have a pd.align that could be used also.
         try:
-            extra_columns_aligned = extra_columns.loc[column.cat.codes]
+            extra_columns_aligned = extra_columns.reindex(column.cat.codes)
             extra_columns_aligned.index = f.index
         except KeyError:
             extra_columns_aligned = pd.DataFrame([], columns=key_mapping.values())
