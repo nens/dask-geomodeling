@@ -304,6 +304,7 @@ class Add(BaseMath):
       RasterBlock containing the result of function *(a+b)*
 	  
 	"""
+
     process = staticmethod(wrap_math_process_func(np.add))
 
 
@@ -473,6 +474,7 @@ class Less(BaseComparison):
     Returns:
       RasterBlock containing boolean values
     """
+
     process = staticmethod(wrap_math_process_func(np.less))
 
 

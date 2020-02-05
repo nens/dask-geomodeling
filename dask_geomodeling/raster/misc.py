@@ -676,7 +676,9 @@ class RasterizeWKT(RasterBlock):
     @property
     def extent(self):
         return tuple(
-            utils.shapely_transform(load_wkt(self.wkt), self.projection, "EPSG:4326").bounds
+            utils.shapely_transform(
+                load_wkt(self.wkt), self.projection, "EPSG:4326"
+            ).bounds
         )
 
     @property
