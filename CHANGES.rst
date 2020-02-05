@@ -5,7 +5,7 @@ Changelog of dask-geomodeling
 2.2.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Added GeometryWKTSource.
 
 
 2.2.1 (2020-02-04)
