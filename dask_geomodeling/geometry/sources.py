@@ -8,9 +8,13 @@ from dask import config
 from dask_geomodeling import utils
 from .base import GeometryBlock
 
+from shapely.errors import WKTReadingError
+from shapely.wkt import loads as load_wkt
+
+
 # this import is a copy from geopandas.io.files
 
-__all__ = ["GeometryFileSource"]
+__all__ = ["GeometryFileSource", "GeometryWKTSource"]
 
 
 class GeometryFileSource(GeometryBlock):
@@ -153,3 +157,58 @@ class GeometryFileSource(GeometryBlock):
                     )
 
             return {"projection": request["projection"], "features": f}
+
+
+class GeometryWKTSource(GeometryBlock):
+    """Converts a single geometry to a geometry source
+
+    Args:
+      wkt (string): the WKT representation of a geometry
+      projection (string): the projection of the geometry
+
+    Returns:
+      Geometry source
+    """
+
+    def __init__(self, wkt, projection, column_name="geometry"):
+        if not isinstance(wkt, str):
+            raise TypeError("'{}' object is not allowed".format(type(wkt)))
+        if not isinstance(projection, str):
+            raise TypeError("'{}' object is not allowed".format(type(projection)))
+        try:
+            load_wkt(wkt)
+        except WKTReadingError:
+            raise ValueError("The provided geometry is not a valid WKT")
+        try:
+            utils.get_sr(projection)
+        except TypeError:
+            raise ValueError("The provided projection is not a valid WKT")
+        super().__init__(wkt, projection, column_name)
+
+    @property
+    def wkt(self):
+        return self.args[0]
+
+    @property
+    def projection(self):
+        return self.args[1]
+
+    @property
+    def column_name(self):
+        return self.args[2]
+
+    @property
+    def columns(self):
+        return {self.column_name}
+
+    def get_sources_and_requests(self, **request):
+        # mode
+        mode = request.get("mode", "intersects").lower()
+        if mode not in ("extent", "intersects", "centroid"):
+            raise ValueError("Unknown mode '{}'".format(mode))
+        request["mode"] = mode
+
+        # just pass on the args and request here
+        request["layer"] = self.layer
+        request["id_field"] = self.id_field
+        return [(self.url, None), (request, None)]
