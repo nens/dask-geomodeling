@@ -5,7 +5,9 @@ Changelog of dask-geomodeling
 2.2.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Reworked the docstrings of all rasterblocks.
+
+- Renamed the 'location' parameter of raster.misc.Step to 'value'.
 
 
 2.2.1 (2020-02-04)

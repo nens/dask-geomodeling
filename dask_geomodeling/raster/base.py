@@ -1,5 +1,5 @@
 """
-Module containing the raster block base classes.
+Module containing the RasterBlock base classes.
 """
 from datetime import datetime as Datetime
 
@@ -9,7 +9,7 @@ from dask_geomodeling import Block
 class RasterBlock(Block):
     """ The base block for temporal rasters.
 
-    All raster blocks must be derived from this base class and must implement
+    All RasterBlocks must be derived from this base class and must implement
     the following attributes:
 
     - ``period``: a tuple of datetimes
