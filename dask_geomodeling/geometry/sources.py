@@ -168,7 +168,7 @@ class GeometryWKTSource(GeometryBlock):
       projection (string): the projection of the geometry
 
     Returns:
-      Geometry source
+      GeometryBlock
     """
 
     def __init__(self, wkt, projection):
@@ -199,25 +199,15 @@ class GeometryWKTSource(GeometryBlock):
         return {"geometry"}
 
     def get_sources_and_requests(self, **request):
-        mode = request.get("mode", "intersects").lower()
-        if mode not in ("extent", "intersects", "centroid"):
-            raise ValueError("Unknown mode '{}'".format(mode))
-        request["mode"] = mode
         data = {"wkt": self.wkt, "projection": self.projection}
         return [(data, None), (request, None)]
 
     @staticmethod
     def process(data, request):
-        # check the filters: this block does not support lookups
-        if request.get("filters") is None:
-            request["filters"] = dict()
-        if request["filters"]:
-            for field, value in request["filters"].items():
-                if "__" in field:
-                    raise ValueError("Filter '{}' is not supported".format(field))
+        if not request.get("filters"):
+            raise ValueError("Filter are not supported")
 
-        # TODO mode??
-        mode = request.get("mode", "intersects").lower()
+        mode = request["mode"]
         if mode not in ("extent", "intersects", "centroid"):
             raise ValueError("Unknown mode '{}'".format(mode))
 
@@ -227,9 +217,34 @@ class GeometryWKTSource(GeometryBlock):
             geometry = utils.shapely_transform(
                 geometry, data["projection"], request["projection"]
             )
-        # take a shortcut when the geometry does not intersect the bbox
-        if not geometry.intersects(box(*request["geometry"])):
-            return {"values": None,"no_data_value": None}
 
-        values = gpd.GeoDataFrame(geometry=geometry, crs=request["projection"])
-        return {"values": values, "no_data_value": None}
+        f = gpd.GeoDataFrame([geometry], crs=utils.get_crs(request["projection"]))
+
+        # compute the bounds of each geometry and filter on min_size
+        min_size = request.get("min_size")
+        if min_size:
+            bounds = f["geometry"].bounds
+            widths = bounds["maxx"] - bounds["minx"]
+            heights = bounds["maxy"] - bounds["miny"]
+            f = f[(widths > min_size) | (heights > min_size)]
+
+        if mode == 'intersects':
+            if not geometry.intersects(request["geometry"]):
+                return {
+                    "projection": request["projection"],
+                    "features": gpd.GeoDataFrame([])
+                }
+            return {"features": f, "projection": request['projection']}
+
+        elif mode == 'centroid':
+            if not geometry.centroid.intersects(request["geometry"]):
+                return {
+                        "projection": request["projection"],
+                        "features": gpd.GeoDataFrame([]),
+                    }
+            return {"features": f, "projection": request['projection']}
+
+        elif mode == 'extent':
+            if not geometry.intersects(request["geometry"]):
+                return {"projection": request["projection"], "extent": None}
+            return {"extent": tuple(geometry.bounds), "projection": request['projection']}
