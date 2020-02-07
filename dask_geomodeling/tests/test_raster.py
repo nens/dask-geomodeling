@@ -1669,7 +1669,7 @@ class TestBase(unittest.TestCase):
         self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_step(self):
-        view = raster.Step(store=self.raster, location=0)
+        view = raster.Step(store=self.raster, value=0)
         view.get_data(**self.meta_request)
         view.get_data(**self.time_request)
 
@@ -1678,17 +1678,17 @@ class TestBase(unittest.TestCase):
         self.assertIsNone(data)
 
         # right value result (store returns 7)
-        view = raster.Step(store=self.raster, left=3, right=10, location=6)
+        view = raster.Step(store=self.raster, left=3, right=10, value=6)
         data = view.get_data(**self.vals_request)
         assert_equal(data["values"], 10)
 
         # left value result
-        view = raster.Step(store=self.raster, left=3, right=10, location=8)
+        view = raster.Step(store=self.raster, left=3, right=10, value=8)
         data = view.get_data(**self.vals_request)
         assert_equal(data["values"], 3)
 
         # at value result
-        view = raster.Step(store=self.raster, at=15, location=7)
+        view = raster.Step(store=self.raster, at=15, value=7)
         data = view.get_data(**self.vals_request)
         assert_equal(data["values"], 15)
 
