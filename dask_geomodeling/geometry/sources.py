@@ -204,7 +204,7 @@ class GeometryWKTSource(GeometryBlock):
 
     @staticmethod
     def process(data, request):
-        if not request.get("filters"):
+        if request.get("filters"):
             raise ValueError("Filter are not supported")
 
         mode = request["mode"]
@@ -218,7 +218,11 @@ class GeometryWKTSource(GeometryBlock):
                 geometry, data["projection"], request["projection"]
             )
 
-        f = gpd.GeoDataFrame([geometry], crs=utils.get_crs(request["projection"]))
+        f = gpd.GeoDataFrame(
+            [geometry],
+            crs=utils.get_crs(request["projection"]),
+            columns=['geometry']
+        )
 
         # compute the bounds of each geometry and filter on min_size
         min_size = request.get("min_size")
@@ -247,4 +251,7 @@ class GeometryWKTSource(GeometryBlock):
         elif mode == 'extent':
             if not geometry.intersects(request["geometry"]):
                 return {"projection": request["projection"], "extent": None}
-            return {"extent": tuple(geometry.bounds), "projection": request['projection']}
+            return {
+                "extent": tuple(geometry.bounds),
+                "projection": request['projection']
+            }
