@@ -13,13 +13,16 @@ __all__ = ["Area"]
 
 
 class Area(SeriesBlock):
-    """Calculate the area of all features in a GeometryBlock.
+    """
+    Calculate the area of all features in a GeometryBlock.
 
-    Provide a GeometryBlock and a projection. Returns the area of all indiviudal geometric features in the input block.
+    Provide a GeometryBlock and a projection. Returns the area of all indiviudal 
+    geometric features in the input block.
     
     Args:
-      a input (GeometryBlock): Source GeometryBlock which contains the features.
-      b projection (String): Projection in which to compute the area (i.e. "epsg:28992").
+      source (GeometryBlock): Source GeometryBlock which contains the features.
+      projection (String): Projection in which to compute the area 
+        (i.e. "epsg:28992").
       
     Returns: 
     SeriesBlock with only the computed area

@@ -10,16 +10,24 @@ __all__ = ["Difference", "Intersection"]
 
 
 class Difference(BaseSingle):
-    """Calculate the geometric difference of two GeometryBlocks.
+    """
+    Calculate the geometric difference of two GeometryBlocks.
     
-    Provide two GeometryBlocks. All geometries in the source GeometryBlock will be adapted by geometries with the same id from the second GeometryBlock. The adaptation is a so called difference which means that the geometry of the source GeometryBlock which does not overlap with the second GeometryBlock is preserved. Any overlap is removed from the geometry.
+    Provide two GeometryBlocks. All geometries in the source GeometryBlock will 
+    be adapted by geometries with the same id from the second GeometryBlock. The 
+    adaptation is a so called difference which means that the geometry of the 
+    source GeometryBlock which does not overlap with the second GeometryBlock is 
+    preserved. Any overlap is removed from the geometry.
 
     Args:
-      a source geometry (GeometryBlock): Input geometry source.
-      b second geometry (GeometryBlock): The geometry source which is used to adapt the source GeometryBlock. Any overlap between this block and the source block is removed from the source geometry.
+      source (GeometryBlock): Input geometry source.
+      other (GeometryBlock): The geometry source which is used to adapt the 
+      source GeometryBlock. Any overlap between this block and the source block 
+      is removed from the source geometry.
       
     Returns:
-      The source GeometryBlock with its original features is returned. Only the geometries are altered.
+      The source GeometryBlock with its original features is returned. Only the 
+      geometries are altered.
     """
 
     def __init__(self, source, other):
@@ -79,16 +87,25 @@ class Difference(BaseSingle):
 
 
 class Intersection(BaseSingle):
-    """Calculate the geometric overlap/intersaction of two GeometryBlocks.
+    """
+    Calculate the geometric overlap/intersection of two GeometryBlocks.
     
-    Provide two GeometryBlocks. All geometries in the source GeometryBlock will be adapted by geometries with the same id from the second GeometryBlock. The adaptation is a so called intersection which means that only the part of the geometry which overlaps with the geometry in the second GeometryBlock is preserved. Non overlapping areas are removed from the geometry.
+    Provide two GeometryBlocks. All geometries in the source GeometryBlock will 
+    be adapted by geometries with the same id from the second GeometryBlock. The 
+    adaptation is a so called intersection which means that only the part of the 
+    geometry which overlaps with the geometry in the second GeometryBlock is 
+    preserved. Non overlapping areas are removed from the geometry.
 
     Args:
-      a source geometry (GeometryBlock): Input geometry source.
-      b second geometry (GeometryBlock): The geometry source which is used to adapt the source GeometryBlock. Any overlap between this block and the source block is preserved. Any areas from the source GeometryBlock which fall outside this GeometryBlock are removed.
+      source (GeometryBlock): Input geometry source.
+      other (GeometryBlock): The geometry source which is used to adapt the 
+      source GeometryBlock. Any overlap between this block and the source block 
+      is preserved. Any areas from the source GeometryBlock which fall outside 
+      this GeometryBlock are removed.
 
     Returns:
-      Source GeometryBlock with altered geometries. Only the overlapping part of the geometry with the second GeometryBlock is preserved.
+      Source GeometryBlock with altered geometries. Only the overlapping part of 
+      the geometry with the second GeometryBlock is preserved.
       """
 
     # TODO There are three modes, of which only one is currently implemented:

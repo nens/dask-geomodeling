@@ -184,13 +184,17 @@ class SeriesBlock(Block):
 
 
 class GetSeriesBlock(SeriesBlock):
-    """Obtains the values within a column from a GeometryBlock.
+    """
+    Obtain the values within a column from a GeometryBlock.
     
-    Provide a GeometryBlock with one or more columns. One of these columns can be read from the source into a SeriesBlock. This SeriesBlock can be used to run for example classifications.
+    Provide a GeometryBlock with one or more columns. One of these columns can 
+    be read from the source into a SeriesBlock. This SeriesBlock can be used to 
+    run for example classifications.
 
     Args:
-      a source (GeometryBlock): GeometryBlock with the column you want to load into the SeriesBlock.
-      b column name (string): Name of the column to load into the SeriesBlock.
+      source (GeometryBlock): GeometryBlock with the column you want to load 
+        into the SeriesBlock.
+      name (string): Name of the column to load into the SeriesBlock.
 
     Returns: 
       SeriesBlock containing the property column
@@ -218,18 +222,27 @@ class GetSeriesBlock(SeriesBlock):
 
 
 class SetSeriesBlock(GeometryBlock):
-    """Add one or multiple columns (SeriesBlocks) to a GeometryBlock.
+    """
+    Add one or multiple columns (SeriesBlocks) to a GeometryBlock.
     
-    Provide the GeometryBlock which you want to add more data to. Then provide the SeriesBlock(s) which you want to add to the GeometryBlock. The values of the SeriesBlock will be added to the right features in the GeometryBlock automatically (assuming they are either constant or derived from the same geometries in previous operations).
+    Provide the GeometryBlock which you want to add more data to. Then provide 
+    the SeriesBlock(s) which you want to add to the GeometryBlock. The values of 
+    the SeriesBlock will be added to the right features in the GeometryBlock 
+    automatically (assuming they are either constant or derived from the same 
+    geometries in previous operations).
 
     Args:
-      a source (GeometryBlock): The base GeometryBlock where the SeriesBlock is added to as a new column.
-      b destination column name(string): The name of the new column where the SeriesBlock is inserted.
-      c value to be inserted (string or SeriesBlock): The seriesblock or constant value which has to filled in the destination column. 
+      source (GeometryBlock): The base GeometryBlock where the SeriesBlock is 
+        added to as a new column.
+      column(string): The name of the new column where the SeriesBlock is 
+        inserted.
+      value (string or SeriesBlock): The seriesblock or constant value which has
+        to be filled in the destination column. 
       *args: It is posible to repeat b and c multiple times 
 
     Example:
-      SetSeriesBlock(view, 'column_1', series_1, 'column_2', series_2). Like this it is possible to set multiple columns in one operation. 
+      SetSeriesBlock(view, 'column_1', series_1, 'column_2', series_2). Like 
+      this it is possible to set multiple columns in one operation. 
 
     Returns:
       The source GeometryBlock with additional property columns

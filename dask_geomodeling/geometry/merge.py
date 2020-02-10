@@ -10,22 +10,46 @@ __all__ = ["MergeGeometryBlocks"]
 
 
 class MergeGeometryBlocks(GeometryBlock):
-    """Merge two GeometryBlocks into one by index
+    """
+    Merge two GeometryBlocks into one by index
     
-    Provide two GeometryBlocks with the same original source to make sure they can be matched on index. The additional SeriesBlocks which have been added to the GeometryBlock will be combined to one GeometryBlock which contains all the information.
+    Provide two GeometryBlocks with the same original source to make sure they 
+    can be matched on index. The additional SeriesBlocks which have been added
+    to the GeometryBlock will be combined to one GeometryBlock which contains 
+    all the information.
     
     Args:
-      a left (GeometryBlock): One of the two GeometryBlocks which will be combined.
-      b right (GeometryBlock): The second of the GeometryBlocks which will be combined.
-      c how parameter (string): The parameter which describes how the merge should be performed. There are four options:
-        1. ``left``: The left GeometryBlock is used as base. The outcome GeometryBlock will have all the features which were present in the left GeometryBlock, no matter the features in the right GeometryBlock. If a feature is absent in the right GeometryBlock empty SeriesBlocks will be added. If a feature is present in the right GeometryBlock only it will be ignored.
-        2. ``right``: The right GeometryBlock is used as base. The outcome GeometryBlock will have all the features which were present in the right GeometryBlock, no matter the features in the left GeometryBlock. If a feature is absent in the left GeometryBlock empty SeriesBlocks will be added. If a feature is present in the left GeometryBlock only it will be ignored.
-        3. ``inner``: The outcome will contain all the features which are present in both GeometryBlocks. Features which are absent in one of the GeometryBlocks will be absent in the outcome. (Default setting)
-        4. ``outer``: The outcome will contain all the features which are present in either GeometryBlock. 
-      d column suffixes (Tuple): Text to be added to the column (SeriesBlock) names to distinguish whether they originate from the left or right GeometryBlock. Example: '('_left','_right')' will result in adding the words left and right to their respective GeometryBlocks. Default: ('','_right').
+      left (GeometryBlock): One of the two GeometryBlocks which will be combined.
+      right (GeometryBlock): The second of the GeometryBlocks which will be combined.
+      how (string, optional): The parameter which describes how the merge should 
+      be performed. There are four options:
+        1. ``left``: The left GeometryBlock is used as base. The outcome 
+        GeometryBlock will have all the features which were present in the left 
+        GeometryBlock, no matter the features in the right GeometryBlock. If a 
+        feature is absent in the right GeometryBlock empty SeriesBlocks will be 
+        added. If a feature is present in the right GeometryBlock only it will 
+        be ignored.
+        2. ``right``: The right GeometryBlock is used as base. The outcome 
+        GeometryBlock will have all the features which were present in the right 
+        GeometryBlock, no matter the features in the left GeometryBlock. If a 
+        feature is absent in the left GeometryBlock empty SeriesBlocks will be 
+        added. If a feature is present in the left GeometryBlock only it will be
+        ignored.
+        3. ``inner``: The outcome will contain all the features which are 
+        present in both GeometryBlocks. Features which are absent in one of the 
+        GeometryBlocks will be absent in the outcome. (Default setting)
+        4. ``outer``: The outcome will contain all the features which are 
+        present in either GeometryBlock. 
+      suffixes (Tuple, optional): Text to be added to the column (SeriesBlock) 
+        names to distinguish whether they originate from the left or right 
+        GeometryBlock. Example: "('_left','_right')" will result in adding the 
+        words left and right to their respective GeometryBlocks. Default: 
+        ('','_right').
 
     Returns:
-      Combined GeometryBlock which contains a combination of columns/SeriesBlocks from the two input GeometryBlocks. Depending on the how parameter different features may be included. 
+      Combined GeometryBlock which contains a combination of columns/
+      SeriesBlocks from the two input GeometryBlocks. Depending on the how 
+      parameter different features may be included. 
     """
 
     allow_how_joins = ("left", "right", "outer", "inner")
