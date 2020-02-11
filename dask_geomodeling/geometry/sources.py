@@ -204,8 +204,6 @@ class GeometryWKTSource(GeometryBlock):
 
     @staticmethod
     def process(data, request):
-        if request.get("filters"):
-            raise ValueError("Filter are not supported")
 
         mode = request["mode"]
         if mode not in ("extent", "intersects", "centroid"):
@@ -227,10 +225,12 @@ class GeometryWKTSource(GeometryBlock):
         # compute the bounds of each geometry and filter on min_size
         min_size = request.get("min_size")
         if min_size:
-            bounds = f["geometry"].bounds
-            widths = bounds["maxx"] - bounds["minx"]
-            heights = bounds["maxy"] - bounds["miny"]
-            f = f[(widths > min_size) | (heights > min_size)]
+            minx, miny, maxx, maxy = geometry.bounds
+            if (maxy - miny) < min_size or (maxx - minx) < min_size:
+                return {
+                    "projection": request["projection"],
+                    "features": gpd.GeoDataFrame([])
+                }
 
         if mode == 'intersects':
             if not geometry.intersects(request["geometry"]):

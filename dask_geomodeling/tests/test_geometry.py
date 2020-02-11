@@ -404,13 +404,6 @@ class TestGeometryWktSource(unittest.TestCase):
             projection=self.projection,
         )
 
-    def test_geometry_wkt_source_vals_filters_no_supported(self):
-        view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
-        self.request['filters'] = dict(name='test')
-        with self.assertRaises(ValueError) as ctx:
-            view.get_data(**self.request)
-        self.assertEqual("Filter are not supported", str(ctx.exception))
-
     def test_geometry_wkt_source_vals_wrong_mode(self):
         self.request['mode'] = 'jose'
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
@@ -420,6 +413,20 @@ class TestGeometryWktSource(unittest.TestCase):
 
     def test_geometry_wkt_source_vals(self):
         self.request['mode'] = 'intersects'
+        assert self.geometry.intersects(self.request["geometry"])
+        assert self.geometry.centroid.intersects(self.request["geometry"])
+        view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
+        actual = view.get_data(**self.request)
+        assert actual["features"]['geometry'][0].wkt == self.geometry.wkt
+
+    def test_geometry_wkt_source_vals_intersects_not_centroid(self):
+        self.request['mode'] = 'intersects'
+        self.geometry = shapely_transform(
+            box(135001, 455998, 135002.5, 455999.5),
+            "EPSG:28992", self.projection
+        )
+        assert self.geometry.intersects(self.request["geometry"])
+        assert not self.geometry.centroid.intersects(self.request["geometry"])
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
         assert actual["features"]['geometry'][0].wkt == self.geometry.wkt
@@ -430,15 +437,31 @@ class TestGeometryWktSource(unittest.TestCase):
             box(135100.5, 455998, 135101.5, 455999.5),
             "EPSG:28992", self.projection
         )
+        assert not self.geometry.intersects(self.request["geometry"])
+        assert not self.geometry.centroid.intersects(self.request["geometry"])
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
         assert actual["features"].empty
 
     def test_geometry_wkt_source_vals_mode_centroid(self):
         self.request['mode'] = 'centroid'
+        assert self.geometry.intersects(self.request["geometry"])
+        assert self.geometry.centroid.intersects(self.request["geometry"])
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
         assert actual["features"]['geometry'][0].wkt == self.geometry.wkt
+
+    def test_geometry_wkt_source_vals_intersects_centroid_empty(self):
+        self.request['mode'] = 'centroid'
+        self.geometry = shapely_transform(
+            box(135001, 455998, 135002.5, 455999.5),
+            "EPSG:28992", self.projection
+        )
+        assert self.geometry.intersects(self.request["geometry"])
+        assert not self.geometry.centroid.intersects(self.request["geometry"])
+        view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
+        actual = view.get_data(**self.request)
+        assert actual["features"].empty
 
     def test_geometry_wkt_source_vals_centroid_empty(self):
         self.request['mode'] = 'centroid'
@@ -446,6 +469,8 @@ class TestGeometryWktSource(unittest.TestCase):
             box(135100.5, 455998, 135101.5, 455999.5),
             "EPSG:28992", self.projection
         )
+        assert not self.geometry.intersects(self.request["geometry"])
+        assert not self.geometry.centroid.intersects(self.request["geometry"])
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
         assert actual["features"].empty
