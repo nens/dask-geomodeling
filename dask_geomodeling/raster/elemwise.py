@@ -28,6 +28,18 @@ __all__ = [
     "Xor",
     "IsData",
     "IsNoData",
+    "ArgMax",
+    "ArgMin",
+    "CountData",
+    "Max",
+    "Mean",
+    "Median",
+    "Min",
+    "Product",
+    "Std",
+    "Sum",
+    "Variance",
+    "Round",
 ]
 
 
@@ -276,6 +288,9 @@ def wrap_math_process_func(func):
             else:
                 fillvalue = False
             func_kwargs = {}
+        elif dtype == np.dtype("float32"):
+            func_kwargs = {}
+            no_data_value = fillvalue        
         else:
             func_kwargs = {"dtype": dtype}
             no_data_value = fillvalue
@@ -369,6 +384,32 @@ class Divide(BaseMath):
     def dtype(self):
         # use at least float32
         return np.result_type(np.float32, *self.args)
+
+
+class Round(BaseMath):
+    """
+    Round a raster to the given number of decimals.
+
+    Either one or both of the inputs should be a RasterBlock. In case of
+    two raster inputs the temporal properties of the rasters should be equal,
+    however spatial properties can be different.
+
+    Args:
+      a (RasterBlock, number): Base raster with decimal values
+      b (RasterBlock, number): Whole number of decimals
+      
+    Returns:
+      RasterBlock containing the result of the rounded function. 
+    """
+
+    process = staticmethod(wrap_math_process_func(np.round))
+
+    def __init__(self, a, decimals=0):
+        if not isinstance(a, RasterBlock):
+            raise TypeError("'{}' object is not allowed.".format(type(a)))
+        if not isinstance(decimals, int):
+            raise TypeError("'{}' object is not allowed.".format(type(b)))
+        super(Round, self).__init__(a, decimals)
 
 
 class Power(BaseMath):
@@ -714,9 +755,7 @@ class FillNoData(BaseElementwise):
                 raise TypeError("'{}' object is not allowed".format(type(arg)))
         super(FillNoData, self).__init__(*args)
 
-    @staticmethod
-    def process(*args):
-        """Combine data, filling in nodata values."""
+    def preprocess(*args):
         data_list = []
         no_data_values = []
         for data in args:
@@ -735,11 +774,141 @@ class FillNoData(BaseElementwise):
 
         # initialize values array
         values = np.full(data_list[0].shape, fillvalue, dtype=dtype)
-
         # populate values array
+        multivalues = []
         for data, no_data_value in zip(data_list, no_data_values):
+            # initialize values array
+            array_values = np.full(data_list[0].shape, np.nan, dtype=dtype)
             # index is where the source has data
             index = get_index(data, no_data_value)
-            values[index] = data[index]
+            array_values[index] = data[index]
+            multivalues.append(array_values)
+        return {"values": values, "no_data_value": fillvalue}, multivalues
 
+    @staticmethod
+    def process(*args):
+        """Combine data, filling in nodata values."""
+        values_fillvalue, _ = FillNoData.preprocess(*args)
+        return values_fillvalue
+
+
+class ArgMax(FillNoData):
+    """Compare multiple rasters to return the element-wise indices of the maximum values (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        """Combine data, filling in nodata values."""
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = 255
+        values = np.nanargmax(multivalues, axis=0)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class ArgMin(FillNoData):
+    """Compare multiple rasters to return the element-wise indices of the minimum values (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = 255
+        values = np.nanargmin(multivalues, axis=0)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class CountData(FillNoData):
+    """Compare multiple rasters to return the element-wise count of data occurrence (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = 255
+        values = np.count_nonzero(~np.isnan(multivalues), axis=0)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Max(FillNoData):
+    """Compares the values of multiple rasters and returns element-wise max (ignorese partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nanmax(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Mean(FillNoData):
+    """Compares the values of multiple rasters and returns element-wise mean (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nanmean(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Median(FillNoData):
+    """Compares the values of multiple rasters and returns element-wise median (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nanmedian(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Min(FillNoData):
+    """Compares the values of multiple rasters and returns element-wise min (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nanmin(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Product(FillNoData):
+    """Compare multiple rasters to return the element-wise product (partial NoData are set to 1)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nanprod(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Std(FillNoData):
+    """Compare multiple rasters to return the element-wise standard deviations (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nanstd(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Sum(FillNoData):
+    """Compare multiple rasters to return the element-wise summed values (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nansum(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
+        return {"values": values, "no_data_value": fillvalue}
+
+
+class Variance(FillNoData):
+    """Compare multiple rasters to return the element-wise variance values (ignores partial NoData)."""
+    @staticmethod
+    def process(self, *args):
+        values_fillvalue, multivalues = FillNoData.preprocess(*args)
+        fillvalue = values_fillvalue["no_data_value"]
+        values = np.nanvar(multivalues, axis=0, keepdims=True)
+        values[np.isnan(values)] = fillvalue 
         return {"values": values, "no_data_value": fillvalue}
