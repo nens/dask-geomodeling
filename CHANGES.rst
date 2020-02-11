@@ -5,6 +5,8 @@ Changelog of dask-geomodeling
 2.2.2 (unreleased)
 ------------------
 
+- Added GeometryWKTSource.
+
 - Reworked the docstrings of all rasterblocks.
 
 - Renamed the 'location' parameter of raster.misc.Step to 'value'.
