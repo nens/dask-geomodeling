@@ -104,7 +104,7 @@ class Dilate(BaseSingle):
     """
     Perform spatial dilation on specific cell values.
 
-    Cells with values in the supplied list are spatially dilated by one cell
+    Cells with values in the supplied list are spatially dilated
     in each direction, including diagonals.
 
     Dilation is performed in the order of the values parameter.
@@ -112,6 +112,7 @@ class Dilate(BaseSingle):
     Args:
       store (RasterBlock): Raster to perform dilation on.
       values (list): Only cells with these values are dilated.
+      radius: Size of radius. Default is 1. The radius is the same for all values.
 
     Returns:
       RasterBlock where cells in values list are dilated.
@@ -119,31 +120,34 @@ class Dilate(BaseSingle):
     See also:
       https://en.wikipedia.org/wiki/Dilation_%28morphology%29
     """
-
-    def __init__(self, store, values):
+    def __init__(self, store, values, radius=1):
         values = np.asarray(values, dtype=store.dtype)
-        super(Dilate, self).__init__(store, values)
+        super(Dilate, self).__init__(store, values, radius)
 
     @property
     def values(self):
         return self.args[1]
 
+    @property
+    def radius(self):
+        return self.args[2]
+
     def get_sources_and_requests(self, **request):
-        new_request = expand_request_pixels(request, radius=1)
+        new_request = expand_request_pixels(request, radius=self.radius)
         if new_request is None:  # not an expandable request: do nothing
             return [(self.store, request)]
         else:
             return [(self.store, new_request), (self.values, None)]
 
     @staticmethod
-    def process(data, values=None):
+    def process(data, values=None, radius=1):
         if data is None or values is None or "values" not in data:
             return data
         original = data["values"]
         dilated = original.copy()
         for value in values:
             dilated[ndimage.binary_dilation(original == value)] = value
-        dilated = dilated[:, 1:-1, 1:-1]
+        dilated = dilated[:, radius:-radius, radius:-radius]
         return {"values": dilated, "no_data_value": data["no_data_value"]}
 
 
