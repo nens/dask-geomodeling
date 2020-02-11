@@ -395,8 +395,8 @@ class Round(BaseMath):
     however spatial properties can be different.
 
     Args:
-      a (RasterBlock, number): Base raster with decimal values
-      b (RasterBlock, number): Whole number of decimals
+      RasterBlock: Base raster with decimal values
+      decimals: Whole number of decimals
       
     Returns:
       RasterBlock containing the result of the rounded function. 
@@ -408,7 +408,7 @@ class Round(BaseMath):
         if not isinstance(a, RasterBlock):
             raise TypeError("'{}' object is not allowed.".format(type(a)))
         if not isinstance(decimals, int):
-            raise TypeError("'{}' object is not allowed.".format(type(b)))
+            raise TypeError("'{}' object is not allowed.".format(type(decimals)))
         super(Round, self).__init__(a, decimals)
 
 
