@@ -3,6 +3,7 @@ Module containing miscellaneous raster blocks.
 """
 from osgeo import ogr
 import numpy as np
+import random
 from geopandas import GeoSeries
 
 from shapely.geometry import box
@@ -21,7 +22,9 @@ __all__ = [
     "Classify",
     "Reclassify",
     "Mask",
+    "MaskAbove",
     "MaskBelow",
+    "MaskRandom",
     "Step",
     "Rasterize",
     "RasterizeWKT",
@@ -163,6 +166,35 @@ class Mask(BaseSingle):
         return {"values": values, "no_data_value": fillvalue}
 
 
+class MaskAbove(BaseSingle):
+    """
+    Converts raster cells above the supplied value to 'no data'.
+
+    Raster cells with values lower than or equal to the supplied value are
+    returned unchanged.
+    
+    Args:
+      store (RasterBlock): The raster whose values are to be masked.
+      value (number): The constant value above which values are masked.
+    
+    Returns:
+      RasterBlock with cells below the input value converted to 'no data'.
+    """
+
+    def __init__(self, store, value):
+        if not isinstance(value, (float, int)):
+            raise TypeError("'{}' object is not allowed".format(type(value)))
+        super(MaskAbove, self).__init__(store, value)
+
+    @staticmethod
+    def process(data, value):
+        if data is None or "values" not in data:
+            return data
+        values, no_data_value = data["values"].copy(), data["no_data_value"]
+        values[values > value] = no_data_value
+        return {"values": values, "no_data_value": no_data_value}
+
+
 class MaskBelow(BaseSingle):
     """
     Converts raster cells below the supplied value to 'no data'.
@@ -190,6 +222,46 @@ class MaskBelow(BaseSingle):
         values, no_data_value = data["values"].copy(), data["no_data_value"]
         values[values < value] = no_data_value
         return {"values": values, "no_data_value": no_data_value}
+
+
+class MaskRandom(BaseSingle):
+    """
+    Replace values in a raster with a random number between 0 and 1. 'no data' values
+    are preserved.
+
+    Args:
+      store (RasterBlock): The raster whose values are to be converted.
+
+    Returns:
+      RasterBlock containing a single value
+    """
+
+    def __init__(self, store):
+        super(MaskRandom, self).__init__(store)
+
+    @property
+    def fillvalue(self):
+        return 255
+
+    @property
+    def dtype(self):
+        return "float32"
+
+    @staticmethod
+    def process(data):
+        if data is None or "values" not in data:
+            return data
+
+        index = utils.get_index(
+            values=data["values"], no_data_value=data["no_data_value"]
+        )
+
+        fillvalue = 255
+        dtype = "float32"
+
+        values = np.full_like(data["values"], fillvalue, dtype=dtype)
+        values[index] = random.random()
+        return {"values": values, "no_data_value": fillvalue}
 
 
 class Step(BaseSingle):
