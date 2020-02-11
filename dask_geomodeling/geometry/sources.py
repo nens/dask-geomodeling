@@ -217,9 +217,8 @@ class GeometryWKTSource(GeometryBlock):
             )
 
         f = gpd.GeoDataFrame(
-            [geometry],
+            geometry=[geometry],
             crs=utils.get_crs(request["projection"]),
-            columns=['geometry']
         )
 
         # compute the bounds of each geometry and filter on min_size
