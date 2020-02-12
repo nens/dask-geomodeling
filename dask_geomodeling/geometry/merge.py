@@ -10,22 +10,37 @@ __all__ = ["MergeGeometryBlocks"]
 
 
 class MergeGeometryBlocks(GeometryBlock):
-    """Merge two GeometryBlocks into one by index
+    """
+    Merge two GeometryBlocks into one by index
+    
+    Provide two GeometryBlocks with the same original source to make sure they 
+    can be matched on index. The additional SeriesBlocks that have been added
+    to the GeometryBlock will be combined to one GeometryBlock that contains
+    all the information.
+    
+    Args:
+      left (GeometryBlock): The left GeometryBlock to be combined.
+      right (GeometryBlock): The right GeometryBlock to be combined.
+      how (str, optional): The parameter that describes how the merge should
+        be performed. There are four options:
+        1. ``"left"``: The resulting GeometryBlock will have all the features
+           that are present in the left GeometryBlock, no matter the features
+           in the right GeometryBlock.
+        2. ``"right"``: The resulting GeometryBlock will have all the features
+           that are present in the right GeometryBlock, no matter the features
+           in the left GeometryBlock.
+        3. ``"inner"`` (default): The outcome will contain all the features
+           that are present in both input GeometryBlocks. Features that are
+           absent in one of the GeometryBlocks will be absent in the result.
+        4. ``outer``: The result will contain all the features which are
+           present in one of the input GeometryBlocs.
+      suffixes (tuple, optional): Text to be added to the column
+        names to distinguish whether they originate from the left or right 
+        GeometryBlock. Default: ``("", "_right")``.
 
-    :param left: left geometry data to merge
-    :param right: right geometry data to merge
-    :param how: type of merge to be performed. One of ``‘left’, ‘right’,
-      ‘outer’, ‘inner'``. Default ``‘inner’``.
-    :param suffixes: suffix to apply to overlapping column names in the left
-      and right side, respectively. Default ``('', '_right')``.
-
-    :type left: GeometryBlock
-    :type right: GeometryBlock
-    :type how: string
-    :type suffixes: tuple
-
-    See also merge:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.merge.html
+    Returns:
+      GeometryBlock that contains a combination of features and columns of the
+      two input GeometryBlocks.
     """
 
     allow_how_joins = ("left", "right", "outer", "inner")

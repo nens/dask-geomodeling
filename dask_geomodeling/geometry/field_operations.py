@@ -33,25 +33,40 @@ __all__ = [
 
 
 class Classify(BaseSingleSeries):
-    """Classify a continuous-valued property into binned categories
+    """
+    Classify a value column into different bins
 
-    :param source: source data to classify
-    :param bins: a 1-dimensional and monotonic list of bins.
-      How values outside of the bins are classified, depends on the length of
-      the labels. If len(labels) = len(bins) - 1, then values outside of the
-      bins are classified to NaN. If len(labels) = len(bins) + 1, then values
-      outside of the bins are classified to the first and last elements of the
-      labels list.
-    :param labels: the labels for the returned bins
-    :param right: whether the intervals include the right or the left bin edge
+    For example: every value below 3 becomes "A", every value between 3 and 5
+    becomes "B", and every value above 5 becomes "C".
 
-    :type source: SeriesBlock
-    :type bins: list
-    :type labels: list
-    :type right: boolean
+    The provided SeriesBlock will be classified according to the given
+    classification parameters. These parameters consist of two lists, one with
+    the edges of the classification bins (i.e. ``[3, 5]``) and one with the
+    desired class output (i.e. ``["A", "B", "C"]``). The input data is then
+    compared to the classification bins. In this example a value 1 is below 3
+    so it gets class ``"A"``. A value 4 is between 3 and 5 so it gets label
+    ``"B"``.
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/version/0.23.4/generated/pandas.cut.html
+    How values outside of the bins are classified depends on the length of the
+    labels list. If the length of the labels equals the length of the binedges
+    plus 1 (the above example), then values outside of the bins are classified
+    to the first and last elements of the labels list. If the length of the
+    labels equals the length of the bins minus 1, then values outside of the
+    bins are classified to 'no data'.
+
+    Args:
+      source (SeriesBlock): The (numeric) data which should be classified.
+      bins (list): The edges of the classification intervals
+        (i.e. ``[3, 5]``).
+      labels (list): The classification returned if a value falls in a specific
+        bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
+        larger or one less than the length of the ``bins`` argument.
+      right (boolean, optional): Determines what side of the intervals are
+        closed. Defaults to True (the right side of the bin is closed so a
+        value assigned to the bin on the left if it is exactly on a bin edge).
+
+    Returns:
+      A SeriesBlock with classified values instead of the original numbers.
     """
 
     def __init__(self, source, bins, labels, right=True):
@@ -105,25 +120,31 @@ class Classify(BaseSingleSeries):
 
 
 class ClassifyFromColumns(SeriesBlock):
-    """Classify a continuous-valued property based on bins located in different
-    columns.
+    """
+    Classify a continuous-valued geometry property based on bins located in 
+    other columns.
+    
+    See :class:``dask_geomodeling.geometry.field_operations.Classify`` for
+    further information.
 
-    :param source: geometry source to classify
-    :param value_column: the column name that contains values to classify
-    :param bin_columns: column names in which the bins are stored.
-      The bins values need to be sorted in increasing order.
-    :param labels: specifies the labels for the returned bins
-    :param right: whether the intervals include the right or the left bin edge
-      Default True.
+    Args:
+      source (GeometryBlock):The GeometryBlock which contains the column which 
+        should be clasified as well as columns with the bin edges.
+      value_column (str): The column with (float) data which should be
+        classified.
+      bin_columns (list): A list of columns that contain the bins for the
+        classification. The order of the columns should be from low to high
+        values.
+      labels (list): The classification returned if a value falls in a specific
+        bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
+        larger or one less than the length of the ``bins`` argument.
+      right (boolean, optional): Determines what side of the intervals are
+        closed. Defaults to True (the right side of the bin is closed so a
+        value assigned to the bin on the left if it is exactly on a bin edge).
 
-    :type source: GeometryBlock
-    :type value_column: string
-    :type bin_columns: list
-    :type labels: list
-    :type right: boolean
+    Returns:
+      A SeriesBlock with classified values instead of the original floats.
 
-    See also:
-      :class:`dask_geomodeling.geometry.field_operations.Classify`
     """
 
     def __init__(self, source, value_column, bin_columns, labels, right=True):
@@ -217,14 +238,15 @@ class BaseFieldOperation(BaseSingleSeries):
 
 
 class Add(BaseFieldOperation):
-    """
-    Addition of series and other, element-wise.
+    """ 
+    Element-wise addition of SeriesBlock or number to another SeriesBlock.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
-
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.add.html
+    Args:
+      source (SeriesBlock): First addition term
+      other (SeriesBlock or number): Second addition term
+    
+    Returns:
+      SeriesBlock
     """
 
     process = staticmethod(operator.add)
@@ -232,13 +254,17 @@ class Add(BaseFieldOperation):
 
 class Subtract(BaseFieldOperation):
     """
-    Subtraction of series and other, element-wise.
+    Element-wise subtraction of SeriesBlock or number with another SeriesBlock.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Note that if you want to subtract a SeriesBlock from a constant value (like
+    ``4 - series``, you have to do ``Add(Multiply(series, -1), 4)``.
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.subtract.html
+    Args:
+      source (SeriesBlock): First subtraction term
+      other (SeriesBlock or number): Second subtraction term
+
+    Returns:
+      SeriesBlock
     """
 
     process = staticmethod(operator.sub)
@@ -246,30 +272,33 @@ class Subtract(BaseFieldOperation):
 
 class Multiply(BaseFieldOperation):
     """
-    Multiplication of series and other, element-wise.
+    Element-wise multiplication of SeriesBlock or number with another
+    SeriesBlock.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Args:
+      source (SeriesBlock): First multiplication factor
+      other (SeriesBlock or number): Second multiplication factor
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.multiply.html
+    Returns:
+      SeriesBlock
     """
 
     process = staticmethod(operator.mul)
 
 
 class Divide(BaseFieldOperation):
-    """
-    Floating division of series and other, element-wise.
+    """ 
+    Element-wise division of SeriesBlock or number with another SeriesBlock.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Note that if you want to divide a constant value by a SeriesBlock (like
+    ``3 / series``, you have to do ``Multiply(3, Power(series, -1))``.
 
-    Putting source in the divisor is not possible: please use the Power
-    for that instead.
+    Args:
+      source (SeriesBlock): Numerator
+      other (SeriesBlock or number): Denominator
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.divide.html
+    Returns:
+      SeriesBlock
     """
 
     process = staticmethod(operator.truediv)
@@ -277,13 +306,18 @@ class Divide(BaseFieldOperation):
 
 class FloorDivide(BaseFieldOperation):
     """
-    Integer (floor) division of series and other, element-wise.
+    Element-wise integer division of SeriesBlock or number with another
+    SeriesBlock.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    The outcome of the division is converted to the closest integer below (i.e.
+    3.4 becomes 3, 3.9 becomes 3 and -3.4 becomes -4)
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.floordiv.html
+    Args:
+      source (SeriesBlock): Numerator
+      other (SeriesBlock or number): Denominator
+
+    Returns:
+      SeriesBlock
     """
 
     process = staticmethod(operator.floordiv)
@@ -291,15 +325,18 @@ class FloorDivide(BaseFieldOperation):
 
 class Power(BaseFieldOperation):
     """
-    Power (exponent) of series and other, element-wise.
+    Element-wise raise a SeriesBlock to the power of a number or another
+    SeriesBlock.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    For example, the inputs ``[2, 4]`` and ``2`` will give output ``[4, 16]``.
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.pow.html
+    Args:
+      source (SeriesBlock): Base
+      other (SeriesBlock or number): Exponent
+
+    Returns:
+      SeriesBlock
     """
-
     def __init__(self, source, other):
         # the float(other) will raise a TypeError if necessary
         super().__init__(source, float(other))
@@ -309,13 +346,19 @@ class Power(BaseFieldOperation):
 
 class Modulo(BaseFieldOperation):
     """
-    Modulo of series and other, element-wise.
+    Element-wise modulo (remainder after division) of SeriesBlock or number
+    with another SeriesBlock.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Example: if the input is ``[31, 5.3, -4]`` and the modulus is ``3``, the
+    outcome would be ``[1, 2.3, 2]``. The outcome is always postive and less
+    than the modulus.
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.mod.html
+    Args:
+      source (SeriesBlock): Number
+      other (SeriesBlock or number): Modulus
+
+    Returns:
+      SeriesBlock
     """
 
     process = staticmethod(operator.mod)
@@ -323,13 +366,17 @@ class Modulo(BaseFieldOperation):
 
 class Equal(BaseFieldOperation):
     """
-    Equal to of series and other, element-wise.
+    Determine whether a SeriesBlock and a second SeriesBlock or a constant
+    value are equal.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Note that 'no data' does not equal 'no data'.
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.eq.html
+    Args:
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
+
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.eq)
@@ -337,13 +384,17 @@ class Equal(BaseFieldOperation):
 
 class NotEqual(BaseFieldOperation):
     """
-    Not equal to of series and other, element-wise.
+    Determine whether a SeriesBlock and a second SeriesBlock or a constant 
+    value are not equal.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Note that 'no data' does not equal 'no data'.
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.ne.html
+    Args:
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
+
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.ne)
@@ -351,13 +402,15 @@ class NotEqual(BaseFieldOperation):
 
 class Greater(BaseFieldOperation):
     """
-    Greater than of series and other, element-wise.
+    Determine for each value in a SeriesBlock whether it is greater than a
+    comparison value from a SeriesBlock or constant.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Args:
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.gt.html
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.gt)
@@ -365,13 +418,15 @@ class Greater(BaseFieldOperation):
 
 class GreaterEqual(BaseFieldOperation):
     """
-    Greater than or equal to of series and other, element-wise.
+    Determine for each value in a SeriesBlock whether it is greater than or
+    equal to a comparison value from a SeriesBlock or constant.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    Args:
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.ge.html
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.ge)
@@ -379,13 +434,15 @@ class GreaterEqual(BaseFieldOperation):
 
 class Less(BaseFieldOperation):
     """
-    Less than of series and other, element-wise.
+    Determine for each value in a SeriesBlock whether it is less than a
+    comparison value from a SeriesBlock or constant.
+    
+    Args:
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
-
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.lt.html
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.lt)
@@ -393,13 +450,15 @@ class Less(BaseFieldOperation):
 
 class LessEqual(BaseFieldOperation):
     """
-    Less than or equal to of series and other, element-wise.
+    Determine for each value in a SeriesBlock whether it is less than or equal
+    to a comparison value from a SeriesBlock or constant.
+    
+    Args:
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
-
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.le.html
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.le)
@@ -416,10 +475,17 @@ class BaseLogicOperation(BaseFieldOperation):
 
 class And(BaseLogicOperation):
     """
-    Logical AND between series and other.
+    Perform an elementwise logical AND between two SeriesBlocks.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    If a feature has a True value in both SeriesBlocks, True is returned, else
+    False is returned.
+
+    Args:
+      source (SeriesBlock): First boolean term
+      other (SeriesBlock): Second boolean term
+    
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.and_)
@@ -427,10 +493,17 @@ class And(BaseLogicOperation):
 
 class Or(BaseLogicOperation):
     """
-    Logical OR between series and other.
+    Perform an elementwise logical OR between two SeriesBlocks.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    If a feature has a True value in any of the input SeriesBlocks, True is
+    returned, else False is returned.
+
+    Args:
+      source (SeriesBlock): First boolean term
+      other (SeriesBlock): Second boolean term
+
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.or_)
@@ -438,10 +511,17 @@ class Or(BaseLogicOperation):
 
 class Xor(BaseLogicOperation):
     """
-    Logical XOR between series and other.
+    Perform an elementwise logical exclusive OR between two SeriesBlocks.
 
-    :type source: SeriesBlock
-    :type other: SeriesBlock, float
+    If a feature has a True value in precisely one of the input SeriesBlocks,
+    True is returned, else False is returned.
+
+    Args:
+      source (SeriesBlock): First boolean term
+      other (SeriesBlock): Second boolean term
+
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.xor)
@@ -449,28 +529,39 @@ class Xor(BaseLogicOperation):
 
 class Invert(BaseSingleSeries):
     """
-    Logical NOT operation on a series.
+    Invert a boolean SeriesBlock (swap True and False)
 
-    :type source: SeriesBlock
+    Args:
+      source (SeriesBlock): SeriesBlock with boolean values.
+      
+    Returns:
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.inv)
 
 
 class Where(BaseSingleSeries):
-    """Replace values where the condition is False.
+    """
+    Replace values in a SeriesBlock where values in another SeriesBlock are
+    False.
 
-    :param source: source data
-    :param cond: condition that determines whether to keep values from source
-    :param other: entries where cond is False are replaced with the
-      corresponding value from other.
+    Provide a source SeriesBlock, a conditional SeriesBlock (True/False) and a
+    replacement value which can either be a SeriesBlock or a constant value.
+    All entries in the source that correspond to a True value in the
+    conditional are left unchanged. The values in the source that correspond to
+    a False value in the conditional are replaced with the value from 'other'.
 
-    :type source: SeriesBlock
-    :type cond: SeriesBlock
-    :type other: SeriesBlock, scalar
-
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.where.html
+    Args:
+      source (SeriesBlock): Source SeriesBlock that is going to be updated
+      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated.
+      other (SeriesBlock or constant): The value that should be used as a
+        replacement for the source SeriesBlock where the conditional
+        SeriesBlock is False.
+      
+    Returns:
+      SeriesBlock with updated values where condition is False.
     """
 
     def __init__(self, source, cond, other):
@@ -492,19 +583,26 @@ class Where(BaseSingleSeries):
 
 
 class Mask(BaseSingleSeries):
-    """Replace values where the condition is True.
+    """
+    Replace values in a SeriesBlock where values in another SeriesBlock are
+    True.
 
-    :param source: source data
-    :param cond: condition that determines whether to mask values from source
-    :param other: entries where cond is True are replaced with the
-      corresponding value from other.
+    Provide a source SeriesBlock, a conditional SeriesBlock (True/False) and a
+    replacement value which can either be a SeriesBlock or a constant value.
+    All entries in the source that correspond to a True value in the
+    conditional are left unchanged. The values in the source that correspond to
+    a True value in the conditional are replaced with the value from 'other'.
 
-    :type source: SeriesBlock
-    :type cond: SeriesBlock
-    :type other: SeriesBlock, scalar
+    Args:
+      source (SeriesBlock): Source SeriesBlock that is going to be updated
+      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated.
+      other (SeriesBlock or constant): The value that should be used as a
+        replacement for the source SeriesBlock where the conditional
+        SeriesBlock is True.
 
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.mask.html
+    Returns:
+      SeriesBlock with updated values where condition is True.
     """
 
     def __init__(self, source, cond, other):
@@ -526,18 +624,18 @@ class Mask(BaseSingleSeries):
 
 
 class Round(BaseSingleSeries):
-    """Round each value in a SeriesBlock to the given number of decimals
+    """
+    Round each value in a SeriesBlock to the given number of decimals
 
-    :param source: source data
-    :param decimals: number of decimal places to round to (default: 0).
-      If decimals is negative, it specifies the number of positions to the left
-      of the decimal point.
+    Args:
+      source (SeriesBlock): SeriesBlock with float data that is rounded to the
+        provided number of decimals.
+      decimals (int, optional): number of decimal places to round to
+        (default: 0). If decimals is negative, it specifies the number of 
+        positions to the left of the decimal point.
 
-    :type source: SeriesBlock
-    :type decimals: int
-
-    See also:
-      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.round.html
+    Returns:
+      SeriesBlock with rounded values. 
     """
 
     def __init__(self, source, decimals=0):
@@ -549,25 +647,22 @@ class Round(BaseSingleSeries):
 
 
 class Interp(BaseSingleSeries):
-    """One-dimensional linear interpolation.
+    """One-dimensional piecewise linear interpolation.
 
-    Compute the one-dimensional piecewise linear interpolant to a function with
-    given discrete data points (xp, fp).
+    Given a list of datapoints corresponding to x and f(x), compute the
+    one-dimensional piecewise linear interpolant f(x) for each input x
+    from ``source``.
 
-    :param source: source data (x-coordinates) to interpolate
-    :param xp: the x-coordinates of the data points, must be increasing.
-    :param fp: the y-coordinates of the data points, same length as ``xp``.
-    :param left: value to return for ``x < xp[0]``, default is ``fp[0]``.
-    :param right: value to return for ``x > xp[-1]``, default is ``fp[-1]``.
-
-    :type source: SeriesBlock
-    :type xp: list
-    :type fp: list
-    :type left: float
-    :type right: float
-
-    See also:
-      https://docs.scipy.org/doc/numpy/reference/generated/numpy.interp.html
+    Args:
+      source (SeriesBlock): Source data (x-coordinates) to interpolate
+      xp (list): The x-coordinates of the data points, must be increasing.
+      fp (list): The y-coordinates of the data points, same length as ``xp``.
+      left (number, optional): Value to return when an x-coordinate from
+        ``source`` is below than the first ``xp``. Defaults to the first
+        ``fp``.
+      right (number, optional): Value to return when an x-coordinate from
+        ``source`` is greater than the last ``xp``. Defaults to the last
+        ``fp``.
     """
 
     def __init__(self, source, xp, fp, left=None, right=None):
@@ -588,18 +683,31 @@ class Interp(BaseSingleSeries):
 
 
 class Choose(BaseSingleSeries):
-    """Construct a SeriesBlock from an index series and a multiple series to
-    choose from.
+    """Construct a SeriesBlock by choosing values from multiple SeriesBlocks.
 
-    :param source: series having integers from 0 to n - 1 with n being the
-      number of choices. Values outside this range will result in NaN.
-    :param choices: multiple series containing the values to choose
+    For example, consider we have created ``Choose(X, A, B, C)``. The four
+    input SeriesBlock contain the following values:
 
-    :type source: SeriesBlock
-    :type choices: list of SeriesBlock
+    - X: ``[0, 2, 1]``
+    - A: ``[1, 2, 3]``
+    - B: ``[4, 5, 6]``
+    - C: ``[7, 8, 9]``
 
-    See also:
-      https://docs.scipy.org/doc/numpy/reference/generated/numpy.choose.html
+    The result will be ``[1, 8, 6]``: the first entry has X=0, so A is
+    selected whose first entry is ``1``. The second entry has X=2, so B
+    is selected, the third will select C, etc. Note that the choice series
+    A, B and C can be of any type.
+
+    If any value in ``source`` is out of bounds (below 0 or larger than the
+    number of arguments), 'no data' will be filled in.
+
+    Args:
+      source (SeriesBlock): SeriesBlock having integers from 0 to n - 1 with n
+        being the number of choices.
+      *choices (SeriesBlock): Multiple series containing the values to choose
+
+    Returns:
+       SeriesBlock with values from ``choices``
     """
 
     def __init__(self, source, *choices):

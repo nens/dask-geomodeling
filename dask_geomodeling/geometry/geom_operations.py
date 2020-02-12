@@ -13,14 +13,19 @@ __all__ = ["Area"]
 
 
 class Area(SeriesBlock):
-    """Block that calculates the area of geometries.
+    """
+    Calculate the area of features in a GeometryBlock.
 
-    :param source: geometry data
-    :param projection: projection as EPSG or WKT string to compute area in
-    :returns: SeriesBlock with only the computed area
-
-    :type source: GeometryBlock
-    :type projection: string
+    Provide a GeometryBlock and a projection. Returns the area of each
+    individual geometry in the input block, in that projection.
+    
+    Args:
+      source (GeometryBlock): Source GeometryBlock which contains the features.
+      projection (str): Projection in which to compute the area
+        (i.e. ``"epsg:28992"``).
+      
+    Returns: 
+      SeriesBlock with only the computed area
     """
 
     def __init__(self, source, projection):

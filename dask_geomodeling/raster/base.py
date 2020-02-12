@@ -33,14 +33,16 @@ class RasterBlock(Block):
     - start: start date as naive UTC datetime
     - stop: stop date as naive UTC datetime
 
-    The data response contains the following:
+    The data response is ``None`` or a dictionary with the following fields:
 
-    - if mode was ``'vals'``: a three dimensional array of shape
-      ``(bands, height, width)``
-    - if mode was ``'time'``: a list of naive UTC datetimes corresponding to
-      the time axis
-    - if mode was ``'meta'``: a list of metadata values corresponding to
-      the time axis
+    - (if mode was ``"vals"``) ``"values"``: a three dimensional numpy ndarray
+      of shape ``(bands, height, width)``
+    - (if mode was ``"vals"``) ``"no_data_value"``: a number that represents
+      'no data'. If the ndarray is a boolean, there is no 'no data' value.
+    - (if mode was ``"time"'"``) ``"time"``: a list of naive UTC datetimes
+      corresponding to the time axis
+    - (if mode was ``"meta"``) ``"meta"``: a list of metadata values
+      corresponding to the time axis
     """
 
     DEFAULT_ORIGIN = Datetime(1970, 1, 1, 0, 0)

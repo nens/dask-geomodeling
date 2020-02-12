@@ -21,18 +21,16 @@ __all__ = ["GeometryFileSource", "GeometryWKTSource"]
 class GeometryFileSource(GeometryBlock):
     """A geometry source that opens a geometry file from disk.
 
-    :param url: URL to the file. File paths have to be contained inside the
-      current root setting. Relative paths are interpreted relative to this
-      setting  but internally stored as absolute paths).
-    :param layer: the layer_name in the json to use as source. If None,
-      the first layer is used.
-    :param id_field: the field name to use as unique ID. Default ``'id'``.
+    The input of this blocks is by default limited by the global
+    geomodeling.geometry-limit setting.
 
-    :type path: string
-    :type layer: string
-    :type id_field: string
-
-    The input of these blocks is by default limited to 10000 geometries.
+    Args:
+      url (str): Path (URL) to the file. If relative, it is taken relative to
+        the geomodeling.root setting.
+      layer (str, optional): The layer name in the source to select. If None,
+        (default) the first layer is used.
+      id_field (str, optional): The field name to use as feature index.
+        Default ``"id"``.
 
     Relevant settings can be adapted as follows:
       >>> from dask import config

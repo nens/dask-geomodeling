@@ -113,47 +113,43 @@ def bucketize(bboxes):
 
 class AggregateRaster(GeometryBlock):
     """
-    Compute zonal statistics and add them to the geometry properties
+    Compute statistics of a raster for each geometry in a geometry source.
 
-    :param source: the source of geometry data
-    :param raster: the source of raster data
-    :param statistic: the type of statistic to perform. can be
-      ``'sum', 'count', 'min', 'max', 'mean', 'median', 'p<percentile>'``.
-    :param projection: the projection to perform the aggregation in
-    :param pixel_size: the pixel size to perform aggregation in
-    :param max_pixels: the maximum number of pixels to use for aggregation.
-       defaults to the geomodeling.raster-limit setting.
-    :param column_name: the name of the column to output the results
-    :param auto_pixel_size: determines whether the pixel_size is
-      adjusted when a raster is too large. Default False.
-    :returns: GeometryBlock with aggregation results in ``column_name``
-
-    :type source: GeometryBlock
-    :type raster: RasterBlock
-    :type statistic: string
-    :type projection: string or None
-    :type pixel_size: float or None
-    :type max_pixels: int or None
-    :type column_name: string
-    :type auto_pixel_size: boolean
-
-    The currently implemented statistics are sum, count, min, max, mean,
-    median, and percentile. If projection or max_resolution are not
-    given, these are taken from the provided RasterBlock.
-
-    The count statistic calculates the number of active cells in the raster. A
-    percentile statistic can be selected using text value starting with 'p'
-    followed by something that can be parsed as a float value, for example
-    ``'p33.3'``.
-
-    Only geometries that intersect the requested bbox are aggregated.
-    Aggregation is done in a specified projection and with a specified pixel
-    size.
+    A statistic is computed in a specific projection and with a specified cell
+    size. If ``projection`` or ``pixel_size`` are not given, these default to
+    the native projection of the provided raster source.
 
     Should the combination of the requested pixel_size and the extent of the
-    source geometry cause the requested raster size to exceed max_pixels, the
-    pixel_size is adjusted automatically if ``auto_pixel_size = True``, else
-    a RuntimeError is raised.
+    source geometry cause the required raster size to exceed ``max_pixels``,
+    the ``pixel_size`` can be adjusted automatically if ``auto_pixel_size`` is
+    set to ``True``, else (the default) a RuntimeError is raised.
+
+    Please note that for any field operation on the result of this block
+    a GetSeriesBlock should be used to retrieve data from the added column. The
+    name of the added column is determined by the ``column_name`` parameter.
+
+    Args:
+      source (GeometryBlock): The geometry source for which the statistics are
+        determined.
+      raster (RasterBlock): The raster source that is sampled.
+      statistic (str): The type of statistical analysis that should be
+        performed. The options are: ``{"sum", "count", "min", "max", "mean",
+        "median", "p<percentile>"}``. Percentiles are provided for example as
+        follows: ``"p50"``. Default ``"sum"``.
+      projection (str, optional): Projection to perform the aggregation in, for
+        example ``"EPSG:28992"``. Defaults to the native projection of the
+        supplied raster.
+      pixel_size (float, optional): The raster cell size used in the
+        aggregation. Defaults to the cell size of the supplied raster.
+      max_pixels (int, optional): The maximum number of pixels (cells) in the
+        aggregation. Defaults to the ``geomodeling.raster-limit`` setting.
+      column_name (str, optional): The name of the column where the result
+        should be placed. Defaults to ``"agg"``.
+      auto_pixel_size (boolean): Determines whether the pixel size is adjusted
+        automatically when ``"max_pixels"`` is exceeded. Default False.
+
+    Returns: 
+      GeometryBlock with aggregation results in an added column
 
     The global raster-limit setting can be adapted as follows:
       >>> from dask import config
@@ -463,36 +459,23 @@ class AggregateRaster(GeometryBlock):
 
 class AggregateRasterAboveThreshold(AggregateRaster):
     """
-    Aggregate raster values ignoring values below some threshold. The
-    thresholds are supplied per geometry.
+    Compute statistics of a per-feature masked raster for each geometry in a
+    geometry source.
 
-    :param source: the source of geometry data
-    :param raster: the source of raster data
-    :param statistic: the type of statistic to perform. can be
-      ``'sum', 'count', 'min', 'max', 'mean', 'median', 'p<percentile>'``.
-    :param projection: the projection to perform the aggregation in
-    :param pixel_size: the pixel size to perform aggregation in
-    :param max_pixels: the maximum number of pixels to use for aggregation
-    :param column_name: the name of the column to output the results
-    :param auto_pixel_size: determines whether the pixel_size is
-      adjusted when a raster is too large. Default False.
-    :param threshold_name: the name of the column with the thresholds
-    :returns: GeometryBlock with aggregation results in ``column_name``
+    Per feature, a threshold can be supplied to mask the raster with. Only
+    values that exceed the threshold of a specific feature are included for
+    the statistical value of that feature.
 
-    :type source: GeometryBlock
-    :type raster: RasterBlock
-    :type statistic: string
-    :type projection: string
-    :type pixel_size: float
-    :type max_pixels: int
-    :type column_name: string
-    :type auto_pixel_size: boolean
-    :type threshold_name: string
+    See :class:``dask_geomodeling.geometry.aggregate.AggregateRaster`` for
+    further information.
 
-    See also:
-      :class:`dask_geomodeling.geometry.aggregate.AggregateRaster`
+    Args:
+      *args: See :class:``dask_geomodeling.geometry.aggregate.AggregateRaster``
+      threshold_name (str): The column that holds the thresholds.
+
+    Returns:
+      GeometryBlock with aggregation results in an added column
     """
-
     def __init__(
         self,
         source,

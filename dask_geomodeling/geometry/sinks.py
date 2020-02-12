@@ -23,12 +23,15 @@ class GeometryFileSink(BaseSingle):
     Use GeometryFileSink.merge_files to merge tiles into one large file.
 
     Args:
-      source: the block the data is coming from
-      url: the target directory to put the files in
-      extension: the file extension (defines the format), the options depend
-        on the platform. See GeometryFileSink.supported_extensions
-      fields: a mapping that relates column names to output file field names
-        field names, ``{<output file field name>: <column name>, ...}``.
+      source (GeometryBlock): The block the data is coming from
+      url (str): The target directory to put the files in. If relative, it is
+        taken relative to the geomodeling.root setting.
+      extension (str): The file extension (defines the format), one of
+        ``{"shp", "gpkg", "geojson", "gml"}``. On some platforms, these options
+        might be limited. For an accurate list, see
+        ``GeometryFileSink.supported_extensions``.
+      fields (dict): A mapping that relates column names to output file field
+        names field names like ``{<output file field name>: <column name>}``.
 
     Relevant settings can be adapted as follows:
       >>> from dask import config
@@ -193,7 +196,11 @@ def to_file(
     """Utility function to export data from a GeometryBlock to a file on disk.
 
     You need to specify the target file path as well as the extent geometry
-    you want to save.
+    you want to save. Feature properties can be saved by providing a field
+    mapping to the ``fields`` argument.
+
+    To stay within memory constraints or to parallelize an operation, the
+    ``tile_size`` argument can be provided.
 
     Args:
       source (GeometryBlock): the block the data is coming from

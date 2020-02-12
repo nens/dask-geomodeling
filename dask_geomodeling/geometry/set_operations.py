@@ -10,14 +10,19 @@ __all__ = ["Difference", "Intersection"]
 
 
 class Difference(BaseSingle):
-    """Block that calculates the difference of two GeometryBlocks.
+    """
+    Calculate the geometric difference of two GeometryBlocks.
+    
+    All geometries in the source GeometryBlock will be adapted by geometries
+    with the same index from the second GeometryBlock. The difference operation
+    removes any overlap between the geometries from the first geometry.
 
-    The resulting GeometryBlock will have all geometries in ``source``, and if
-    there are geometries with the same ID in ``other``, the geometries will be
-    adapted using the Difference operation.
+    Args:
+      source (GeometryBlock): First geometry source.
+      other (GeometryBlock): Second geometry source.
 
-    :type source: GeometryBlock
-    :type other: GeometryBlock
+    Returns:
+      A GeometryBlock with altered geometries. Properties are preserved.
     """
 
     def __init__(self, source, other):
@@ -77,19 +82,20 @@ class Difference(BaseSingle):
 
 
 class Intersection(BaseSingle):
-    """Block that intersects geometries with the requested geometry.
+    """Calculate the intersection of a GeometryBlock with the request geometry.
 
-    :param source: the source of geometry data
-    :type source: GeometryBlock
+    Normally, geometries returned by a GeometryBlock may be partially outside
+    of the requested geometry. This block ensures that the geometries are
+    strictly inside the requested geometry by taking the intersection of
+    each geometry with the request geometry.
+
+    Args:
+      source (GeometryBlock): Input geometry source.
+
+    Returns:
+      A GeometryBlock with altered geometries. Properties are preserved.
     """
 
-    # TODO There are three modes, of which only one is currently implemented:
-    #
-    # 1. Intersection of source geometries with the requested geometry.
-    # 2. Intersection of source geometries with a single, constant geometry,
-    # 3. Intersection of source geometries with geometries from another source.
-    #
-    # Only case 1 is implemented. Supply ``other=None`` (default).
     def __init__(self, source, other=None):
         if isinstance(other, GeometryBlock):
             raise NotImplementedError(

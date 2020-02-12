@@ -11,7 +11,7 @@ class GeometryBlock(Block):
     """ The base block for geometries
 
     All geometry blocks must be derived from this base class and must implement
-    the following attributes:
+    the following attribute:
 
     - ``columns``: a set of column names to expect in the dataframe
 
@@ -29,13 +29,18 @@ class GeometryBlock(Block):
     - filters: dict of `Django <https://www.djangoproject.com/>`_ ORM-like
       filters on properties (e.g. ``id=598``)
 
-    The data response contains the following:
+    The data response is a dictionary with the following fields:
 
-    - if mode was ``'intersects'``: a DataFrame of features with properties
-    - if mode was ``'extent'``: the bbox that contains all features
+    - (if mode was ``"intersects"`` or ``"centroid"``) ``"features"``:
+      a ``GeoDataFrame`` of features with properties
+    - (if mode was ``"extent"``) ``"extent"``: a tuple of 4 numbers
+      ``(min_x, min_y, max_x, max_y)`` that represents the extent of the
+      geometries that would be returned by an ``"intersects"`` request.
+    - (for all modes) ``"projection"``: the EPSG or WKT representation of the
+      projection.
 
     To be able to perform operations on properties, there is a helper type
-    called``SeriesBlock``. This is the block equivalent of a ``pandas.Series``.
+    called ``SeriesBlock``. This is the block equivalent of a ``pandas.Series``.
     You can get a ``SeriesBlock`` from a ``GeometryBlock``, perform operations
     on it, and set it back into a ``GeometryBlock``.
     """
@@ -54,7 +59,11 @@ class GeometryBlock(Block):
         """Utility function to export data from this block to a file on disk.
 
         You need to specify the target file path as well as the extent geometry
-        you want to save.
+        you want to save. Feature properties can be saved by providing a field
+        mapping to the ``fields`` argument.
+
+        To stay within memory constraints or to parallelize an operation, the
+        ``tile_size`` argument can be provided.
 
         Args:
           url (str): The target file path. The extension determines the format.
@@ -79,6 +88,7 @@ class GeometryBlock(Block):
         Relevant settings can be adapted as follows:
           >>> from dask import config
           >>> config.set({"geomodeling.root": '/my/output/data/path'})
+          >>> config.set({"geomodeling.geometry-limit": 10000})
           >>> config.set({"temporary_directory": '/my/alternative/tmp/dir'})
         """
         from dask_geomodeling.geometry.sinks import to_file
@@ -87,7 +97,16 @@ class GeometryBlock(Block):
 
 
 class SeriesBlock(Block):
-    """ A helper block for GeometryBlocks, representing one single field"""
+    """ A block that represents one column from a GeometryBlock.
+
+    Use this helper class to modify (or to use logic on) a specific feature
+    property.
+
+    Use :class:``dask_geomodeling.geometry.base.GetSeriesBlock`` to retrieve
+    a SeriesBlock from a GeometryBlock and
+    :class:``dask_geomodeling.geometry.base.SetSeriesBlock`` to add a
+    SeriesBlock to a GeometryBlock.
+    """
 
     def __add__(self, other):
         from . import Add
@@ -181,14 +200,21 @@ class SeriesBlock(Block):
 
 
 class GetSeriesBlock(SeriesBlock):
-    """Get a column from a GeometryBlock.
+    """
+    Obtain a single feature property column from a GeometryBlock.
+    
+    Provide a GeometryBlock with one or more columns. One of these columns can 
+    be read from this source into a SeriesBlock. This SeriesBlock can be used
+    to run for example classifications.
 
-    :param source: GeometryBlock
-    :param name: name of the column to get
-    :returns: SeriesBlock containing the property column
+    Args:
+      source (GeometryBlock): GeometryBlock with the column you want to load 
+        into the SeriesBlock.
+      name (str): Name of the column to load into the SeriesBlock.
 
-    :type source: GeometryBlock
-    :type name: string
+    Returns: 
+      SeriesBlock containing the single property column
+
     """
 
     def __init__(self, source, name):
@@ -212,20 +238,36 @@ class GetSeriesBlock(SeriesBlock):
 
 
 class SetSeriesBlock(GeometryBlock):
-    """Set one or multiple columns (SeriesBlocks) in a GeometryBlock.
+    """
+    Add one or multiple property columns (SeriesBlocks) to a GeometryBlock.
+    
+    Provide the GeometryBlock that you want to add more properties to. Then
+    provide the SeriesBlock(s) which you want to add to the GeometryBlock. The
+    values of the SeriesBlock will be added to the features in the
+    GeometryBlock automatically (if they are derived from the same geometries
+    in previous operations, the features will have matching indexes so that
+    each property is matched to the correct feature).
 
-    :param source: source to add the extra columns to
-    :param column: name of the column to be set
-    :param value: series or constant value to set
-    :param args: string, SeriesBlock, ..., repeated multiple times
-    :returns: the source GeometryBlock with additional property columns
+    The value which is set can also be a single value, in which case each
+    feature will get the same value as a property.
 
-    :type source: GeometryBlock
-    :type column: string
-    :type value: SeriesBlock, scalar
+    Args:
+      source (GeometryBlock): The base GeometryBlock to which the SeriesBlock
+        is added as a new column.
+      column (str): The name of the new column (if it exists, it will be
+        overwritten)
+      value (SeriesBlock, number, str, bool): The SeriesBlock or constant value
+        that has to be inserted in the destination column.
+      *args: It is possible to repeat the ``"column"`` and ``"value"``
+        arguments multiple times to insert more than one column.
 
     Example:
-      >>> SetSeriesBlock(view, 'column_1', series_1, 'column_2', series_2)
+      Add two columns to an existing ``view`` like this:
+      ``SetSeriesBlock(view, "column_1", series_1, "column_2", series_2)``.
+
+    Returns:
+      The source GeometryBlock with additional property columns
+
     """
 
     def __init__(self, source, column, value, *args):

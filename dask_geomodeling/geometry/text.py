@@ -36,16 +36,11 @@ class ParseTextColumn(BaseSingle):
 
     Key, value pairs need to be separated by an equal (``=``) sign.
 
-    :param source: data source
-    :param source_column: existing column in source.
-    :param key_mapping: mapping containing pairs {key_name: column_name}:
-        key_name: existing key in the text to be parsed.
-        column_name: name of the new column created that contains
-        the parsed value.
+    Args:
+      source (GeometryBlock): Data source
+      source_column (str): Existing column in source.
+      key_mapping (dict): Mapping containing pairs {key_name: column_name}:
 
-    :type source: GeometryBlock
-    :type source_column: string
-    :type key_mapping: dict
     """
 
     def __init__(self, source, source_column, key_mapping):
