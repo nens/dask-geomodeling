@@ -242,33 +242,29 @@ class Add(BaseFieldOperation):
     Element-wise addition of SeriesBlock or number to another SeriesBlock.
 
     Args:
-      source (SeriesBlock): first addition term
-      other (SeriesBlock or number): second addition term
+      source (SeriesBlock): First addition term
+      other (SeriesBlock or number): Second addition term
     
     Returns:
-      SeriesBlock where the values are summed.
+      SeriesBlock
     """
 
     process = staticmethod(operator.add)
 
 
 class Subtract(BaseFieldOperation):
-    """ 
-    Subtract scalar or SeriesBlock from another SeriesBlock.
-    
-    Supply a SeriesBlock and either a second SeriesBlock or a constant value to 
-    be subtracted from its data. 
+    """
+    Element-wise subtraction of SeriesBlock or number with another SeriesBlock.
+
+    Note that if you want to subtract a SeriesBlock from a constant value (like
+    ``4 - series``, you have to do ``Add(Multiply(series, -1), 4)``.
 
     Args:
-      source (SeriesBlock): The SeriesBlock which is used in the calculation.
-      subtraction_value (SeriesBlock or float): Either a second SeriesBlock or a 
-        constant value which is subtracted from the first one.
-      
+      source (SeriesBlock): First subtraction term
+      other (SeriesBlock or number): Second subtraction term
+
     Returns:
-      SeriesBlock where the values are subtracted.
-    
-    Note that if you want to subtract a SeriesBlock from a constant value (like 
-    4 - series, you have to do Add(Multiply(series, -1), 4)
+      SeriesBlock
     """
 
     process = staticmethod(operator.sub)
@@ -276,19 +272,15 @@ class Subtract(BaseFieldOperation):
 
 class Multiply(BaseFieldOperation):
     """
-    Multiply a SeriesBlock with a constant value or a second SeriesBlock 
-    (element-wise)
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value to be 
-    multiplied together. 
+    Element-wise multiplication of SeriesBlock or number with another
+    SeriesBlock.
 
     Args:
-      source (SeriesBlock): The SeriesBlock which is used in the calculation.
-      multiplication_value (SeriesBlock or float): Either a second SeriesBlock 
-        or a constant value. The multiplication is performed element-wise. 
-      
+      source (SeriesBlock): First multiplication factor
+      other (SeriesBlock or number): Second multiplication factor
+
     Returns:
-      SeriesBlock where the values are multiplied.
+      SeriesBlock
     """
 
     process = staticmethod(operator.mul)
@@ -296,70 +288,55 @@ class Multiply(BaseFieldOperation):
 
 class Divide(BaseFieldOperation):
     """ 
-    Divide a SeriesBlock by a constant value or a second SeriesBlock 
-    (element-wise)
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value to 
-    divide the first SeriesBlock by.
+    Element-wise division of SeriesBlock or number with another SeriesBlock.
+
+    Note that if you want to divide a constant value by a SeriesBlock (like
+    ``3 / series``, you have to do ``Multiply(3, Power(series, -1))``.
 
     Args:
-      source (SeriesBlock): The SeriesBlock which is used in the calculation 
-        (numerator).
-      denominator (SeriesBlock or float): Either a second SeriesBlock or a 
-        constant value. The division is performed element-wise
+      source (SeriesBlock): Numerator
+      other (SeriesBlock or number): Denominator
 
     Returns:
-      SeriesBlock where the values are divided.
+      SeriesBlock
     """
 
     process = staticmethod(operator.truediv)
 
 
 class FloorDivide(BaseFieldOperation):
-    """ 
-    Divide a SeriesBlock by a second SeriesBlock or constant value 
-    (element-wise) and round to the closest integer below (i.e. 3.4 becomes 3, 
-    3.9 becomes 3 and -3.4 becomes -4)
+    """
+    Element-wise integer division of SeriesBlock or number with another
+    SeriesBlock.
 
-    Provide a SeriesBlock and a second SeriesBlock or a constant value to divide
-    the first SeriesBlock by. The outcome is rounded to the nearest integer 
-    below.
+    The outcome of the division is converted to the closest integer below (i.e.
+    3.4 becomes 3, 3.9 becomes 3 and -3.4 becomes -4)
 
     Args:
-      source (SeriesBlock): The seriesblock which is used in the calculation 
-        (numerator).
-      denominator (SeriesBlock): Either a second SeriesBlock or a constant 
-        value. The division is performed element-wise.
-      
+      source (SeriesBlock): Numerator
+      other (SeriesBlock or number): Denominator
+
     Returns:
-      SeriesBlock where the values are divided and rounded to the nearest 
-      integer below.
+      SeriesBlock
     """
 
     process = staticmethod(operator.floordiv)
 
 
 class Power(BaseFieldOperation):
-    """ 
-    Provide a SeriesBlock which is taken to the power of a constant value or a 
-    second SeriesBlock. For example input: [2,4] and 2 gives output [4,16]. 
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. 
-    The (first) input SeriesBlock is taken to the power of the second 
-    SeriesBlock or the constant value. In case two SeriesBlocks are provided the
-    power is computed element-wise.
- 
-    Args:
-      source (SeriesBlock): The SeriesBlock which is used as the base of the 
-        power operation.
-      exponent (SeriesBlock or float): The value which is used as the 
-        exponent/power value.
-      
-    Returns:
-      SeriesBlock with new values.
-    
     """
+    Element-wise raise a SeriesBlock to the power of a number or another
+    SeriesBlock.
 
+    For example, the inputs ``[2, 4]`` and ``2`` will give output ``[4, 16]``.
+
+    Args:
+      source (SeriesBlock): Base
+      other (SeriesBlock or number): Exponent
+
+    Returns:
+      SeriesBlock
+    """
     def __init__(self, source, other):
         # the float(other) will raise a TypeError if necessary
         super().__init__(source, float(other))
@@ -369,31 +346,19 @@ class Power(BaseFieldOperation):
 
 class Modulo(BaseFieldOperation):
     """
-    Compute the modulo (remainder after division) of two series or one series 
-    and a constant value.
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. The 
-    first SeriesBlock is expressed as a function of the second SeriesBlock or 
-    constant value. The second value functions as the modulus of the system. 
-    Example: the input value = 5, the second input value (modulus) = 3. The 
-    possible values in the new system become 0,1,2. These values are repeted 
-    infinitely, i.e. the number sequence becomes 0,1,2,0,1,2,0. Any value 
-    exceeding the modulus is thus becoming smaller. Example: if 5 is expressed 
-    with a modulus 3 it becomes the 3rd value past the hightest value of the 
-    sequence which is in this case 2 (0,1,2,0,1,2). The easiest way to determine
-    the outcome is to repeatedly subtract the modulus from the input until the 
-    outcome is below the modulus. Example: input 15, modulus 4: 15-4=11, 11-4=7,
-    7-4=3, the outcome = 3.
+    Element-wise modulo (remainder after division) of SeriesBlock or number
+    with another SeriesBlock.
+
+    Example: if the input is ``[31, 5.3, -4]`` and the modulus is ``3``, the
+    outcome would be ``[1, 2.3, 2]``. The outcome is always postive and less
+    than the modulus.
 
     Args:
-      source (SeriesBlock): The SeriesBlock which is converted into its modular 
-        representation.
-      modulus (SeriesBlock or float): The value which is used as the modulus of 
-        the system. If a SeriesBlock is provided the operations take place 
-        element-wise.
-    
+      source (SeriesBlock): Number
+      other (SeriesBlock or number): Modulus
+
     Returns:
-     SeriesBlock with values expressed as function of the modulus. 
+      SeriesBlock
     """
 
     process = staticmethod(operator.mod)
@@ -401,23 +366,17 @@ class Modulo(BaseFieldOperation):
 
 class Equal(BaseFieldOperation):
     """
-    Determine whether a SeriesBlock and a second SeriesBlock or a constant 
+    Determine whether a SeriesBlock and a second SeriesBlock or a constant
     value are equal.
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. If both 
-    are equal the operation returns True and if not a False is returned. 
+
+    Note that 'no data' does not equal 'no data'.
 
     Args:
-      source (SeriesBlock): The input seriesBlock which is compared to the 
-        second input value.
-      comparison_value (SeriesBlock or constant): The input SeriesBlock or 
-        constant which is used to compare the first SeriesBlock to.
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
 
     Returns:
-      Boolean SeriesBlock with values True or False for each feature. Outcome is 
-      determined by whether they are equal to the comparison value or not.
-      
-    Note that 'no data' does not equal 'no data'
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.eq)
@@ -426,20 +385,16 @@ class Equal(BaseFieldOperation):
 class NotEqual(BaseFieldOperation):
     """
     Determine whether a SeriesBlock and a second SeriesBlock or a constant 
-    value are different.
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. If both 
-    are different the operation returns True and if not a False is returned. 
+    value are not equal.
+
+    Note that 'no data' does not equal 'no data'.
 
     Args:
-      source (SeriesBlock): The input SeriesBlock which is compared to the 
-        second input value.
-      comparison_value (SeriesBlock or constant): The input SeriesBlock or 
-        constant which is used to compare the first SeriesBlock to.
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
 
     Returns:
-      Boolean SeriesBlock with values True or False for each feature. Outcome is
-      determined by whether they are different from the comparison value or not.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.ne)
@@ -447,22 +402,15 @@ class NotEqual(BaseFieldOperation):
 
 class Greater(BaseFieldOperation):
     """
-    Determine for each value in a SeriesBlock whether it is larger than a 
+    Determine for each value in a SeriesBlock whether it is greater than a
     comparison value from a SeriesBlock or constant.
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each
-    feature in the first input SeriesBlock is determined whether its value 
-    exceeds the value in the second SeriesBlock.
 
     Args:
-      source (SeriesBlock): The input SeriesBlock which is compared to the 
-        second input value.
-      comparison_value (SeriesBlock or constant): The input SeriesBlock or 
-        constant which is used to compare the first SeriesBlock to.
-      
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
+
     Returns:
-      Boolean SeriesBlock with values True or False for each feature. Outcome is 
-      determined by whether the value exceeds the comparison value or not.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.gt)
@@ -470,23 +418,15 @@ class Greater(BaseFieldOperation):
 
 class GreaterEqual(BaseFieldOperation):
     """
-    Determine for each value in a SeriesBlock whether it is larger than or equal
-    to a comparison value from a SeriesBlock or constant.
-    
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each
-    feature in the first input SeriesBlock is determined whether its value 
-    exceeds or equals the value in the second SeriesBlock.
+    Determine for each value in a SeriesBlock whether it is greater than or
+    equal to a comparison value from a SeriesBlock or constant.
 
     Args:
-      source (SeriesBlock): The input SeriesBlock which is compared to the 
-        second input value.
-      comparison_value (SeriesBlock or constant): The input SeriesBlock or 
-        constant which is used to compare the first SeriesBlock to.
-      
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
+
     Returns:
-      Boolean SeriesBlock with values True or False for each feature. Outcome is 
-      determined by whether the value exceeds or equals the comparison value or
-      not.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.ge)
@@ -494,22 +434,15 @@ class GreaterEqual(BaseFieldOperation):
 
 class Less(BaseFieldOperation):
     """
-    Determine for each value in a SeriesBlock whether it is below a comparison 
-    value from a SeriesBlock or constant.
+    Determine for each value in a SeriesBlock whether it is less than a
+    comparison value from a SeriesBlock or constant.
     
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each
-    feature in the first input SeriesBlock is determined whether its value falls
-    below the value in the second seriesBlock.
-
     Args:
-      source (SeriesBlock): The input SeriesBlock which is compared to the 
-        second input value.
-      comparison_value (SeriesBlock or constant): The input SeriesBlock or 
-        constant which is used to compare the first SeriesBlock to.
-      
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
+
     Returns:
-      Boolean SeriesBlock with values True or False for each feature. Outcome is 
-      determined by whether the value falls below the comparison value or not.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.lt)
@@ -517,23 +450,15 @@ class Less(BaseFieldOperation):
 
 class LessEqual(BaseFieldOperation):
     """
-    Determine for each value in a SeriesBlock whether it is below or equal to a 
-    comparison value from a SeriesBlock or constant.
+    Determine for each value in a SeriesBlock whether it is less than or equal
+    to a comparison value from a SeriesBlock or constant.
     
-    Provide a SeriesBlock and a second SeriesBlock or a constant value. For each 
-    feature in the first input SeriesBlock is determined whether its value falls 
-    below or equals the value in the second SeriesBlock.
-
     Args:
-      source (SeriesBlock): The input SeriesBlock which is compared to the 
-        second input value.
-      comparison_value (SeriesBlock or constant): The input SeriesBlock or 
-        constant which is used to compare the first SeriesBlock to.
-      
+      source (SeriesBlock): First comparison term
+      other (SeriesBlock or number): Second comparison term
+
     Returns:
-      Boolean SeriesBlock with values True or False for each feature. Outcome is 
-      determined by whether the value falls below or equals the comparison value 
-      or not.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.le)
@@ -548,20 +473,19 @@ class BaseLogicOperation(BaseFieldOperation):
         super().__init__(source, other)
 
 
-class And(BaseLogicOperation): #WIP: TE ONDUIDELIJK.
+class And(BaseLogicOperation):
     """
-    Determine whether a value is True in two provided (boolean) SeriesBlocks. 
+    Perform an elementwise logical AND between two SeriesBlocks.
 
-    Provide two SeriesBlocks with boolean values (True/False). If a feature has 
-    a True value in both SeriesBlocks, True is returned else False is returned. 
+    If a feature has a True value in both SeriesBlocks, True is returned, else
+    False is returned.
 
     Args:
-      source (SeriesBlock): First boolean (True/False) SeriesBlock.
-      comparison_value (SeriesBlock): second boolean (True/False) SeriesBlock.
+      source (SeriesBlock): First boolean term
+      other (SeriesBlock): Second boolean term
     
     Returns:
-      Boolean SeriesBlock with True value where both input blocks were True. All 
-      other values become false.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.and_)
@@ -569,19 +493,17 @@ class And(BaseLogicOperation): #WIP: TE ONDUIDELIJK.
 
 class Or(BaseLogicOperation):
     """
-    Determine whether at least 1 of 2 provided (boolean) SeriesBlocks is True.
-    
-    Provide two SeriesBlocks with boolean values (True/False). If one or both 
-    features in the SeriesBlocks are True the result will be True. If both are 
-    False the outcome will be False.
-    
+    Perform an elementwise logical OR between two SeriesBlocks.
+
+    If a feature has a True value in any of the input SeriesBlocks, True is
+    returned, else False is returned.
+
     Args:
-      source (SeriesBlock): First boolean (True/False) SeriesBlock
-      comparison_value (SeriesBlock): Second boolean (True/False) SeriesBlock
-      
+      source (SeriesBlock): First boolean term
+      other (SeriesBlock): Second boolean term
+
     Returns:
-      Boolean SeriesBlock with True value where at least one or both of the two 
-      SeriesBlocks are True. If both are False, False is returned.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.or_)
@@ -589,20 +511,17 @@ class Or(BaseLogicOperation):
 
 class Xor(BaseLogicOperation):
     """
-    Determine whether one value (and one value only) is True out of two 
-    (boolean) SeriesBlocks.
-    
-    Provide two boolean (True/False) SeriesBlocks. If only one of the features 
-    in the blocks is True, True is returned. If either both blocks are True or 
-    both blocks are False, False is returned.
+    Perform an elementwise logical exclusive OR between two SeriesBlocks.
+
+    If a feature has a True value in precisely one of the input SeriesBlocks,
+    True is returned, else False is returned.
 
     Args:
-      source (SeriesBlock): First boolean (True/False) SeriesBlock
-      comparison_value (SeriesBlock): Second boolean (True/False) SeriesBlock
-      
+      source (SeriesBlock): First boolean term
+      other (SeriesBlock): Second boolean term
+
     Returns:
-      Boolean SeriesBlock with True values when only one of the two input 
-      SeriesBlocks was True. Else False is returned. 
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.xor)
@@ -610,15 +529,13 @@ class Xor(BaseLogicOperation):
 
 class Invert(BaseSingleSeries):
     """
-    Invert a boolean SeriesBlock (i.e. True becomes False and vice versa).
-    
-    Provide a boolean SeriesBlock which is inverted.
-    
+    Invert a boolean SeriesBlock (swap True and False)
+
     Args:
       source (SeriesBlock): SeriesBlock with boolean values.
       
     Returns:
-      Inverted, boolean, SeriesBlock.
+      SeriesBlock with boolean values
     """
 
     process = staticmethod(operator.inv)
@@ -626,28 +543,25 @@ class Invert(BaseSingleSeries):
 
 class Where(BaseSingleSeries):
     """
-    Replace values in a SeriesBlock with either a constant value or values from
-    a second SeriesBlock. The values are replaced where the values in a boolean 
-    SeriesBlock (True/False) are False.
+    Replace values in a SeriesBlock where values in another SeriesBlock are
+    False.
 
-    Provide a base SeriesBlock, a conditional SeriesBlock (True/False) and a 
-    replacement value which can be a SeriesBlock or a constant value. All 
-    entries in the base SeriesBlock which correspond to a True value in the 
-    conditional SeriesBlock are not changed. The values in the base SeriesBlock
-    which correspond to a False value are replaced with the replacement value.
-    If the replacement value is a SeriesBlock, the replacement happens element-wise.
-    
+    Provide a source SeriesBlock, a conditional SeriesBlock (True/False) and a
+    replacement value which can either be a SeriesBlock or a constant value.
+    All entries in the source that correspond to a True value in the
+    conditional are left unchanged. The values in the source that correspond to
+    a False value in the conditional are replaced with the value from 'other'.
+
     Args:
-      source (SeriesBlock): Base data which is going to be updated for certain 
-        features.
-      cond (SeriesBlock): True/False SeriesBlock which determines whether 
-        features in the base SeriesBlock should be updated.
-      other (SeriesBlock or constant): The value which should be used as a 
-        replacement for the base SeriesBlock when the conditional SeriesBlock is 
-        False.
+      source (SeriesBlock): Source SeriesBlock that is going to be updated
+      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated.
+      other (SeriesBlock or constant): The value that should be used as a
+        replacement for the source SeriesBlock where the conditional
+        SeriesBlock is False.
       
     Returns:
-      SeriesBlock with updated values where condition is false. 
+      SeriesBlock with updated values where condition is False.
     """
 
     def __init__(self, source, cond, other):
@@ -670,28 +584,25 @@ class Where(BaseSingleSeries):
 
 class Mask(BaseSingleSeries):
     """
-    Replace values in a SeriesBlock with either a constant value or values from 
-    a second SeriesBlock. The values are replaced where the values in a boolean
-    SeriesBlock (True/False) are True.
+    Replace values in a SeriesBlock where values in another SeriesBlock are
+    True.
 
-    Provide a base SeriesBlock, a conditional SeriesBlock (True/False) and a 
-    replacement value which can be a SeriesBlock or a constant value. All 
-    entries in the base SeriesBlock which correspond to a False value in the 
-    conditional SeriesBlock are not changed. The values in the base SeriesBlock 
-    which correspond to a True value are replaced with the replacement value. If
-    the replacement value is a SeriesBlock, the replacement happens element-wise.
-    
+    Provide a source SeriesBlock, a conditional SeriesBlock (True/False) and a
+    replacement value which can either be a SeriesBlock or a constant value.
+    All entries in the source that correspond to a True value in the
+    conditional are left unchanged. The values in the source that correspond to
+    a True value in the conditional are replaced with the value from 'other'.
+
     Args:
-      source (SeriesBlock): Base data which is going to be updated for certain 
-        features.
-      cond (SeriesBlock): True/False SeriesBlock which determines whether 
-        features in the base SeriesBlock should be updated.
-      other (SeriesBlock or constant): The value which should be used as a 
-        replacement for the base SeriesBlock when the conditional SeriesBlock is
-        True.
-      
+      source (SeriesBlock): Source SeriesBlock that is going to be updated
+      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated.
+      other (SeriesBlock or constant): The value that should be used as a
+        replacement for the source SeriesBlock where the conditional
+        SeriesBlock is True.
+
     Returns:
-      SeriesBlock with updated values where condition is True. 
+      SeriesBlock with updated values where condition is True.
     """
 
     def __init__(self, source, cond, other):
@@ -715,17 +626,14 @@ class Mask(BaseSingleSeries):
 class Round(BaseSingleSeries):
     """
     Round each value in a SeriesBlock to the given number of decimals
-    
-    Provide a SeriesBlock with float data. The data is rounded to the provided 
-    number of decimals.
-    
+
     Args:
-      source (SeriesBlock): SeriesBlock with float data which is rounded to the 
+      source (SeriesBlock): SeriesBlock with float data that is rounded to the
         provided number of decimals.
-      decimals (integer, optional): number of decimal places to round to 
+      decimals (int, optional): number of decimal places to round to
         (default: 0). If decimals is negative, it specifies the number of 
         positions to the left of the decimal point.
-      
+
     Returns:
       SeriesBlock with rounded values. 
     """
@@ -738,26 +646,23 @@ class Round(BaseSingleSeries):
     process = staticmethod(np.around)
 
 
-class Interp(BaseSingleSeries): #WIP: te onduidelijk
-    """One-dimensional linear interpolation.
+class Interp(BaseSingleSeries):
+    """One-dimensional piecewise linear interpolation.
 
-    Compute the one-dimensional piecewise linear interpolant to a function with
-    given discrete data points (xp, fp).
+    Given a list of datapoints corresponding to x and f(x), compute the
+    one-dimensional piecewise linear interpolant f(x) for each input x
+    from ``source``.
 
-    :param source: source data (x-coordinates) to interpolate
-    :param xp: the x-coordinates of the data points, must be increasing.
-    :param fp: the y-coordinates of the data points, same length as ``xp``.
-    :param left: value to return for ``x < xp[0]``, default is ``fp[0]``.
-    :param right: value to return for ``x > xp[-1]``, default is ``fp[-1]``.
-
-    :type source: SeriesBlock
-    :type xp: list
-    :type fp: list
-    :type left: float
-    :type right: float
-
-    See also:
-      https://docs.scipy.org/doc/numpy/reference/generated/numpy.interp.html
+    Args:
+      source (SeriesBlock): Source data (x-coordinates) to interpolate
+      xp (list): The x-coordinates of the data points, must be increasing.
+      fp (list): The y-coordinates of the data points, same length as ``xp``.
+      left (number, optional): Value to return when an x-coordinate from
+        ``source`` is below than the first ``xp``. Defaults to the first
+        ``fp``.
+      right (number, optional): Value to return when an x-coordinate from
+        ``source`` is greater than the last ``xp``. Defaults to the last
+        ``fp``.
     """
 
     def __init__(self, source, xp, fp, left=None, right=None):
@@ -777,19 +682,32 @@ class Interp(BaseSingleSeries): #WIP: te onduidelijk
         return pd.Series(result, index=data.index)
 
 
-class Choose(BaseSingleSeries):#WIP: te onduidelijk
-    """Construct a SeriesBlock from an index series and a multiple series to
-    choose from.
+class Choose(BaseSingleSeries):
+    """Construct a SeriesBlock by choosing values from multiple SeriesBlocks.
 
-    :param source: series having integers from 0 to n - 1 with n being the
-      number of choices. Values outside this range will result in NaN.
-    :param choices: multiple series containing the values to choose
+    For example, consider we have created ``Choose(X, A, B, C)``. The four
+    input SeriesBlock contain the following values:
 
-    :type source: SeriesBlock
-    :type choices: list of SeriesBlock
+    - X: ``[0, 2, 1]``
+    - A: ``[1, 2, 3]``
+    - B: ``[4, 5, 6]``
+    - C: ``[7, 8, 9]``
 
-    See also:
-      https://docs.scipy.org/doc/numpy/reference/generated/numpy.choose.html
+    The result will be ``[1, 8, 6]``: the first entry has X=0, so A is
+    selected whose first entry is ``1``. The second entry has X=2, so B
+    is selected, the third will select C, etc. Note that the choice series
+    A, B and C can be of any type.
+
+    If any value in ``source`` is out of bounds (below 0 or larger than the
+    number of arguments), 'no data' will be filled in.
+
+    Args:
+      source (SeriesBlock): SeriesBlock having integers from 0 to n - 1 with n
+        being the number of choices.
+      *choices (SeriesBlock): Multiple series containing the values to choose
+
+    Returns:
+       SeriesBlock with values from ``choices``
     """
 
     def __init__(self, source, *choices):
