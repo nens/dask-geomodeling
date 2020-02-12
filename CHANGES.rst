@@ -7,7 +7,7 @@ Changelog of dask-geomodeling
 
 - Added GeometryWKTSource.
 
-- Reworked the docstrings of all rasterblocks.
+- Updated all docstrings.
 
 - Renamed the 'location' parameter of raster.misc.Step to 'value'.
 
