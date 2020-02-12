@@ -12,7 +12,7 @@ __all__ = ["Buffer", "Simplify"]
 
 class Buffer(BaseSingle):
     """
-    Buffer geometries with a given value.
+    Buffer ('expand') geometries with a given value.
     
     A GeometryBlock and a buffer distance are provided. Each feature in the 
     GeometryBlock is buffered with the distance provided, resulting in updated 
@@ -22,16 +22,17 @@ class Buffer(BaseSingle):
       source (GeometryBlock): The source GeometryBlock whose geometry will be 
         updated.
       distance (float): The distance used to buffer all features. The distance 
-        is measured in the unit of the given projection (i.e. meters or degrees).
-      projection (string): The projection used in the operation provided in the 
-        format: "EPSG:28992".
+        is measured in the unit of the given projection (e.g. m, °).
+      projection (str): The projection used in the operation provided in the
+        format: ``"EPSG:28992"``.
       resolution (integer, optional): The resolution of the buffer provided as 
         the number of points used to represent a quarter of a circle. The 
-        default value is "16".
+        default value is ``16``.
 
     Returns:
       GeometryBlock with buffered geometries.
-      """
+
+    """
 
     def __init__(self, source, distance, projection, resolution=16):
         if not isinstance(distance, numbers.Real):
@@ -44,20 +45,14 @@ class Buffer(BaseSingle):
 
     @property
     def distance(self):
-        """Buffer distance.
-
-        The unit (e.g. m, °) is determined by the projection.
-        """
         return self.args[1]
 
     @property
     def projection(self):
-        """Projection used for buffering."""
         return self.args[2]
 
     @property
     def resolution(self):
-        """Buffer resolution."""
         return self.args[3]
 
     def get_sources_and_requests(self, **request):
@@ -98,22 +93,22 @@ class Buffer(BaseSingle):
 
 class Simplify(BaseSingle):
     """
-    Simplify geometries, mainly to make them computationally more efficient. 
+    Simplify geometries, mainly to make them computationally more efficient.
     
     Provide a GeometryBlock and a tolerance value to simplify the geometries. 
-    As a result all features in the geometryBlock are simplified either with 
-    topological preservence or without.
+    As a result all features in the GeometryBlock are simplified.
 
     Args:
-      source(GeometryBlock): Source of the geometric features to be simplified.
+      source (GeometryBlock): Source of the geometries to be simplified.
       tolerance (float): The tolerance used in the simplification. If no 
-        tolerance is given the ``min_size`` request parameter is used.
+        tolerance is given the ``"min_size"`` request parameter is used.
       preserve_topology (boolean, optional): Determines whether the topology 
-        should be preserved in the operation. Defaults to "True".
+        should be preserved in the operation. Defaults to ``True``.
 
     Returns:
       GeometryBlock which was provided as input with a simplified geometry.
-      """
+
+    """
 
     def __init__(self, source, tolerance=None, preserve_topology=True):
         if tolerance is not None:

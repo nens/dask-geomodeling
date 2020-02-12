@@ -34,34 +34,40 @@ __all__ = [
 
 class Classify(BaseSingleSeries):
     """
-    Classify a value column into different bins i.e. every value below 3 becomes 
-    "A", every value between 3 and 5 becomes "B" etc.
-    
-    Provide a seriesBlock with values and the desired classification. The 
-    classification consists of two lists, one with the edges of the 
-    classification bins (i.e. 3,5) and one with the desired class output (i.e. 
-    "low","middle","high"). The input data is then compared to the 
-    classification bins. For example a value 1 is below 3 so it gets label 
-    "low". A value 4 is between 3 and 5 so it gets label "middle" etc.
+    Classify a value column into different bins
+
+    For example: every value below 3 becomes "A", every value between 3 and 5
+    becomes "B", and every value above 5 becomes "C".
+
+    The provided SeriesBlock will be classified according to the given
+    classification parameters. These parameters consist of two lists, one with
+    the edges of the classification bins (i.e. ``[3, 5]``) and one with the
+    desired class output (i.e. ``["A", "B", "C"]``). The input data is then
+    compared to the classification bins. In this example a value 1 is below 3
+    so it gets class ``"A"``. A value 4 is between 3 and 5 so it gets label
+    ``"B"``.
+
+    How values outside of the bins are classified depends on the length of the
+    labels list. If the length of the labels equals the length of the binedges
+    plus 1 (the above example), then values outside of the bins are classified
+    to the first and last elements of the labels list. If the length of the
+    labels equals the length of the bins minus 1, then values outside of the
+    bins are classified to 'no data'.
 
     Args:
-      source (SeriesBlock): The (float) data which should be classified.
-      bins (list): The edges of the classification intervalls specified as a 
-        list (i.e. "[1,2,3]").
-      labels (list): The label/classification returned if a value falls 
-        in a specific bin supplied as a list (i.e. "['A','B','C']"). How values 
-        outside of the bins are classified, depends on the length of the labels.
-        If the length of the labels equals the length of the bins minus 1, then 
-        values outside of the bins are classified to no data. If the length of 
-        the labels equals the length of the bins plus 1, then values outside of 
-        the bins are classified to the first and last elements of the labels list.
-      right (boolean, optional): Determines in what bin a value is classified 
-        when it is exactly on a bin edge. Defaults to True (a value is assigned 
-        to the bin on the right).
+      source (SeriesBlock): The (numeric) data which should be classified.
+      bins (list): The edges of the classification intervals
+        (i.e. ``[3, 5]``).
+      labels (list): The classification returned if a value falls in a specific
+        bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
+        larger or one less than the length of the ``bins`` argument.
+      right (boolean, optional): Determines what side of the intervals are
+        closed. Defaults to True (the right side of the bin is closed so a
+        value assigned to the bin on the left if it is exactly on a bin edge).
 
     Returns:
-      A SeriesBlock with classified values instead of the original floats.
-      """
+      A SeriesBlock with classified values instead of the original numbers.
+    """
 
     def __init__(self, source, bins, labels, right=True):
         if not isinstance(bins, list):
@@ -116,37 +122,29 @@ class Classify(BaseSingleSeries):
 class ClassifyFromColumns(SeriesBlock):
     """
     Classify a continuous-valued geometry property based on bins located in 
-    different columns. 
+    other columns.
     
-    Classifies the value of a column for all features in a GeometryBlock. The 
-    classification bins may differ per feature as they are provided through 
-    different columns in the GeometryBlock. To classify the field the columns 
-    with the bins and the resultant labels are provided.
+    See :class:``dask_geomodeling.geometry.field_operations.Classify`` for
+    further information.
 
     Args:
       source (GeometryBlock):The GeometryBlock which contains the column which 
         should be clasified as well as columns with the bin edges.
-      value_column (String): The column with (float) data which should be 
+      value_column (str): The column with (float) data which should be
         classified.
-      bin_columns (List): A list of columns which contain the bins for the 
-        classification. The data should be supplied as list (i.e. "["column_1",
-        "column_2","column_3"]"). The order of the columns should be from low to
-        high values.
-      labels (List): The label/classification returned if a value falls in a 
-        specific bin supplied as a list (i.e. "['A','B','C']"). How values 
-        outside of the bins are classified, depends on the length of the labels.
-        If the length of the labels equals the length of the bins minus 1, then 
-        values outside of the bins are classified to no data. If the length of 
-        the labels equals the length of the bins plus 1, then values outside of 
-        the bins are classified to the first and last elements of the labels 
-        list.
-      right (boolean, optional): Determines in what bin a value is classified 
-        when it is exactly on a bin edge. Defaults to True (a value is assigned 
-        to the bin on the right).
+      bin_columns (list): A list of columns that contain the bins for the
+        classification. The order of the columns should be from low to high
+        values.
+      labels (list): The classification returned if a value falls in a specific
+        bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
+        larger or one less than the length of the ``bins`` argument.
+      right (boolean, optional): Determines what side of the intervals are
+        closed. Defaults to True (the right side of the bin is closed so a
+        value assigned to the bin on the left if it is exactly on a bin edge).
 
     Returns:
-      A seriesBlock with classified values instead of the original floats.
-    
+      A SeriesBlock with classified values instead of the original floats.
+
     """
 
     def __init__(self, source, value_column, bin_columns, labels, right=True):
@@ -240,16 +238,11 @@ class BaseFieldOperation(BaseSingleSeries):
 
 class Add(BaseFieldOperation):
     """ 
-    Addition of constant value or SeriesBlock to a different SeriesBlock 
-    (element-wise).
-    
-    Supply a SeriesBlock and either a second SeriesBlock or a constant value to 
-    be added to its data. The data are added.
+    Element-wise addition of SeriesBlock or number to another SeriesBlock.
 
     Args:
-      source (SeriesBlock): The SeriesBlock which is used in the calculation.
-      addition_value (SeriesBlock or float): Either a second SeriesBlock or a 
-        constant value which is added to the first one.
+      source (SeriesBlock): first addition term
+      other (SeriesBlock or number): second addition term
     
     Returns:
       SeriesBlock where the values are summed.
