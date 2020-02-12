@@ -16,18 +16,17 @@ __all__ = ["GeometryTiler"]
 
 
 class GeometryTiler(BaseSingle):
-    """Parallelize operations on a GeometryBlock by tiling the request
+    """Parallelize operations on a GeometryBlock by tiling the request.
 
-    :param source: GeometryBlock
-    :param size: the max size of a tile in units of the projection
-    :param projection: the projection as EPSG or WKT string in which to
-      compute tiles
+    Args:
+      source (GeometryBlock): The source GeometryBlock
+      size (float): The maximum size of a tile in units of the projection
+      projection (str): The projection as EPSG or WKT string in which to
+        compute tiles (e.g. ``"EPSG:28992"``)
 
-    :type source: GeometryBlock
-    :type size: float
-    :type projection: string
-
-    Only supports 'centroid' and 'extent' request modes.
+    Returns:
+      GeometryBlock that only supports ``"centroid"`` and ``"extent"`` request
+      modes.
     """
 
     def __init__(self, source, size, projection):

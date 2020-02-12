@@ -13,21 +13,16 @@ class Difference(BaseSingle):
     """
     Calculate the geometric difference of two GeometryBlocks.
     
-    Provide two GeometryBlocks. All geometries in the source GeometryBlock will 
-    be adapted by geometries with the same id from the second GeometryBlock. The 
-    adaptation is a so called difference which means that the geometry of the 
-    source GeometryBlock which does not overlap with the second GeometryBlock is 
-    preserved. Any overlap is removed from the geometry.
+    All geometries in the source GeometryBlock will be adapted by geometries
+    with the same index from the second GeometryBlock. The difference operation
+    removes any overlap between the geometries from the first geometry.
 
     Args:
-      source (GeometryBlock): Input geometry source.
-      other (GeometryBlock): The geometry source which is used to adapt the 
-      source GeometryBlock. Any overlap between this block and the source block 
-      is removed from the source geometry.
-      
+      source (GeometryBlock): First geometry source.
+      other (GeometryBlock): Second geometry source.
+
     Returns:
-      The source GeometryBlock with its original features is returned. Only the 
-      geometries are altered.
+      A GeometryBlock with altered geometries. Properties are preserved.
     """
 
     def __init__(self, source, other):
@@ -87,34 +82,20 @@ class Difference(BaseSingle):
 
 
 class Intersection(BaseSingle):
-    """
-    Calculate the geometric overlap/intersection of two GeometryBlocks.
-    
-    Provide two GeometryBlocks. All geometries in the source GeometryBlock will 
-    be adapted by geometries with the same id from the second GeometryBlock. The 
-    adaptation is a so called intersection which means that only the part of the 
-    geometry which overlaps with the geometry in the second GeometryBlock is 
-    preserved. Non overlapping areas are removed from the geometry.
+    """Calculate the intersection of a GeometryBlock with the request geometry.
+
+    Normally, geometries returned by a GeometryBlock may be partially outside
+    of the requested geometry. This block ensures that the geometries are
+    strictly inside the requested geometry by taking the intersection of
+    each geometry with the request geometry.
 
     Args:
       source (GeometryBlock): Input geometry source.
-      other (GeometryBlock): The geometry source which is used to adapt the 
-      source GeometryBlock. Any overlap between this block and the source block 
-      is preserved. Any areas from the source GeometryBlock which fall outside 
-      this GeometryBlock are removed.
 
     Returns:
-      Source GeometryBlock with altered geometries. Only the overlapping part of 
-      the geometry with the second GeometryBlock is preserved.
-      """
+      A GeometryBlock with altered geometries. Properties are preserved.
+    """
 
-    # TODO There are three modes, of which only one is currently implemented:
-    #
-    # 1. Intersection of source geometries with the requested geometry.
-    # 2. Intersection of source geometries with a single, constant geometry,
-    # 3. Intersection of source geometries with geometries from another source.
-    #
-    # Only case 1 is implemented. Supply ``other=None`` (default).
     def __init__(self, source, other=None):
         if isinstance(other, GeometryBlock):
             raise NotImplementedError(
