@@ -3,14 +3,19 @@ Module containing geometry sources.
 """
 import fiona
 import geopandas as gpd
+from shapely.geometry import box
 
 from dask import config
 from dask_geomodeling import utils
 from .base import GeometryBlock
 
+from shapely.errors import WKTReadingError
+from shapely.wkt import loads as load_wkt
+
+
 # this import is a copy from geopandas.io.files
 
-__all__ = ["GeometryFileSource"]
+__all__ = ["GeometryFileSource", "GeometryWKTSource"]
 
 
 class GeometryFileSource(GeometryBlock):
@@ -153,3 +158,99 @@ class GeometryFileSource(GeometryBlock):
                     )
 
             return {"projection": request["projection"], "features": f}
+
+
+class GeometryWKTSource(GeometryBlock):
+    """Converts a single geometry to a geometry source
+
+    Args:
+      wkt (string): the WKT representation of a geometry
+      projection (string): the projection of the geometry
+
+    Returns:
+      GeometryBlock
+    """
+
+    def __init__(self, wkt, projection):
+        if not isinstance(wkt, str):
+            raise TypeError("'{}' object is not allowed".format(type(wkt)))
+        if not isinstance(projection, str):
+            raise TypeError("'{}' object is not allowed".format(type(projection)))
+        try:
+            load_wkt(wkt)
+        except WKTReadingError:
+            raise ValueError("The provided geometry is not a valid WKT")
+        try:
+            utils.get_sr(projection)
+        except TypeError:
+            raise ValueError("The provided projection is not a valid WKT")
+        super().__init__(wkt, projection)
+
+    @property
+    def wkt(self):
+        return self.args[0]
+
+    @property
+    def projection(self):
+        return self.args[1]
+
+    @property
+    def columns(self):
+        return {"geometry"}
+
+    def get_sources_and_requests(self, **request):
+        data = {"wkt": self.wkt, "projection": self.projection}
+        return [(data, None), (request, None)]
+
+    @staticmethod
+    def process(data, request):
+
+        mode = request["mode"]
+        if mode not in ("extent", "intersects", "centroid"):
+            raise ValueError("Unknown mode '{}'".format(mode))
+
+        # load the geometry and transform it into the requested projection
+        geometry = load_wkt(data["wkt"])
+        if data["projection"] != request["projection"]:
+            geometry = utils.shapely_transform(
+                geometry, data["projection"], request["projection"]
+            )
+
+        f = gpd.GeoDataFrame(
+            geometry=[geometry],
+            crs=utils.get_crs(request["projection"]),
+        )
+
+        # compute the bounds of each geometry and filter on min_size
+        min_size = request.get("min_size")
+        if min_size:
+            minx, miny, maxx, maxy = geometry.bounds
+            if (maxy - miny) < min_size or (maxx - minx) < min_size:
+                return {
+                    "projection": request["projection"],
+                    "features": gpd.GeoDataFrame([])
+                }
+
+        if mode == 'intersects':
+            if not geometry.intersects(request["geometry"]):
+                return {
+                    "projection": request["projection"],
+                    "features": gpd.GeoDataFrame([])
+                }
+            return {"features": f, "projection": request['projection']}
+
+        elif mode == 'centroid':
+            if not geometry.centroid.intersects(request["geometry"]):
+                return {
+                        "projection": request["projection"],
+                        "features": gpd.GeoDataFrame([]),
+                    }
+            return {"features": f, "projection": request['projection']}
+
+        elif mode == 'extent':
+            if not geometry.intersects(request["geometry"]):
+                return {"projection": request["projection"], "extent": None}
+            return {
+                "extent": tuple(geometry.bounds),
+                "projection": request['projection']
+            }

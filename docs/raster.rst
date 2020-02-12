@@ -1,8 +1,15 @@
 Raster Blocks
 =============
 
-Raster-type blocks contain rasters with a time axis. Internally, the raster
-data is stored as `NumPy <https://numpy.org/>`_ arrays.
+RasterBlocks are the main component of raster operations. Most raster
+operations take one or more RasterBlocks as input and produce a single
+RasterBlock as output.
+
+Raster-type blocks contain rasters with data in three dimensions. Besides the
+x- and y-axes they also have a temporal axis.
+
+Internally, dask-geomodeling stores the raster data as
+`NumPy <https://numpy.org/>`_ arrays.
 
 API Specification
 -----------------
@@ -32,7 +39,7 @@ API Specification
 
 .. automodule:: dask_geomodeling.raster.misc
    :members:
-   :exclude-members: get_sources_and_requests, process
+   :exclude-members: get_sources_and_requests, process, extent, geometry
 
 
 :mod:`dask_geomodeling.raster.sources`

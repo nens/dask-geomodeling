@@ -1,35 +1,50 @@
 """
 Module containing miscellaneous raster blocks.
 """
+from osgeo import ogr
 import numpy as np
+from geopandas import GeoSeries
 
-import shapely
+from shapely.geometry import box
+from shapely.errors import WKTReadingError
+from shapely.wkt import loads as load_wkt
 
 from dask import config
 from dask_geomodeling.geometry import GeometryBlock
-from dask_geomodeling.utils import (
-    get_uint_dtype,
-    get_dtype_max,
-    get_index,
-    rasterize_geoseries,
-)
+from dask_geomodeling import utils
 
 from .base import RasterBlock, BaseSingle
 
 
-__all__ = ["Clip", "Classify", "Reclassify", "Mask", "MaskBelow", "Step", "Rasterize"]
+__all__ = [
+    "Clip",
+    "Classify",
+    "Reclassify",
+    "Mask",
+    "MaskBelow",
+    "Step",
+    "Rasterize",
+    "RasterizeWKT",
+]
 
 
 class Clip(BaseSingle):
     """
-    Make result values 'no data' if it is 'no data' in the source.
-    If source is a boolean mask, False values become 'no data'.
+    Clip one raster to the extent of another raster.
+    
+    Takes two raster inputs, one raster ('store') whose values are returned in
+    the output and one raster ('source') that is used as the extent. Cells of
+    the 'store' raster are replaced with 'no data' if there is no data in the
+    'source' raster.
 
-    :param store: The store-like whose values are to be converted.
-    :param source: The store-like as the source for 'data or no data'
+    If the 'source' raster is a boolean raster, False will result in 'no data'.
 
-    :type store: RasterBlock
-    :type source: RasterBlock
+    Args:
+      store (RasterBlock): Raster whose values are clipped
+      source (RasterBlock): Raster that is used as the clipping mask
+
+    Returns:
+      RasterBlock with clipped values.
     """
 
     def __init__(self, store, source):
@@ -103,13 +118,15 @@ class Clip(BaseSingle):
 
 class Mask(BaseSingle):
     """
-    Convert 'data' values to a single constant value.
+    Replace values in a raster with a single constant value. 'no data' values
+    are preserved.
 
-    :param store: The store whose values are to be converted.
-    :param value: The constant value to be given to 'data' values.
+    Args:
+      store (RasterBlock): The raster whose values are to be converted.
+      value (number): The constant value to be given to 'data' values.
 
-    :type store: Store
-    :type value: number
+    Returns:
+      RasterBlock containing a single value
     """
 
     def __init__(self, store, value):
@@ -134,7 +151,9 @@ class Mask(BaseSingle):
         if data is None or "values" not in data:
             return data
 
-        index = get_index(values=data["values"], no_data_value=data["no_data_value"])
+        index = utils.get_index(
+            values=data["values"], no_data_value=data["no_data_value"]
+        )
 
         fillvalue = 1 if value == 0 else 0
         dtype = "float32" if isinstance(value, float) else "uint8"
@@ -146,13 +165,17 @@ class Mask(BaseSingle):
 
 class MaskBelow(BaseSingle):
     """
-    Mask data below some value.
+    Converts raster cells below the supplied value to 'no data'.
 
-    :param store: The store whose values are to be masked.
-    :param value: The threshold value. Values below this will be masked.
-
-    :type store: Store
-    :type value: number
+    Raster cells with values greater than or equal to the supplied value are
+    returned unchanged.
+    
+    Args:
+      store (RasterBlock): The raster whose values are to be masked.
+      value (number): The constant value below which values are masked.
+    
+    Returns:
+      RasterBlock with cells below the input value converted to 'no data'.
     """
 
     def __init__(self, store, value):
@@ -170,38 +193,43 @@ class MaskBelow(BaseSingle):
 
 
 class Step(BaseSingle):
-    """Block for a constant step function with one discontinuity.
+    """
+    Apply a step function to a raster.
 
-    The step function is defined as:
-    - left if x < location
-    - at if x == location
-    - right if x > location
+    This operation classifies the elements of a raster into three categories:
+    less than, equal to, and greater than a value.
 
-    :param store: The raster whose values are the input to the step function.
-    :param left: value left of the discontinuity
-    :param right: value right of the discontinuity
-    :param location: location of the discontinuity
-    :param at: value at the discontinuity
+    The step function is defined as follows, with x being the value of a raster
+    cell:
 
-    :type store: RasterBlock
-    :type left: number
-    :type right: number
-    :type location: number
-    :type at: number
+    - 'left' if *x < value*
+
+    - 'at' if *x == value*
+
+    - 'right' if *x > value*
+
+    Args:
+      store (RasterBlock): The input raster
+      left (number): Value given to cells lower than the input value,
+        defaults to 0
+      right (number): Value given to cells higher than the input value,
+        defaults to 1
+      value (number): The constant value which raster cells are compared to,
+        defaults to 0
+      at (number): Value given to cells equal to the input value, defaults to
+        the average of left and right
+
+    Returns:
+      RasterBlock containing three values; left, right and at.
+    
     """
 
-    def __init__(self, store, left=0, right=1, location=0, at=None):
-        """Constructor.
-
-
-
-        The at parameter defaults to the mean of the left and right values.
-        """
+    def __init__(self, store, left=0, right=1, value=0, at=None):
         at = (left + right) / 2 if at is None else at
-        for x in left, right, location, at:
+        for x in left, right, value, at:
             if not isinstance(x, (float, int)):
                 raise TypeError("'{}' object is not allowed".format(type(x)))
-        super(Step, self).__init__(store, left, right, location, at)
+        super(Step, self).__init__(store, left, right, value, at)
 
     @property
     def left(self):
@@ -212,7 +240,7 @@ class Step(BaseSingle):
         return self.args[2]
 
     @property
-    def location(self):
+    def value(self):
         return self.args[3]
 
     @property
@@ -243,18 +271,25 @@ class Step(BaseSingle):
 
 class Classify(BaseSingle):
     """
-    Classify raster data into a binned categories
+    Classify raster data into binned categories
 
-    :param store: rasterdata to classify
-    :param bins: a 1-dimensional and monotonic list of bin edges
-    :param right: whether the intervals include the right or the left bin edge
+    Takes a RasterBlock and classifies its values based on bins. The bins are
+    supplied as a list of increasing bin edges.
 
-    :type store: RasterBlock
-    :type bins: list
-    :type right: boolean
+    For each raster cell this operation returns the index of the bin to which
+    the raster cell belongs. The lowest possible output cell value is 0, which
+    means that the input value was lower than the lowest bin edge. The highest
+    possible output value is equal to the number of supplied bin edges.
 
-    See also:
-      https://docs.scipy.org/doc/numpy/reference/generated/numpy.digitize.html
+    Args:
+      store (RasterBlock): The raster whose cell values are to be classified
+      bins (list): An increasing list of bin edges
+      right (boolean): Whether the intervals include the right or the left bin
+        edge, defaults to False.
+    
+    Returns:
+      RasterBlock with classified values
+
     """
 
     def __init__(self, store, bins, right=False):
@@ -284,11 +319,11 @@ class Classify(BaseSingle):
     def dtype(self):
         # with 254 bin edges, we have 255 bins, and we need 256 possible values
         # to include no_data
-        return get_uint_dtype(len(self.bins) + 2)
+        return utils.get_uint_dtype(len(self.bins) + 2)
 
     @property
     def fillvalue(self):
-        return get_dtype_max(self.dtype)
+        return utils.get_dtype_max(self.dtype)
 
     @staticmethod
     def process(data, bins, right):
@@ -296,8 +331,8 @@ class Classify(BaseSingle):
             return data
 
         values = data["values"]
-        dtype = get_uint_dtype(len(bins) + 2)
-        fillvalue = get_dtype_max(dtype)
+        dtype = utils.get_uint_dtype(len(bins) + 2)
+        fillvalue = utils.get_dtype_max(dtype)
 
         result_values = np.digitize(values, bins, right).astype(dtype)
         result_values[values == data["no_data_value"]] = fillvalue
@@ -307,18 +342,21 @@ class Classify(BaseSingle):
 
 class Reclassify(BaseSingle):
     """
-    Reclassify integer data to integers or floats.
+    Reclassify a raster of integer values.
 
-    :param store: rasterdata to reclassify
-    :param data: list of (from, to) values defining the reclassification
-        the from values can be of bool or int datatype; the to values can be
-        of int or float datatype
-    :param select: leave only reclassified values, set others to 'no data'.
-      Default False.
+    This operation can be used to reclassify a classified raster into desired
+    values. Reclassification is done by supplying a list of [from, to] pairs.
 
-    :type store: RasterBlock
-    :type data: list
-    :type select: bool
+    Args:
+      store (RasterBlock): The raster whose cell values are to be reclassified
+      bins (list): A list of [from, to] pairs defining the reclassification.
+        The from values can be of bool or int datatype; the to values can be of
+        int or float datatype
+      select (boolean): Whether to set all non-reclassified cells to 'no data',
+        defaults to False.
+    
+    Returns:
+      RasterBlock with reclassified values
     """
 
     def __init__(self, store, data, select=False):
@@ -366,7 +404,7 @@ class Reclassify(BaseSingle):
 
     @property
     def fillvalue(self):
-        return get_dtype_max(self.dtype)
+        return utils.get_dtype_max(self.dtype)
 
     def get_sources_and_requests(self, **request):
         process_kwargs = {
@@ -414,24 +452,26 @@ class Reclassify(BaseSingle):
 
 
 class Rasterize(RasterBlock):
-    """Converts geometry source to raster
+    """
+    Converts geometry source to raster
 
-    :param source: geometry source
-    :param column_name: column from the geometry source to rasterize. If
-      column_name is not provided, a boolean raster will be returned indicating
-      where there are geometries.
-    :param dtype: a numpy datatype specification to return the array. Defaults
-      to 'int32' if column_name is not, else it defaults to 'bool'.
-    :param limit: the maximum number of geometries. Defaults to the
-      geomodeling.goemetry-limit setting.
-    :returns: a raster containing values from 'column_name' or True/False.
+    This operation is used to transform GeometryBlocks into RasterBlocks. Here
+    geometries (from for example a shapefile) are converted to a raster, using
+    the values from one of the columns.
 
-    :type source: GeometryBlock
-    :type column_name: string
-    :type dtype: string
-    :type limit: int
-
-    To rasterize floating point values, it is necessary to pass dtype='float'.
+    Note that to rasterize floating point values, it is necessary to pass
+    ``dtype="float"``.
+    
+    Args:
+      source (GeometryBlock): The geometry source to be rasterized
+      column_name (string): The name of the column whose values will be
+        returned in the raster. If column_name is not provided, a boolean
+        raster will be generated indicating where there are geometries.
+      dtype (string): A numpy datatype specification to return the array.
+        Defaults to 'int32' if column_name is provided, or to 'bool' otherwise.
+    
+    Returns: 
+      RasterBlock with values from 'column_name' or a boolean raster.
 
     See also:
       https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html
@@ -474,7 +514,7 @@ class Rasterize(RasterBlock):
 
     @property
     def fillvalue(self):
-        return None if self.dtype == np.bool else get_dtype_max(self.dtype)
+        return None if self.dtype == np.bool else utils.get_dtype_max(self.dtype)
 
     @property
     def period(self):
@@ -528,7 +568,7 @@ class Rasterize(RasterBlock):
 
         geom_request = {
             "mode": "intersects",
-            "geometry": shapely.geometry.box(*request["bbox"]),
+            "geometry": box(*request["bbox"]),
             "projection": request["projection"],
             "min_size": min_size,
             "limit": limit,
@@ -579,7 +619,7 @@ class Rasterize(RasterBlock):
             values = np.full((1, height, width), no_data_value, dtype=dtype)
             return {"values": values, "no_data_value": no_data_value}
 
-        result = rasterize_geoseries(
+        result = utils.rasterize_geoseries(
             geoseries=f["geometry"] if "geometry" in f else None,
             values=values,
             bbox=process_kwargs["bbox"],
@@ -598,3 +638,112 @@ class Rasterize(RasterBlock):
             cast_values[values == result["no_data_value"]] = no_data_value
 
         return {"values": cast_values, "no_data_value": no_data_value}
+
+
+class RasterizeWKT(RasterBlock):
+    """Converts a single geometry to a raster mask
+
+    Args:
+      wkt (string): the WKT representation of a geometry
+      projection (string): the projection of the geometry
+
+    Returns:
+      RasterBlock with True for cells that are inside the geometry.
+    """
+
+    def __init__(self, wkt, projection):
+        if not isinstance(wkt, str):
+            raise TypeError("'{}' object is not allowed".format(type(wkt)))
+        if not isinstance(projection, str):
+            raise TypeError("'{}' object is not allowed".format(type(projection)))
+        try:
+            load_wkt(wkt)
+        except WKTReadingError:
+            raise ValueError("The provided geometry is not a valid WKT")
+        try:
+            utils.get_sr(projection)
+        except TypeError:
+            raise ValueError("The provided projection is not a valid WKT")
+        super().__init__(wkt, projection)
+
+    @property
+    def wkt(self):
+        return self.args[0]
+
+    @property
+    def projection(self):
+        return self.args[1]
+
+    @property
+    def dtype(self):
+        return np.dtype("bool")
+
+    @property
+    def fillvalue(self):
+        return None
+
+    @property
+    def period(self):
+        return (self.DEFAULT_ORIGIN,) * 2
+
+    @property
+    def extent(self):
+        return tuple(
+            utils.shapely_transform(
+                load_wkt(self.wkt), self.projection, "EPSG:4326"
+            ).bounds
+        )
+
+    @property
+    def timedelta(self):
+        return None
+
+    @property
+    def geometry(self):
+        return ogr.CreateGeometryFromWkt(self.wkt, utils.get_sr(self.projection))
+
+    @property
+    def geo_transform(self):
+        return None
+
+    def get_sources_and_requests(self, **request):
+        # first handle the 'time' and 'meta' requests
+        mode = request["mode"]
+        if mode == "time":
+            data = self.period[-1]
+        elif mode == "meta":
+            data = None
+        elif mode == "vals":
+            data = {"wkt": self.wkt, "projection": self.projection}
+        else:
+            raise ValueError("Unknown mode '{}'".format(mode))
+        return [(data, None), (request, None)]
+
+    @staticmethod
+    def process(data, request):
+        mode = request["mode"]
+        if mode == "time":
+            return {"time": [data]}
+        elif mode == "meta":
+            return {"meta": [None]}
+        # load the geometry and transform it into the requested projection
+        geometry = load_wkt(data["wkt"])
+        if data["projection"] != request["projection"]:
+            geometry = utils.shapely_transform(
+                geometry, data["projection"], request["projection"]
+            )
+        # take a shortcut when the geometry does not intersect the bbox
+        if not geometry.intersects(box(*request["bbox"])):
+            return {
+                "values": np.full(
+                    (1, request["height"], request["width"]), False, dtype=np.bool
+                ),
+                "no_data_value": None,
+            }
+        return utils.rasterize_geoseries(
+            geoseries=GeoSeries([geometry]) if not geometry.is_empty else None,
+            bbox=request["bbox"],
+            projection=request["projection"],
+            height=request["height"],
+            width=request["width"],
+        )
