@@ -113,18 +113,18 @@ def bucketize(bboxes):
 
 class AggregateRaster(GeometryBlock):
     """
-    Compute a statistics of a raster for each geometry in a geometry source.
+    Compute statistics of a raster for each geometry in a geometry source.
 
     A statistic is computed in a specific projection and with a specified cell
     size. If ``projection`` or ``pixel_size`` are not given, these default to
     the native projection of the provided raster source.
 
     Should the combination of the requested pixel_size and the extent of the
-    source geometry cause the requested raster size to exceed max_pixels, the
-    pixel_size is adjusted automatically if ``auto_pixel_size = True``, else
-    a RuntimeError is raised.
+    source geometry cause the required raster size to exceed ``max_pixels``,
+    the ``pixel_size`` can be adjusted automatically if ``auto_pixel_size`` is
+    set to ``True``, else (the default) a RuntimeError is raised.
 
-    Please note that for any field operation on the result of the aggregation
+    Please note that for any field operation on the result of this block
     a GetSeriesBlock should be used to retrieve data from the added column. The
     name of the added column is determined by the ``column_name`` parameter.
 
@@ -460,7 +460,7 @@ class AggregateRaster(GeometryBlock):
 
 class AggregateRasterAboveThreshold(AggregateRaster):
     """
-    Compute a statistics of a per-feature masked raster for each geometry in a
+    Compute statistics of a per-feature masked raster for each geometry in a
     geometry source.
 
     Per feature, a threshold can be supplied to mask the raster with. Only
@@ -471,8 +471,8 @@ class AggregateRasterAboveThreshold(AggregateRaster):
     further information.
 
     Args:
+      *args: See :class:``dask_geomodeling.geometry.aggregate.AggregateRaster``
       threshold_name (str): The column that holds the thresholds.
-      **kwargs: See :class:``dask_geomodeling.geometry.aggregate.AggregateRaster``
 
     Returns:
       GeometryBlock with aggregation results in an added column
