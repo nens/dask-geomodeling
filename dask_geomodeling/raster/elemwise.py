@@ -729,32 +729,16 @@ class Xor(BaseLogic):
     process = staticmethod(wrap_math_process_func(np.logical_xor))
 
 
-class FillNoData(BaseElementwise):
-    """
-    Combines multiple rasters filling 'no data' values.
-
-    Values at equal timesteps in the contributing rasters are considered
-    starting with the leftmost input raster. Therefore, values from rasters
-    that are more 'to the right' are shown in the result. 'no data' values are
-    transparent and will show data of rasters more 'to the left'.
-
-    The temporal properties of the rasters should be equal, however spatial
-    properties can be different.
-
-    Args:
-      *args (list of RasterBlocks): Rasters to be combined.
-      
-    Returns:
-      RasterBlock that combines values from the inputs.
-    """
-
+class BaseElementwiseMultiple(BaseElementwise):
+    """Base class for elementwise combinations of N rasters"""
     def __init__(self, *args):
         # TODO Expand this block so that it takes ndarrays and scalars.
         for arg in args:
             if not isinstance(arg, RasterBlock):
                 raise TypeError("'{}' object is not allowed".format(type(arg)))
-        super(FillNoData, self).__init__(*args)
+        super().__init__(*args)
 
+    @staticmethod
     def preprocess(*args):
         data_list = []
         no_data_values = []
@@ -769,39 +753,45 @@ class FillNoData(BaseElementwise):
                 data_list.append(data["values"])
                 no_data_values.append(data["no_data_value"])
 
-        dtype = np.result_type(*data_list)
-        fillvalue = get_dtype_max(dtype)
+        dtype = np.float64
 
-        # initialize values array
-        values = np.full(data_list[0].shape, fillvalue, dtype=dtype)
         # populate values array
-        multivalues = []
-        for data, no_data_value in zip(data_list, no_data_values):
-            # initialize values array
-            array_values = np.full(data_list[0].shape, np.nan, dtype=dtype)
+        multivalues = np.full(
+            (len(data_list), ) + data_list[0].shape, np.nan, dtype=dtype
+        )
+        for i, (data, no_data_value) in enumerate(zip(data_list, no_data_values)):
             # index is where the source has data
             index = get_index(data, no_data_value)
-            array_values[index] = data[index]
-            multivalues.append(array_values)
-        return {"values": values, "no_data_value": fillvalue}, multivalues
+            multivalues[i, index] = data[index]
+        return multivalues
 
+
+class FilNoData(BaseElementwiseMultiple):
     @staticmethod
     def process(*args):
         """Combine data, filling in nodata values."""
-        values_fillvalue, _ = FillNoData.preprocess(*args)
+        multivalues = BaseElementwiseMultiple.preprocess(*args)
+        # convert here
         return values_fillvalue
 
 
-class ArgMax(FillNoData):
+class ArgMax(BaseElementwiseMultiple):
     """Compare multiple rasters to return the element-wise indices of the maximum values (ignores partial NoData)."""
     @staticmethod
-    def process(self, *args):
+    def process(kwargs, *args):
         """Combine data, filling in nodata values."""
-        values_fillvalue, multivalues = FillNoData.preprocess(*args)
-        fillvalue = 255
-        values = np.nanargmax(multivalues, axis=0)
-        values[np.isnan(values)] = fillvalue 
-        return {"values": values, "no_data_value": fillvalue}
+        multivalues = BaseElementwiseMultiple.preprocess(*args)
+        values = np.nanargmax(multivalues, axis=0, dtype=kwargs["dtype"])
+        values[np.isnan(values)] = kwargs["fillvalue"]
+        return {"values": values, "no_data_value": kwargs["fillvalue"]}
+
+    @property
+    def dtype(self):
+        return np.uint8
+
+    @property
+    def fillvalue(self):
+        return 255
 
 
 class ArgMin(FillNoData):
@@ -826,15 +816,16 @@ class CountData(FillNoData):
         return {"values": values, "no_data_value": fillvalue}
 
 
-class Max(FillNoData):
+class Max(BaseElementwiseMultiple):
     """Compares the values of multiple rasters and returns element-wise max (ignorese partial NoData)."""
     @staticmethod
-    def process(self, *args):
-        values_fillvalue, multivalues = FillNoData.preprocess(*args)
-        fillvalue = values_fillvalue["no_data_value"]
+    def process(kwargs, *args):
+        multivalues = BaseElementwiseMultiple.preprocess(*args)
         values = np.nanmax(multivalues, axis=0, keepdims=True)
-        values[np.isnan(values)] = fillvalue 
-        return {"values": values, "no_data_value": fillvalue}
+        no_data = np.isnan(values)
+        values.astype(kwargs["dtype"])
+        values[no_data] = kwargs["fillvalue"]
+        return {"values": values, "no_data_value": kwargs["fillvalue"]}
 
 
 class Mean(FillNoData):
