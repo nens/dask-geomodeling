@@ -312,12 +312,15 @@ class AggregateRaster(GeometryBlock):
         width = max(int((x2 - x1) / pixel_size), 1)
         height = max(int((y2 - y1) / pixel_size), 1)
 
+        aggregation = self.statistic\
+            if self.statistic in ('sum', 'count', 'min', 'max', 'mean')\
+            else None
         raster_request = {
             "mode": "vals",
             "projection": agg_srs,
             "start": request.get("start"),
             "stop": request.get("stop"),
-            "aggregation": None,  # TODO
+            "aggregation": aggregation,
             "bbox": (x1, y1, x2, y2),
             "width": width,
             "height": height,

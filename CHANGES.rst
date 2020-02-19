@@ -5,7 +5,7 @@ Changelog of dask-geomodeling
 2.2.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- AggregateRaster geoblock can use stored aggregations.
 
 
 2.2.2 (2020-02-13)

@@ -32,6 +32,9 @@ class RasterBlock(Block):
     - height: data height
     - start: start date as naive UTC datetime
     - stop: stop date as naive UTC datetime
+    - aggregation: Spatial aggregation algorithm.
+      Options are sum (``'sum'``), count (``'count'``), min (``'min'``),
+      max (``'max'``) or mean (``'mean'``).
 
     The data response is ``None`` or a dictionary with the following fields:
 
