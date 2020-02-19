@@ -817,6 +817,22 @@ class TestAggregateRaster(unittest.TestCase):
             np.testing.assert_allclose(request["bbox"], (2, 2, 8, 8))
             self.assertEqual(6, request["width"])
             self.assertEqual(6, request["height"])
+            self.assertEqual('sum', request["aggregation"])
+
+        # test aggregation 'max'
+        view = geometry.AggregateRaster(
+            source=self.source, raster=self.raster, statistic='max'
+        )
+        _, (_, request), _ = view.get_sources_and_requests(**self.request)
+        self.assertEqual('max', request["aggregation"])
+
+        # test aggregation 'median'
+        view = geometry.AggregateRaster(
+            source=self.source, raster=self.raster, statistic='median'
+        )
+        _, (_, request), _ = view.get_sources_and_requests(**self.request)
+        self.assertIsNone(request["aggregation"])
+
 
     def test_pixel_size(self):
         # larger
