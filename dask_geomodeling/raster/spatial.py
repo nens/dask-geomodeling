@@ -12,11 +12,14 @@ from dask_geomodeling.utils import (
     Extent,
     get_dtype_min,
     get_footprint,
+    shapely_transform,
 )
 
-from .base import BaseSingle
+from .base import BaseSingle, RasterBlock
 
-__all__ = ["Dilate", "Smooth", "MovingMax", "HillShade"]
+from shapely.geometry import box, MultiPoint
+
+__all__ = ["Dilate", "Smooth", "MovingMax", "HillShade", "Place"]
 
 
 def expand_request_pixels(request, radius=1):
@@ -429,3 +432,124 @@ class HillShade(BaseSingle):
         )
 
         return [(self.store, new_request), (process_kwargs, None)]
+
+
+class Place(BaseSingle):
+    """Place a small input raster at given coordinates
+
+    Args:
+      store (RasterBlock): Raster that will be placed.
+      projection (str): The projection in which this operation is done. This
+        specifies the projection of the bbox and coordinates arguments.
+      bbox (list): The bounding box (x1, y1, x2, y2) into the source raster
+        encompassing the feature that needs to be placed.
+      coordinates (list of lists of 2 numbers): The target coordinates. The
+        center of the bbox will be placed on each of these coordinates.
+
+    Returns:
+      RasterBlock with the source raster placed
+
+    """
+
+    def __init__(self, store, projection, bbox, coordinates):
+        if not isinstance(store, RasterBlock):
+            raise TypeError("'{}' object is not allowed".format(type(store)))
+        try:
+            get_sr(projection)
+        except RuntimeError:
+            raise ValueError(
+                "'{}' is not a valid projection string".format(projection)
+            )
+        bbox = list(bbox)
+        if len(bbox) != 2:
+            raise ValueError("Expected 2 numbers in the 'bbox' parameter")
+        for x in bbox:
+            if not isinstance(x, (int, float)):
+                raise TypeError("'{}' object is not allowed".format(type(x)))
+        coordinates = np.asarray(coordinates, dtype=float)
+        if coordinates.ndim != 2 or coordinates.shape[1] != 2:
+            raise ValueError(
+                "Expected a list of lists of 2 numbers in the 'coordinates' "
+                "parameter"
+            )
+        super().__init__(store, projection, bbox, coordinates.tolist())
+
+    @property
+    def projection(self):
+        return self.args[1]
+
+    @property
+    def bbox(self):
+        return self.args[2]
+
+    @property
+    def coordinates(self):
+        return self.args[3]
+
+    def get_sources_and_requests(self, **request):
+        if request["mode"] != "vals":
+            return (self.store, request), ({"mode": request["mode"]}, None)
+        process_kwargs = {
+            "mode": "vals",
+            "source_bbox": self.bbox,
+            "requested_bbox": tuple(request["bbox"]),
+            "source_projection": self.projection,
+            "requested_projection": request["projection"],
+            "coordinates": self.coordinates,
+            "height": request["height"],
+            "width": request["width"],
+        }
+
+        # get the requested pixel size
+        x1, y1, x2, y2 = request["bbox"]
+        pixel_size_y = (y2 - y1) / request["height"]
+        pixel_size_x = (x2 - x1) / request["width"]
+
+        # transform the source bbox into the requested projection
+        new_bbox = shapely_transform(
+            box(*self.bbox), self.projection, request["projection"],
+        ).bounds
+
+        # compute corresponding height and width
+        x1, y1, x2, y2 = request["bbox"]
+        new_height = int(round((y2 - y1) / pixel_size_y))
+        new_width = int(round((x2 - x1) / pixel_size_x))
+
+        process_kwargs = {
+            "mode": "vals",
+            "bbox": new_bbox,
+            "source_projection": self.projection,
+            "requested_projection": request["projection"],
+            "coordinates": self.coordinates,
+            "height": request["height"],
+            "width": request["width"],
+        }
+
+        new_request = request.copy()
+        new_request["bbox"] = new_bbox
+        new_request["height"] = new_height
+        new_request["width"] = new_width
+        return (self.store, request), (process_kwargs, None)
+
+    @staticmethod
+    def process(data, kwargs):
+        if kwargs["mode"] != "vals" or data is None:
+            return data
+        values = data["values"]
+        result = np.full(
+            (values.shape[0], kwargs["height"], kwargs["width"]),
+            data["no_data_value"],
+            dtype=values.dtype
+        )
+        # transform coordinates
+        coordinates = shapely_transform(
+            MultiPoint(kwargs["coordinates"]),
+            kwargs["source_projection"],
+            kwargs["requested_projection"],
+        ).coords
+
+        x1, x2, y1, y2 = process_kwargs["bbox"]
+        shape = values.shape[1:]
+
+        for x, y in coordinates:
+            if x <
