@@ -10,6 +10,9 @@ import tempfile
 from dask.config import config
 from dask.base import tokenize
 from dask_geomodeling import utils
+import ast
+import pandas as pd
+from collections import defaultdict
 
 from .base import BaseSingle
 from .parallelize import GeometryTiler
@@ -65,7 +68,8 @@ class GeometryFileSink(BaseSingle):
         elif not isinstance(fields, dict):
             raise TypeError("'{}' object is not allowed".format(type(fields)))
         else:
-            missing = set(fields.values()) - source.columns
+            values = [value.split('.')[0] for value in fields.values()]
+            missing = set(values) - source.columns
             if missing:
                 raise ValueError("Columns {} are not available".format(missing))
         super().__init__(source, safe_url, extension, fields)
@@ -119,10 +123,18 @@ class GeometryFileSink(BaseSingle):
             features[index_name] = features.index
 
         # copy the dataframe
-        features = features[["geometry"] + list(fields.values())]
+        values = [value.split('.')[0] for value in fields.values()]
+        features = features[["geometry"] + values]
 
         # rename the columns
         features.columns = ["geometry"] + list(fields.keys())
+
+        normalized_columns = [s.split('.') for s in fields.values() if '.' in s]
+        if normalized_columns:
+            for column, subcolumn in normalized_columns:
+                features[subcolumn] = pd.json_normalize(
+                    features[column].astype('str').apply(ast.literal_eval)
+                )[subcolumn]
 
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)

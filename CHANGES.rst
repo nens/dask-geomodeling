@@ -5,6 +5,9 @@ Changelog of dask-geomodeling
 2.2.3 (unreleased)
 ------------------
 
+- `GeometryFileSink` normalizes semi-structured JSON columns
+  into a flat column.
+
 - Nothing changed yet.
 
 

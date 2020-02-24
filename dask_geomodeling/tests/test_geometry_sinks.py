@@ -50,8 +50,8 @@ class TestGeometryFileSink(unittest.TestCase):
             ((10.0, 10.0), (10.0, 12.0), (12.0, 12.0), (12.0, 10.0)),
         ]
         self.properties = [
-            {"int": 5, "float": 3.2, "str": "bla"},
-            {"int": 7, "float": 5.2, "str": "bla2"},
+            {"int": 5, "float": 3.2, "str": "bla", "extra": "{'key': 'value_1'}", "extra2": "{'key2': 'value_2'}"},
+            {"int": 7, "float": 5.2, "str": "bla2", "extra": "{'key': 'value_1'}", "extra2": "{'key2': 'value_2'}"},
         ]
         self.source = MockGeometry(
             self.polygons, projection="EPSG:3857", properties=self.properties
@@ -138,6 +138,21 @@ class TestGeometryFileSink(unittest.TestCase):
 
         actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
         assert set(actual.columns) == {"geometry", "target", "int1", "int2"}
+
+    def test_nested_fields(self):
+        block = self.klass(
+            self.source,
+            self.path,
+            "geojson",
+            fields={"target": "str", "int1": "int", "int2": "int", 
+                    "extra": "extra.key", "extra2": "extra2.key2"},
+        )
+        block.get_data(**self.request)
+
+        actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
+        assert set(actual.columns)\
+               == {'extra2', 'extra', 'int2', 'key', 'int1',
+                   'geometry', 'key2', 'target'}
 
     def test_merge_files(self):
         block = self.klass(self.source, self.path, "geojson")
