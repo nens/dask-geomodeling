@@ -1017,24 +1017,24 @@ class TestAggregateRaster(unittest.TestCase):
     def test_aggregate_percentile_one_empty(self):
         # after bug report BACK-720: NaN values get replaced with some other
         # value in case of percentile statistics
-        data = np.ones((1, 10, 10), dtype=np.uint8)
-        data[:, :5, :] = 255
-        raster = MemorySource(
-            data, 255, "EPSG:3857", pixel_size=1, pixel_origin=(0, 10)
-        )
-        source = MockGeometry(
-            polygons=[
-                ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),
-                ((6.0, 6.0), (8.0, 6.0), (8.0, 8.0), (6.0, 8.0)),
-            ],
-            properties=[{"id": 1}, {"id": 2}],
-        )
-        view = geometry.AggregateRaster(
-            source=source, raster=raster, statistic="p90.0"
-        )
-        result = view.get_data(**self.request)
-        assert result["features"].loc[1, "agg"] == 1.
-        assert np.isnan(result["features"].loc[2, "agg"])
+        for agg in ["mean", "min", "max", "median", "p90.0"]:
+            data = np.ones((1, 10, 10), dtype=np.uint8)
+            data[:, :5, :] = 255
+            raster = MemorySource(
+                data, 255, "EPSG:3857", pixel_size=1, pixel_origin=(0, 10)
+            )
+            source = MockGeometry(
+                polygons=[
+                    ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),
+                    ((6.0, 6.0), (8.0, 6.0), (8.0, 8.0), (6.0, 8.0)),
+                ],
+                properties=[{"id": 1}, {"id": 2}],
+            )
+            view = geometry.AggregateRaster(
+                source=source, raster=raster, statistic=agg
+            )
+            result = view.get_data(**self.request)
+            assert np.isnan(result["features"]["agg"].values[1])
 
     def test_empty_dataset(self):
         source = MockGeometry(polygons=[], properties=[])
