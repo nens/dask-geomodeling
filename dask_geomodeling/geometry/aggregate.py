@@ -434,6 +434,10 @@ class AggregateRaster(GeometryBlock):
                 select_no_nan = list(
                     set(np.unique(active_labels)) & set(select)
                 )
+
+                if not select_no_nan:
+                    continue
+
                 agg[frame_no][select_no_nan] = agg_func(
                     1 if statistic == "count" else frame[active],
                     labels=active_labels,
