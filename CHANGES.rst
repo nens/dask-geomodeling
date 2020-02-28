@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.2.3 (unreleased)
+2.2.3 (2020-02-28)
 ------------------
 
 -  Fix AggregateRaster: it now returns NaN for no data pixels (#37)
