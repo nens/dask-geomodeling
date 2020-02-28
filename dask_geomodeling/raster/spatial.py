@@ -13,6 +13,7 @@ from dask_geomodeling.utils import (
     get_dtype_min,
     get_footprint,
     shapely_transform,
+    get_index,
 )
 
 from .base import BaseSingle, RasterBlock
@@ -435,14 +436,15 @@ class HillShade(BaseSingle):
 
 
 class Place(BaseSingle):
-    """Place a small input raster at given coordinates
+    """Place an input raster at given coordinates
 
     Args:
       store (RasterBlock): Raster that will be placed.
       projection (str): The projection in which this operation is done. This
-        specifies the projection of the bbox and coordinates arguments.
-      bbox (list): The bounding box (x1, y1, x2, y2) into the source raster
-        encompassing the feature that needs to be placed.
+        specifies the projection of the bbox and coordinates arguments. Also
+        this limits the projection that can be returned by this block.
+      anchor (list of 2 numbers): The anchor into the source raster that will
+        be placed at given coordinates.
       coordinates (list of lists of 2 numbers): The target coordinates. The
         center of the bbox will be placed on each of these coordinates.
 
@@ -451,7 +453,7 @@ class Place(BaseSingle):
 
     """
 
-    def __init__(self, store, projection, bbox, coordinates):
+    def __init__(self, store, projection, anchor, coordinates):
         if not isinstance(store, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
         try:
@@ -460,10 +462,10 @@ class Place(BaseSingle):
             raise ValueError(
                 "'{}' is not a valid projection string".format(projection)
             )
-        bbox = list(bbox)
-        if len(bbox) != 2:
-            raise ValueError("Expected 2 numbers in the 'bbox' parameter")
-        for x in bbox:
+        anchor = list(anchor)
+        if len(anchor) != 2:
+            raise ValueError("Expected 2 numbers in the 'anchor' parameter")
+        for x in anchor:
             if not isinstance(x, (int, float)):
                 raise TypeError("'{}' object is not allowed".format(type(x)))
         coordinates = np.asarray(coordinates, dtype=float)
@@ -472,14 +474,14 @@ class Place(BaseSingle):
                 "Expected a list of lists of 2 numbers in the 'coordinates' "
                 "parameter"
             )
-        super().__init__(store, projection, bbox, coordinates.tolist())
+        super().__init__(store, projection, anchor, coordinates.tolist())
 
     @property
     def projection(self):
         return self.args[1]
 
     @property
-    def bbox(self):
+    def anchor(self):
         return self.args[2]
 
     @property
@@ -488,68 +490,51 @@ class Place(BaseSingle):
 
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
-            return (self.store, request), ({"mode": request["mode"]}, None)
-        process_kwargs = {
-            "mode": "vals",
-            "source_bbox": self.bbox,
-            "requested_bbox": tuple(request["bbox"]),
-            "source_projection": self.projection,
-            "requested_projection": request["projection"],
-            "coordinates": self.coordinates,
-            "height": request["height"],
-            "width": request["width"],
-        }
+            return ({"mode": request["mode"]}, None), (self.store, request)
 
-        # get the requested pixel size
+        if not get_sr(request["projection"]).IsSame(get_sr(self.projection)):
+            raise NotImplementedError(
+                "Cannot reproject rasters in raster.spatial.Place. Either "
+                "initialize Place with {} or request the data in {}".format(
+                    request["projection"], self.projection
+                )
+            )
+
+        # shift the requested bboxes
         x1, y1, x2, y2 = request["bbox"]
-        pixel_size_y = (y2 - y1) / request["height"]
-        pixel_size_x = (x2 - x1) / request["width"]
 
-        # transform the source bbox into the requested projection
-        new_bbox = shapely_transform(
-            box(*self.bbox), self.projection, request["projection"],
-        ).bounds
-
-        # compute corresponding height and width
-        x1, y1, x2, y2 = request["bbox"]
-        new_height = int(round((y2 - y1) / pixel_size_y))
-        new_width = int(round((x2 - x1) / pixel_size_x))
-
-        process_kwargs = {
-            "mode": "vals",
-            "bbox": new_bbox,
-            "source_projection": self.projection,
-            "requested_projection": request["projection"],
-            "coordinates": self.coordinates,
-            "height": request["height"],
-            "width": request["width"],
-        }
-
-        new_request = request.copy()
-        new_request["bbox"] = new_bbox
-        new_request["height"] = new_height
-        new_request["width"] = new_width
-        return (self.store, request), (process_kwargs, None)
+        # generate a new (shifted) bbox for each coordinate
+        sources_and_requests = []
+        for _x, _y in self.coordinates:
+            _request = request.copy()
+            _request["bbox"] = [
+                x1 + self.anchor[0] - _x,
+                y1 + self.anchor[1] - _y,
+                x2 + self.anchor[0] - _x,
+                y2 + self.anchor[1] - _y,
+            ]
+            sources_and_requests.append((self.store, _request))
+        return [({"mode": request["mode"]}, None)] + sources_and_requests
 
     @staticmethod
-    def process(data, kwargs):
-        if kwargs["mode"] != "vals" or data is None:
-            return data
-        values = data["values"]
-        result = np.full(
-            (values.shape[0], kwargs["height"], kwargs["width"]),
-            data["no_data_value"],
-            dtype=values.dtype
-        )
-        # transform coordinates
-        coordinates = shapely_transform(
-            MultiPoint(kwargs["coordinates"]),
-            kwargs["source_projection"],
-            kwargs["requested_projection"],
-        ).coords
+    def process(process_kwargs, *multi):
+        if process_kwargs["mode"] != "vals":
+            return multi[0]
 
-        x1, x2, y1, y2 = process_kwargs["bbox"]
-        shape = values.shape[1:]
+        values = None
+        no_data_value = None
+        for data in multi:
+            if data is None:
+                continue
+            if values is None:
+                values = data["values"].copy()
+                no_data_value = data["no_data_value"]
+            else:
+                # index is where the source has data
+                index = get_index(data["values"], data["no_data_value"])
+                values[index] = data["values"][index]
 
-        for x, y in coordinates:
-            if x <
+        if values is None:
+            return
+        else:
+            return {"values": values, "no_data_value": no_data_value}
