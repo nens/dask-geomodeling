@@ -1015,8 +1015,8 @@ class TestAggregateRaster(unittest.TestCase):
         self.assertEqual(result["features"]["agg"].values.tolist(), [36.0, 18.0])
 
     def test_aggregate_percentile_one_empty(self):
-        # after bug report BACK-720: NaN values get replaced with some other
-        # value in case of percentile statistics
+        # if there are only nodata pixels in the geometries, we expect the
+        # statistic of mean, min, max, median and percentile to be NaN.
         for agg in ["mean", "min", "max", "median", "p90.0"]:
             data = np.ones((1, 10, 10), dtype=np.uint8)
             data[:, :5, :] = 255
@@ -1148,12 +1148,6 @@ class TestSetGetSeries(unittest.TestCase):
         added_values = data["features"]["col_1"].values
         assert_almost_equal(added_values, [i * 3 for i in range(self.N)])
         self.assertSetEqual({"geometry", "col_1"}, source.columns)
-
-    def test_set_series_with_nan(self):
-        source = geometry.SetSeriesBlock(self.source1, "added", self.source2["col_4"])
-        data = source.get_data(**self.request)
-        added_values = data["features"]["added"].values
-        assert np.isnan(added_values[::2]).all()
 
     def test_set_series_multiple(self):
         source = geometry.SetSeriesBlock(

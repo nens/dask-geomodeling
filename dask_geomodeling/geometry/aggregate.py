@@ -403,7 +403,7 @@ class AggregateRaster(GeometryBlock):
                 agg_srs,
                 height,
                 width,
-                values=np.asarray(select, dtype=np.int32),
+                values=np.asarray(select, dtype=np.int32),  # GDAL needs int32
             )
             labels = rasterize_result["values"][0]
 
@@ -429,19 +429,19 @@ class AggregateRaster(GeometryBlock):
                     continue
 
                 # select features that actually have data
-                # (median and percentile cannot handle it otherwise)
+                # (min, max, median, and percentile cannot handle it otherwise)
                 active_labels = labels[active]
-                select_no_nan = list(
+                select_and_active = list(
                     set(np.unique(active_labels)) & set(select)
                 )
 
-                if not select_no_nan:
+                if not select_and_active:
                     continue
 
-                agg[frame_no][select_no_nan] = agg_func(
+                agg[frame_no][select_and_active] = agg_func(
                     1 if statistic == "count" else frame[active],
                     labels=active_labels,
-                    index=select_no_nan,
+                    index=select_and_active,
                 )
 
         if extensive:  # sum and count
