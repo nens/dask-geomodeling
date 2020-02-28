@@ -397,23 +397,21 @@ class AggregateRaster(GeometryBlock):
         # process in groups of disjoint subsets of the features
         agg = np.full((depth, len(features)), np.nan, dtype="f4")
         for select in bucketize(features.bounds.values):
-            agg_geometries_bucket = agg_geometries.iloc[select]
-            index = features.index[select]
-
             rasterize_result = utils.rasterize_geoseries(
-                agg_geometries_bucket,
+                agg_geometries.iloc[select],
                 process_kwargs["agg_bbox"],
                 agg_srs,
                 height,
                 width,
-                values=index,
+                values=np.asarray(select, dtype=np.int32),  # GDAL needs int32
             )
             labels = rasterize_result["values"][0]
 
             # if there is a threshold, generate a raster with thresholds
             if threshold_name:
-                thresholds = features[threshold_name].reindex(labels.ravel())\
-                    .values.reshape(labels.shape)
+                threshold_values = features[threshold_name].iloc[select]
+                threshold_values = np.append(threshold_values.values, np.nan)
+                thresholds = np.take(threshold_values, labels, mode="clip")
             else:
                 thresholds = None
 
@@ -430,15 +428,21 @@ class AggregateRaster(GeometryBlock):
                 if not active.any():
                     continue
 
-                with warnings.catch_warnings():
-                    # we may get divide by 0 if any geometry does not contain
-                    # any 'active' values
-                    warnings.simplefilter("ignore")
-                    agg[frame_no][select] = agg_func(
-                        1 if statistic == "count" else frame[active],
-                        labels=labels[active],
-                        index=index,
-                    )
+                # select features that actually have data
+                # (min, max, median, and percentile cannot handle it otherwise)
+                active_labels = labels[active]
+                select_and_active = list(
+                    set(np.unique(active_labels)) & set(select)
+                )
+
+                if not select_and_active:
+                    continue
+
+                agg[frame_no][select_and_active] = agg_func(
+                    1 if statistic == "count" else frame[active],
+                    labels=active_labels,
+                    index=select_and_active,
+                )
 
         if extensive:  # sum and count
             agg[~np.isfinite(agg)] = 0

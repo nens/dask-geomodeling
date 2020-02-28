@@ -20,6 +20,7 @@ from dask_geomodeling.tests.factories import (
     MockRaster,
 )
 
+from dask_geomodeling.raster import MemorySource
 from dask_geomodeling.geometry import aggregate
 from dask_geomodeling.geometry import set_operations
 from dask_geomodeling.geometry import field_operations
@@ -1013,6 +1014,28 @@ class TestAggregateRaster(unittest.TestCase):
         result = view.get_data(**self.request)
         self.assertEqual(result["features"]["agg"].values.tolist(), [36.0, 18.0])
 
+    def test_aggregate_percentile_one_empty(self):
+        # if there are only nodata pixels in the geometries, we expect the
+        # statistic of mean, min, max, median and percentile to be NaN.
+        for agg in ["mean", "min", "max", "median", "p90.0"]:
+            data = np.ones((1, 10, 10), dtype=np.uint8)
+            data[:, :5, :] = 255
+            raster = MemorySource(
+                data, 255, "EPSG:3857", pixel_size=1, pixel_origin=(0, 10)
+            )
+            source = MockGeometry(
+                polygons=[
+                    ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),
+                    ((6.0, 6.0), (8.0, 6.0), (8.0, 8.0), (6.0, 8.0)),
+                ],
+                properties=[{"id": 1}, {"id": 2}],
+            )
+            view = geometry.AggregateRaster(
+                source=source, raster=raster, statistic=agg
+            )
+            result = view.get_data(**self.request)
+            assert np.isnan(result["features"]["agg"].values[1])
+
     def test_empty_dataset(self):
         source = MockGeometry(polygons=[], properties=[])
         view = geometry.AggregateRaster(
@@ -1079,17 +1102,18 @@ class TestBucketize(unittest.TestCase):
 class TestSetGetSeries(unittest.TestCase):
     def setUp(self):
         self.N = 10
-        self.properties = [{"id": i, "col_1": i * 2} for i in range(self.N)]
+        properties = [{"id": i, "col_1": i * 2} for i in range(self.N)]
+        polygons = [((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * self.N
         self.source1 = MockGeometry(
-            polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * self.N,
-            properties=self.properties,
+            polygons=polygons,
+            properties=properties,
         )
-        self.properties = [
-            {"id": i, "col_2": i * 3, "col_3": i * 4} for i in range(self.N)
+        properties = [
+            {"id": i, "col_2": i * 3, "col_3": i * 4, "col_4": i if i % 2 else np.nan} for i in range(self.N)
         ]
         self.source2 = MockGeometry(
-            polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * self.N,
-            properties=self.properties,
+            polygons=polygons,
+            properties=properties,
         )
         self.request = dict(
             mode="intersects", projection="EPSG:3857", geometry=box(0, 0, 10, 10)
