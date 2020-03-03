@@ -5,7 +5,6 @@ import math
 
 from scipy import ndimage
 import numpy as np
-import pyproj
 from osgeo import ogr
 
 from dask_geomodeling.utils import (
@@ -17,9 +16,11 @@ from dask_geomodeling.utils import (
     get_dtype_min,
     get_footprint,
     get_index,
+    shapely_transform,
 )
 
 from .base import BaseSingle, RasterBlock
+from shapely.geometry import Point
 
 __all__ = ["Dilate", "Smooth", "MovingMax", "HillShade", "Place"]
 
@@ -550,31 +551,27 @@ class Place(BaseSingle):
         y2 = max([e[3] for e in extents])
         return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), sr)
 
-    def _transformed(self, projection):
-        # transform the anchor and coordinates into the requested projection
-        x, y = pyproj.transform(
-            pyproj.Proj(self.place_projection),
-            pyproj.Proj(projection),
-            x=[self.anchor[0]] + [coord[0] for coord in self.coordinates],
-            y=[self.anchor[1]] + [coord[1] for coord in self.coordinates],
-            skip_equivalent=True,
-            always_xy=True,  # enforce lon, lat order
-        )
-        return (x[0], y[0]), (x[1:], y[1:])  # anchor, coordinates
-
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
             return ({"mode": request["mode"]}, None), (self.store, request)
 
         # transform the anchor and coordinates into the requested projection
-        anchor, coordinates = self._transformed(request["projection"])
+        anchor = shapely_transform(
+            Point(self.anchor), self.place_projection, request["projection"]
+        ).coords[0]
+        coordinates = (
+            shapely_transform(
+                Point(coord), self.place_projection, request["projection"]
+            ).coords[0]
+            for coord in self.coordinates
+        )
 
         # shift the requested bboxes
         x1, y1, x2, y2 = request["bbox"]
 
         # generate a new (shifted) bbox for each coordinate
         sources_and_requests = []
-        for _x, _y in zip(*coordinates):
+        for _x, _y in coordinates:
             _request = request.copy()
             _request["bbox"] = [
                 x1 + anchor[0] - _x,
