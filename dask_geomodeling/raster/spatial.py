@@ -5,20 +5,21 @@ import math
 
 from scipy import ndimage
 import numpy as np
+import pyproj
+from osgeo import ogr
 
 from dask_geomodeling.utils import (
     EPSG3857,
+    EPSG4326,
+    POLYGON,
     get_sr,
     Extent,
     get_dtype_min,
     get_footprint,
-    shapely_transform,
     get_index,
 )
 
 from .base import BaseSingle, RasterBlock
-
-from shapely.geometry import box, MultiPoint
 
 __all__ = ["Dilate", "Smooth", "MovingMax", "HillShade", "Place"]
 
@@ -112,14 +113,14 @@ class Dilate(BaseSingle):
     in each direction, including diagonals.
 
     Dilation is performed in the order of the values parameter.
-    
+
     Args:
       store (RasterBlock): Raster to perform dilation on.
       values (list): Only cells with these values are dilated.
 
     Returns:
       RasterBlock where cells in values list are dilated.
-    
+
     See also:
       https://en.wikipedia.org/wiki/Dilation_%28morphology%29
     """
@@ -154,14 +155,14 @@ class Dilate(BaseSingle):
 class MovingMax(BaseSingle):
     """
     Apply a spatial maximum filter to the data using a circular footprint.
-    
+
     This can be used for visualization of sparse data.
 
     Args:
       store (RasterBlock): Raster to which the filter is applied
       size (integer): Diameter of the circular footprint. This should always be
         an odd number larger than 1.
-    
+
     Returns:
       RasterBlock with maximum values inside the footprint of each input cell.
     """
@@ -222,7 +223,7 @@ class Smooth(BaseSingle):
 
     Returns:
       RasterBlock with spatially smoothed values.
-      
+
     See Also:
       https://en.wikipedia.org/wiki/Gaussian_blur
 
@@ -438,29 +439,33 @@ class HillShade(BaseSingle):
 class Place(BaseSingle):
     """Place an input raster at given coordinates
 
+    Note that if the store's projection is different from the requested one,
+    the data will be reprojected before placing it at a different position.
+
     Args:
       store (RasterBlock): Raster that will be placed.
-      projection (str): The projection in which this operation is done. This
-        specifies the projection of the bbox and coordinates arguments. Also
-        this limits the projection that can be returned by this block.
+      place_projection (str): The projection in which this operation is done.
+        This also specifies the projection of the ``anchor`` and
+        ``coordinates`` args.
       anchor (list of 2 numbers): The anchor into the source raster that will
         be placed at given coordinates.
       coordinates (list of lists of 2 numbers): The target coordinates. The
-        center of the bbox will be placed on each of these coordinates.
+        center of the bbox will be placed on each of these coordinates. The
+        last one will go 'on top' in case there is overlap.
 
     Returns:
       RasterBlock with the source raster placed
 
     """
 
-    def __init__(self, store, projection, anchor, coordinates):
+    def __init__(self, store, place_projection, anchor, coordinates):
         if not isinstance(store, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
         try:
-            get_sr(projection)
+            get_sr(place_projection)
         except RuntimeError:
             raise ValueError(
-                "'{}' is not a valid projection string".format(projection)
+                "'{}' is not a valid projection string".format(place_projection)
             )
         anchor = list(anchor)
         if len(anchor) != 2:
@@ -474,10 +479,10 @@ class Place(BaseSingle):
                 "Expected a list of lists of 2 numbers in the 'coordinates' "
                 "parameter"
             )
-        super().__init__(store, projection, anchor, coordinates.tolist())
+        super().__init__(store, place_projection, anchor, coordinates.tolist())
 
     @property
-    def projection(self):
+    def place_projection(self):
         return self.args[1]
 
     @property
@@ -488,30 +493,94 @@ class Place(BaseSingle):
     def coordinates(self):
         return self.args[3]
 
+    @property
+    def projection(self):
+        """The native projection of this block.
+
+        Only returns something if the place projection equals the store
+        projection"""
+        store_projection = self.store.projection
+        if store_projection is None:
+            return
+        if get_sr(self.place_projection).IsSame(get_sr(store_projection)):
+            return store_projection
+
+    @property
+    def geo_transform(self):
+        """The native geo_transform of this block
+
+        Returns None if the store projection and place projections differ."""
+        if self.projection is not None:
+            return self.store.geo_transform
+
+    @property
+    def extent(self):
+        geometry = self.geometry
+        if not geometry.GetSpatialReference().IsSame(EPSG4326):
+            geometry = geometry.Clone()
+            geometry.TransformTo(EPSG4326)
+        x1, x2, y1, y2 = geometry.GetEnvelope()
+        return x1, y1, x2, y2
+
+    @property
+    def geometry(self):
+        """Combined geometry in this block's native projection. """
+        store_geometry = self.store.geometry
+        sr = get_sr(self.place_projection)
+        if not store_geometry.GetSpatialReference().IsSame(sr):
+            store_geometry = store_geometry.Clone()
+            store_geometry.TransformTo(sr)
+        x1, x2, y1, y2 = store_geometry.GetEnvelope()
+
+        extents = []
+        for _x, _y in self.coordinates:
+            extents.append(
+                [
+                    x1 - self.anchor[0] + _x,
+                    y1 - self.anchor[1] + _y,
+                    x2 - self.anchor[0] + _x,
+                    y2 - self.anchor[1] + _y,
+                ]
+            )
+
+        # join the extents
+        x1 = min([e[0] for e in extents])
+        y1 = min([e[1] for e in extents])
+        x2 = max([e[2] for e in extents])
+        y2 = max([e[3] for e in extents])
+        return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), sr)
+
+    def _transformed(self, projection):
+        # transform the anchor and coordinates into the requested projection
+        x, y = pyproj.transform(
+            pyproj.Proj(self.place_projection),
+            pyproj.Proj(projection),
+            x=[self.anchor[0]] + [coord[0] for coord in self.coordinates],
+            y=[self.anchor[1]] + [coord[1] for coord in self.coordinates],
+            skip_equivalent=True,
+            always_xy=True,  # enforce lon, lat order
+        )
+        return (x[0], y[0]), (x[1:], y[1:])  # anchor, coordinates
+
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
             return ({"mode": request["mode"]}, None), (self.store, request)
 
-        if not get_sr(request["projection"]).IsSame(get_sr(self.projection)):
-            raise NotImplementedError(
-                "Cannot reproject rasters in raster.spatial.Place. Either "
-                "initialize Place with {} or request the data in {}".format(
-                    request["projection"], self.projection
-                )
-            )
+        # transform the anchor and coordinates into the requested projection
+        anchor, coordinates = self._transformed(request["projection"])
 
         # shift the requested bboxes
         x1, y1, x2, y2 = request["bbox"]
 
         # generate a new (shifted) bbox for each coordinate
         sources_and_requests = []
-        for _x, _y in self.coordinates:
+        for _x, _y in zip(*coordinates):
             _request = request.copy()
             _request["bbox"] = [
-                x1 + self.anchor[0] - _x,
-                y1 + self.anchor[1] - _y,
-                x2 + self.anchor[0] - _x,
-                y2 + self.anchor[1] - _y,
+                x1 + anchor[0] - _x,
+                y1 + anchor[1] - _y,
+                x2 + anchor[0] - _x,
+                y2 + anchor[1] - _y,
             ]
             sources_and_requests.append((self.store, _request))
         return [({"mode": request["mode"]}, None)] + sources_and_requests

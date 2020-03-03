@@ -13,6 +13,7 @@ install_requires = (
         "pytz",
         "numpy>=1.12",
         "scipy>=0.19",
+        "pyproj",
     ],
 )
 
