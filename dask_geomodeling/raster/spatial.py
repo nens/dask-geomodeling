@@ -527,15 +527,17 @@ class Place(BaseSingle):
     def geometry(self):
         """Combined geometry in this block's native projection. """
         store_geometry = self.store.geometry
+        if store_geometry is None:
+            return
         sr = get_sr(self.place_projection)
         if not store_geometry.GetSpatialReference().IsSame(sr):
             store_geometry = store_geometry.Clone()
             store_geometry.TransformTo(sr)
-         _x1, _x2, _y1, _y2 = store_geometry.GetEnvelope()
-         p, q = self.anchor
-         P, Q = zip(*self.coordinates)
-         x1, x2 = _x1 + min(P) - p, _x2 + max(P) - p
-         y1, y2 = _y1 + min(Q) - q, _y2 + max(Q) - q
+        _x1, _x2, _y1, _y2 = store_geometry.GetEnvelope()
+        p, q = self.anchor
+        P, Q = zip(*self.coordinates)
+        x1, x2 = _x1 + min(P) - p, _x2 + max(P) - p
+        y1, y2 = _y1 + min(Q) - q, _y2 + max(Q) - q
         return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), sr)
 
     def get_sources_and_requests(self, **request):
@@ -553,39 +555,130 @@ class Place(BaseSingle):
             for coord in self.coordinates
         )
 
-        # shift the requested bboxes
-        x1, y1, x2, y2 = request["bbox"]
+        # transform the source's extent
+        extent_geometry = self.store.geometry
+        if extent_geometry is None:
+            # no geometry means: no data
+            return (({"mode": "empty"}, None),)
+        sr = get_sr(request["projection"])
+        if not extent_geometry.GetSpatialReference().IsSame(sr):
+            extent_geometry = extent_geometry.Clone()
+            extent_geometry.TransformTo(sr)
+        xmin, xmax, ymin, ymax = extent_geometry.GetEnvelope()
 
-        # generate a new (shifted) bbox for each coordinate
-        sources_and_requests = []
-        for _x, _y in coordinates:
+        # compute the requested cellsize
+        x1, y1, x2, y2 = request["bbox"]
+        size_x = (x2 - x1) / request["width"]
+        size_y = (y2 - y1) / request["height"]
+
+        # check what the full source extent would require
+        full_height = np.ceil((ymax - ymin) / size_y)
+        full_width = np.ceil((xmax - xmin) / size_x)
+        if full_height * full_width <= request["width"] * request["height"]:
             _request = request.copy()
-            _request["bbox"] = [
+            _request["width"] = int(full_width)
+            _request["height"] = int(full_height)
+            _request["bbox"] = (
+                xmin,
+                ymin,
+                xmin + full_width * size_x,
+                ymin + full_height * size_y,
+            )
+            process_kwargs = {
+                "mode": "warp",
+                "anchor": anchor,
+                "coordinates": coordinates,
+                "src_bbox": _request["bbox"],
+                "dst_bbox": request["bbox"],
+                "cellsize": (size_x, size_y),
+            }
+            return [(process_kwargs, None), (self.store, _request)]
+
+        # generate a new (backwards shifted) bbox for each coordinate
+        sources_and_requests = []
+        filtered_coordinates = []
+        for _x, _y in coordinates:
+            bbox = [
                 x1 + anchor[0] - _x,
                 y1 + anchor[1] - _y,
                 x2 + anchor[0] - _x,
                 y2 + anchor[1] - _y,
             ]
+            # check the overlap with the source's extent
+            if bbox[0] > xmax or bbox[1] <= xmin or bbox[2] > ymax or bbox[3] <= ymin:
+                continue
+            filtered_coordinates.append((_x, _y))
+            _request = request.copy()
+            _request["bbox"] = bbox
             sources_and_requests.append((self.store, _request))
-        return [({"mode": request["mode"]}, None)] + sources_and_requests
+        return [({"mode": "group"}, None)] + sources_and_requests
 
     @staticmethod
     def process(process_kwargs, *multi):
-        if process_kwargs["mode"] != "vals":
+        if process_kwargs["mode"] in {"meta", "time"}:
             return multi[0]
-
-        values = None
-        no_data_value = None
-        for data in multi:
+        if process_kwargs["mode"] == "empty":
+            return
+        if process_kwargs["mode"] == "group":
+            values = None
+            no_data_value = None
+            for data in multi:
+                if data is None:
+                    continue
+                if values is None:
+                    values = data["values"].copy()
+                    no_data_value = data["no_data_value"]
+                else:
+                    # index is where the source has data
+                    index = get_index(data["values"], data["no_data_value"])
+                    values[index] = data["values"][index]
+        elif process_kwargs["mode"] == "warp":
+            # There is a single 'source' raster that we are going to shift
+            # multiple times into the result. The cellsize is already correct.
+            data = multi[0]
             if data is None:
-                continue
-            if values is None:
-                values = data["values"].copy()
-                no_data_value = data["no_data_value"]
-            else:
-                # index is where the source has data
-                index = get_index(data["values"], data["no_data_value"])
-                values[index] = data["values"][index]
+                return
+            no_data_value = data["no_data_value"]
+            source = data["values"]
+            values = None
+
+            # convert everything to pixels
+            anchor = process_kwargs["anchor"]
+            src_bbox = process_kwargs["src_bbox"]
+            size_x, size_y = process_kwargs["cellsize"]
+            anchor_px = (
+                (anchor[0] - src_bbox[0]) / size_x,
+                (anchor[1] - src_bbox[1]) / size_y,
+            )
+            x1, y1, x2, y2 = process_kwargs["dst_bbox"]
+            coordinates = process_kwargs["coordinates"]
+
+            dst_h = int(round((y2 - y1) / size_y))
+            dst_w = int(round((x2 - x1) / size_x))
+            temp_arr = np.empty((source.shape[0], dst_h, dst_w), dtype=source.dtype)
+            _, src_h, src_w = source.shape
+            for x, y in coordinates:
+                dx = ((x - x1) / size_x) - anchor_px[0]
+                dy = ((y - y1) / size_y) - anchor_px[1]
+                dy = -dy  # the Y axis is inverted in the ndarray
+                if dx < -src_w or dx > dst_w or dy < -src_h or dy > dst_h:
+                    continue  # don't bother to shift out of bounds
+                # shift the source into the destination array
+                ndimage.shift(
+                    source,
+                    (0, dy, dx),
+                    order=1,
+                    output=temp_arr,
+                    mode="constant",
+                    cval=no_data_value,
+                )
+                if values is None:
+                    values = temp_arr.copy()
+                else:
+                    index = get_index(temp_arr, no_data_value)
+                    values[index] = temp_arr[index]
+        else:
+            raise RuntimeError("Unknown mode '{}'".format(process_kwargs["mode"]))
 
         if values is None:
             return
