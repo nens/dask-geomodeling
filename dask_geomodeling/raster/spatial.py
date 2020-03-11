@@ -531,24 +531,11 @@ class Place(BaseSingle):
         if not store_geometry.GetSpatialReference().IsSame(sr):
             store_geometry = store_geometry.Clone()
             store_geometry.TransformTo(sr)
-        x1, x2, y1, y2 = store_geometry.GetEnvelope()
-
-        extents = []
-        for _x, _y in self.coordinates:
-            extents.append(
-                [
-                    x1 - self.anchor[0] + _x,
-                    y1 - self.anchor[1] + _y,
-                    x2 - self.anchor[0] + _x,
-                    y2 - self.anchor[1] + _y,
-                ]
-            )
-
-        # join the extents
-        x1 = min([e[0] for e in extents])
-        y1 = min([e[1] for e in extents])
-        x2 = max([e[2] for e in extents])
-        y2 = max([e[3] for e in extents])
+         _x1, _x2, _y1, _y2 = store_geometry.GetEnvelope()
+         p, q = self.anchor
+         P, Q = zip(*self.coordinates)
+         x1, x2 = _x1 + min(P) - p, _x2 + max(P) - p
+         y1, y2 = _y1 + min(Q) - q, _y2 + max(Q) - q
         return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), sr)
 
     def get_sources_and_requests(self, **request):
