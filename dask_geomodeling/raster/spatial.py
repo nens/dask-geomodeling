@@ -517,6 +517,8 @@ class Place(BaseSingle):
     @property
     def extent(self):
         geometry = self.geometry
+        if geometry is None:
+            return
         if not geometry.GetSpatialReference().IsSame(EPSG4326):
             geometry = geometry.Clone()
             geometry.TransformTo(EPSG4326)
@@ -548,18 +550,18 @@ class Place(BaseSingle):
         anchor = shapely_transform(
             Point(self.anchor), self.place_projection, request["projection"]
         ).coords[0]
-        coordinates = (
+        coordinates = [
             shapely_transform(
                 Point(coord), self.place_projection, request["projection"]
             ).coords[0]
             for coord in self.coordinates
-        )
+        ]
 
         # transform the source's extent
         extent_geometry = self.store.geometry
         if extent_geometry is None:
             # no geometry means: no data
-            return (({"mode": "empty"}, None),)
+            return (({"mode": "null"}, None),)
         sr = get_sr(request["projection"])
         if not extent_geometry.GetSpatialReference().IsSame(sr):
             extent_geometry = extent_geometry.Clone()
@@ -605,26 +607,57 @@ class Place(BaseSingle):
                 y2 + anchor[1] - _y,
             ]
             # check the overlap with the source's extent
-            if bbox[0] > xmax or bbox[1] <= xmin or bbox[2] > ymax or bbox[3] <= ymin:
+            if bbox[0] >= xmax or bbox[1] >= ymax or bbox[2] <= xmin or bbox[3] <= ymin:
                 continue
             filtered_coordinates.append((_x, _y))
             _request = request.copy()
             _request["bbox"] = bbox
             sources_and_requests.append((self.store, _request))
+        if len(sources_and_requests) == 0:
+            # No coordinates inside: we still need to return an array
+            # of the correct shape. Send a time request to get the depth.
+            _request = request.copy()
+            _request["mode"] = "time"
+            process_kwargs = {
+                "mode": "empty",
+                "dtype": self.dtype,
+                "fillvalue": self.fillvalue,
+                "width": request["width"],
+                "height": request["height"],
+            }
+            return [(process_kwargs, None), (self.store, _request)]
         return [({"mode": "group"}, None)] + sources_and_requests
 
     @staticmethod
     def process(process_kwargs, *multi):
         if process_kwargs["mode"] in {"meta", "time"}:
             return multi[0]
-        if process_kwargs["mode"] == "empty":
+        if process_kwargs["mode"] == "null":
             return
+        if process_kwargs["mode"] == "empty":
+            data = multi[0]
+            if data is None:
+                return
+            shape = (
+                len(data["time"]),
+                process_kwargs["height"],
+                process_kwargs["width"],
+            )
+            return {
+                "values": np.full(
+                    shape,
+                    fill_value=process_kwargs["fillvalue"],
+                    dtype=process_kwargs["dtype"],
+                ),
+                "no_data_value": process_kwargs["fillvalue"],
+            }
         if process_kwargs["mode"] == "group":
+            # We have a bunch of arrays that are already shifted. Stack them.
             values = None
             no_data_value = None
             for data in multi:
                 if data is None:
-                    continue
+                    return
                 if values is None:
                     values = data["values"].copy()
                     no_data_value = data["no_data_value"]
@@ -640,9 +673,8 @@ class Place(BaseSingle):
                 return
             no_data_value = data["no_data_value"]
             source = data["values"]
-            values = None
 
-            # convert everything to pixels
+            # convert the anchor to pixels (indices inside 'source')
             anchor = process_kwargs["anchor"]
             src_bbox = process_kwargs["src_bbox"]
             size_x, size_y = process_kwargs["cellsize"]
@@ -650,20 +682,28 @@ class Place(BaseSingle):
                 (anchor[0] - src_bbox[0]) / size_x,
                 (anchor[1] - src_bbox[1]) / size_y,
             )
+
+            # create the target array
             x1, y1, x2, y2 = process_kwargs["dst_bbox"]
             coordinates = process_kwargs["coordinates"]
-
             dst_h = int(round((y2 - y1) / size_y))
             dst_w = int(round((x2 - x1) / size_x))
             temp_arr = np.empty((source.shape[0], dst_h, dst_w), dtype=source.dtype)
+            values = np.full_like(temp_arr, no_data_value)
             _, src_h, src_w = source.shape
+
+            # place the 'source' in 'values'
             for x, y in coordinates:
+                # transform coordinate into pixels (indices in 'values')
                 dx = ((x - x1) / size_x) - anchor_px[0]
-                dy = ((y - y1) / size_y) - anchor_px[1]
-                dy = -dy  # the Y axis is inverted in the ndarray
-                if dx < -src_w or dx > dst_w or dy < -src_h or dy > dst_h:
-                    continue  # don't bother to shift out of bounds
-                # shift the source into the destination array
+                dy = anchor_px[1] - ((y - y1) / size_y)
+                # NB: the Y axis is always inverted in dask-geomodeling
+
+                # skip if the shift would go outside the destination array
+                if dx <= -src_w or dx >= dst_w or dy <= -src_h or dy >= dst_h:
+                    continue
+
+                # shift the source into a temporary array
                 ndimage.shift(
                     source,
                     (0, dy, dx),
@@ -672,15 +712,9 @@ class Place(BaseSingle):
                     mode="constant",
                     cval=no_data_value,
                 )
-                if values is None:
-                    values = temp_arr.copy()
-                else:
-                    index = get_index(temp_arr, no_data_value)
-                    values[index] = temp_arr[index]
-        else:
-            raise RuntimeError("Unknown mode '{}'".format(process_kwargs["mode"]))
 
-        if values is None:
-            return
-        else:
-            return {"values": values, "no_data_value": no_data_value}
+                # collect the from the temporary array into the result
+                index = get_index(temp_arr, no_data_value)
+                values[index] = temp_arr[index]
+
+        return {"values": values, "no_data_value": no_data_value}

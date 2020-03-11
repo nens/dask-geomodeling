@@ -18,6 +18,33 @@ def source():
     )
 
 
+@pytest.fixture(scope="module", params=["exact", "zoomed_in"])
+def vals_request(request):
+    if request.param == "exact":
+        return dict(
+            mode="vals",
+            bbox=(0, 0, 100, 100),
+            projection="EPSG:28992",
+            width=10,
+            height=10,
+        )
+    else:
+        return dict(
+            mode="vals", bbox=(0, 0, 50, 50), projection="EPSG:28992", width=5, height=5
+        )
+
+
+@pytest.fixture
+def empty():
+    yield MemorySource(
+        data=np.full((0, 0, 0), 7, dtype=np.uint8),
+        no_data_value=255,
+        projection="EPSG:28992",
+        pixel_size=20,
+        pixel_origin=(0, 0),
+    )
+
+
 @pytest.fixture
 def center():
     # the source raster has data at x 135000..135100 and y 456000..455900
@@ -69,11 +96,17 @@ def test_place_attrs_reproject(source, center_epsg3857):
     assert place.extent == pytest.approx(extent_epsg4326, rel=1e-4)
 
 
-def test_place_exact(source, center):
+def test_place_empty(empty, center, vals_request):
+    place = raster.Place(empty, "EPSG:28992", center, [(50, 50)])
+
+    assert place.geometry is None
+    assert place.extent is None
+    assert place.get_data(**vals_request) is None
+
+
+def test_place_exact(source, center, vals_request):
     place = raster.Place(source, "EPSG:28992", center, [(50, 50)])
-    values = place.get_data(
-        mode="vals", bbox=(0, 0, 100, 100), projection="EPSG:28992", width=10, height=10
-    )["values"]
+    values = place.get_data(**vals_request)["values"]
     assert (values == 7).all()
 
 
@@ -91,41 +124,36 @@ def test_place_reproject(source, center_epsg3857):
     assert (values == 7).all()
 
 
-def test_place_horizontal_shift(source, center):
-    # shift 1 cell (10 meters) to the left
-    place = raster.Place(source, "EPSG:28992", center, [(40, 50)])
-    values = place.get_data(
-        mode="vals", bbox=(0, 0, 100, 100), projection="EPSG:28992", width=10, height=10
-    )["values"]
-    assert (values[:, :, :9] == 7).all()
-    assert (values[:, :, 9] == 255).all()
+def test_place_horizontal_shift(source, center, vals_request):
+    # shift 1 cell (10 meters) to the right
+    place = raster.Place(source, "EPSG:28992", center, [(60, 50)])
+    values = place.get_data(**vals_request)["values"]
+    assert (values[:, :, 1:] == 7).all()
+    assert (values[:, :, 0] == 255).all()
 
 
-def test_place_vertical_shift(source, center):
+def test_place_vertical_shift(source, center, vals_request):
     # shift 1 cell (10 meters) down (y axis is flipped)
     place = raster.Place(source, "EPSG:28992", center, [(50, 60)])
-    values = place.get_data(
-        mode="vals", bbox=(0, 0, 100, 100), projection="EPSG:28992", width=10, height=10
-    )["values"]
-    assert (values[:, :9, :] == 7).all()
-    assert (values[:, 9, :] == 255).all()
+    values = place.get_data(**vals_request)["values"]
+    assert (values[:, :-1, :] == 7).all()
+    assert (values[:, -1, :] == 255).all()
 
 
-def test_place_multiple(source, center):
-    # place such that only the left and right ridges have values
-    place = raster.Place(source, "EPSG:28992", center, [(-40, 50), (140, 50)])
-    values = place.get_data(
-        mode="vals", bbox=(0, 0, 100, 100), projection="EPSG:28992", width=10, height=10
-    )["values"]
-    assert (values[:, :, 1:-1] == 255).all()
-    assert (values[:, :, (0, 9)] == 7).all()
+def test_place_multiple(source, center, vals_request):
+    # place such that only the left and bottom ridges have values
+    place = raster.Place(source, "EPSG:28992", center, [(-40, 50), (50, -40)])
+    values = place.get_data(**vals_request)["values"]
+    assert (values[:, :, 0] == 7).all()
+    assert (values[:, -1, :] == 7).all()
+    assert (values[:, :-1, 1:] == 255).all()
 
 
-def test_place_outside(source, center):
-    place = raster.Place(source, "EPSG:28992", center, [(150, 50)])
-    values = place.get_data(
-        mode="vals", bbox=(0, 0, 100, 100), projection="EPSG:28992", width=10, height=10
-    )["values"]
+def test_place_outside(source, center, vals_request):
+    x1, y1, x2, y2 = vals_request["bbox"]
+    coordinates = [(x1 - 50, y1), (x1, y1 - 50), (x2 + 50, y2), (x2, y2 + 50)]
+    place = raster.Place(source, "EPSG:28992", center, coordinates)
+    values = place.get_data(**vals_request)["values"]
     assert (values[:, :, :] == 255).all()
 
 
