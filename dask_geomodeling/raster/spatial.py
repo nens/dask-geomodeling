@@ -689,32 +689,38 @@ class Place(BaseSingle):
             dst_h = int(round((y2 - y1) / size_y))
             dst_w = int(round((x2 - x1) / size_x))
             src_d, src_h, src_w = source.shape
-            values = np.full(
-                (src_d, dst_h, dst_w), no_data_value, dtype=source.dtype
-            )
+            values = np.full((src_d, dst_h, dst_w), no_data_value, dtype=source.dtype)
 
             # determine what indices in 'source' have data
-            i_t, i_y, i_x = np.where(get_index(source, no_data_value))
-            if i_x.size == 0:  # no data at all
+            k, j, i = np.where(get_index(source, no_data_value))
+            if i.size == 0:  # no data at all
                 return {"values": values, "no_data_value": no_data_value}
             for x, y in coordinates:
                 # transform coordinate into pixels (indices in 'values')
-                dx = int(round(((x - x1) / size_x) - anchor_px[0]))
-                dy = int(round(((y - y1) / size_y) - anchor_px[1]))
+                di = int(round(((x - x1) / size_x) - anchor_px[0]))
+                dj = int(round(((y - y1) / size_y) - anchor_px[1]))
+                # because of the y-axis inversion: dj is measured from the
+                # other side of the array. if you draw it, you'll arrive at:
+                dj = dst_h - src_h - dj
 
-                # skip if the shift would go outside the destination array
-                if dx <= -src_w or dx >= dst_w or dy <= -src_h or dy >= dst_h:
+                if di <= -src_w or di >= dst_w or dj <= -src_h or dj >= dst_h:
+                    # skip as it would shift completely outside
                     continue
-                elif dx >= 0 and dx <= (dst_w - src_w) and dy >= 0 and dy <= (dst_h - src_h):
+                elif (
+                    di >= 0
+                    and di <= (dst_w - src_w)
+                    and dj >= 0
+                    and dj <= (dst_h - src_h)
+                ):
                     # complete place
-                    values[i_t, i_y + dy, i_x + dx] = source[i_t, i_y, i_x]
+                    values[k, j + dj, i + di] = source[k, j, i]
                 else:
                     # partial place
-                    i_x_shifted = i_x + dx
-                    i_y_shifted = i_y + dy
-                    inside = (i_x_shifted >= 0) & (i_y_shifted >= 0) & (i_x_shifted < dst_w) & (i_y_shifted < dst_h)
-                    if not inside.any():
+                    i_s = i + di
+                    j_s = j + dj
+                    m = (i_s >= 0) & (j_s >= 0) & (i_s < dst_w) & (j_s < dst_h)
+                    if not m.any():
                         continue
-                    values[i_t[inside], i_y_shifted[inside], i_x_shifted[inside]] = source[i_t[inside], i_y[inside], i_x[inside]]
+                    values[k[m], j_s[m], i_s[m]] = source[k[m], j[m], i[m]]
 
         return {"values": values, "no_data_value": no_data_value}

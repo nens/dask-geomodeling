@@ -34,6 +34,7 @@ def vals_request(request):
         height=int(bbox[3] / 10),
     )
 
+
 @pytest.fixture
 def empty():
     yield MemorySource(
@@ -107,6 +108,8 @@ def test_place_empty(empty, center, vals_request):
 def test_place_exact(source, center, vals_request):
     place = raster.Place(source, "EPSG:28992", center, [(50, 50)])
     values = place.get_data(**vals_request)["values"]
+    # swap Y axis for readable test
+    values = values[:, ::-1, :]
     assert (values[:, :10, :10] == 7).all()
 
 
@@ -128,6 +131,8 @@ def test_place_horizontal_shift(source, center, vals_request):
     # shift 1 cell (10 meters) to the right
     place = raster.Place(source, "EPSG:28992", center, [(60, 50)])
     values = place.get_data(**vals_request)["values"]
+    # swap Y axis for readable test
+    values = values[:, ::-1, :]
     assert (values[:, :10, 1:11] == 7).all()
     assert (values[:, :, 0] == 255).all()
 
@@ -136,19 +141,21 @@ def test_place_vertical_shift(source, center, vals_request):
     # shift 1 cell (10 meters) up
     place = raster.Place(source, "EPSG:28992", center, [(50, 60)])
     values = place.get_data(**vals_request)["values"]
-    # swap Y axis for test
+    # swap Y axis for readable test
     values = values[:, ::-1, :]
     assert (values[:, 1:11, :10] == 7).all()
-    assert (values[:, 0, :10] == 255).all()
+    assert (values[:, 0, :] == 255).all()
 
 
 def test_place_multiple(source, center, vals_request):
     # place such that only the left and bottom ridges have values
     place = raster.Place(source, "EPSG:28992", center, [(-40, 50), (50, -40)])
     values = place.get_data(**vals_request)["values"]
-    assert (values[:, :, 0] == 7).all()
-    assert (values[:, -1, :] == 7).all()
-    assert (values[:, :-1, 1:] == 255).all()
+    # swap Y axis for readable test
+    values = values[:, ::-1, :]
+    assert (values[:, :10, 0] == 7).all()
+    assert (values[:, 0, :10] == 7).all()
+    assert (values[:, 1:, 1:] == 255).all()
 
 
 def test_place_outside(source, center, vals_request):
