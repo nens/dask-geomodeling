@@ -19,7 +19,7 @@ from shapely import wkb as shapely_wkb
 import fiona
 
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
-
+FLOAT_PRECISION = 1e-7
 
 try:
     from fiona import Env as fiona_env  # NOQA
@@ -171,7 +171,7 @@ class GeoTransform(tuple):
     def __init__(self, tpl):
         if len(tpl) != 6:
             raise ValueError("GeoTransform expected an iterable of length 6")
-        if tpl[2] != 0.0 or tpl[4] != 0.0:
+        if abs(tpl[2]) > FLOAT_PRECISION or abs(tpl[4]) > FLOAT_PRECISION:
             raise ValueError("Tilted geo_transforms are not supported")
         if tpl[1] == 0.0 or tpl[5] == 0.0:
             raise ValueError("Pixel size should not be zero")
