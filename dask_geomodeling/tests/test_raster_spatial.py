@@ -18,21 +18,21 @@ def source():
     )
 
 
-@pytest.fixture(scope="module", params=["exact", "zoomed_in"])
+@pytest.fixture(scope="module", params=["exact", "zoomed_in", "zoomed_out"])
 def vals_request(request):
     if request.param == "exact":
-        return dict(
-            mode="vals",
-            bbox=(0, 0, 100, 100),
-            projection="EPSG:28992",
-            width=10,
-            height=10,
-        )
-    else:
-        return dict(
-            mode="vals", bbox=(0, 0, 50, 50), projection="EPSG:28992", width=5, height=5
-        )
-
+        bbox = (0, 0, 100, 80)
+    elif request.param == "zoomed_in":
+        bbox = (0, 0, 50, 40)
+    elif request.param == "zoomed_out":
+        bbox = (0, 0, 200, 160)
+    return dict(
+        mode="vals",
+        bbox=bbox,
+        projection="EPSG:28992",
+        width=int(bbox[2] / 10),
+        height=int(bbox[3] / 10),
+    )
 
 @pytest.fixture
 def empty():
@@ -107,7 +107,7 @@ def test_place_empty(empty, center, vals_request):
 def test_place_exact(source, center, vals_request):
     place = raster.Place(source, "EPSG:28992", center, [(50, 50)])
     values = place.get_data(**vals_request)["values"]
-    assert (values == 7).all()
+    assert (values[:, :10, :10] == 7).all()
 
 
 def test_place_reproject(source, center_epsg3857):
@@ -128,16 +128,18 @@ def test_place_horizontal_shift(source, center, vals_request):
     # shift 1 cell (10 meters) to the right
     place = raster.Place(source, "EPSG:28992", center, [(60, 50)])
     values = place.get_data(**vals_request)["values"]
-    assert (values[:, :, 1:] == 7).all()
+    assert (values[:, :10, 1:11] == 7).all()
     assert (values[:, :, 0] == 255).all()
 
 
 def test_place_vertical_shift(source, center, vals_request):
-    # shift 1 cell (10 meters) down (y axis is flipped)
+    # shift 1 cell (10 meters) up
     place = raster.Place(source, "EPSG:28992", center, [(50, 60)])
     values = place.get_data(**vals_request)["values"]
-    assert (values[:, :-1, :] == 7).all()
-    assert (values[:, -1, :] == 255).all()
+    # swap Y axis for test
+    values = values[:, ::-1, :]
+    assert (values[:, 1:11, :10] == 7).all()
+    assert (values[:, 0, :10] == 255).all()
 
 
 def test_place_multiple(source, center, vals_request):

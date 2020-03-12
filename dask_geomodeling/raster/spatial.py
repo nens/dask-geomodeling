@@ -688,33 +688,33 @@ class Place(BaseSingle):
             coordinates = process_kwargs["coordinates"]
             dst_h = int(round((y2 - y1) / size_y))
             dst_w = int(round((x2 - x1) / size_x))
-            temp_arr = np.empty((source.shape[0], dst_h, dst_w), dtype=source.dtype)
-            values = np.full_like(temp_arr, no_data_value)
-            _, src_h, src_w = source.shape
+            src_d, src_h, src_w = source.shape
+            values = np.full(
+                (src_d, dst_h, dst_w), no_data_value, dtype=source.dtype
+            )
 
-            # place the 'source' in 'values'
+            # determine what indices in 'source' have data
+            i_t, i_y, i_x = np.where(get_index(source, no_data_value))
+            if i_x.size == 0:  # no data at all
+                return {"values": values, "no_data_value": no_data_value}
             for x, y in coordinates:
                 # transform coordinate into pixels (indices in 'values')
-                dx = ((x - x1) / size_x) - anchor_px[0]
-                dy = anchor_px[1] - ((y - y1) / size_y)
-                # NB: the Y axis is always inverted in dask-geomodeling
+                dx = int(round(((x - x1) / size_x) - anchor_px[0]))
+                dy = int(round(((y - y1) / size_y) - anchor_px[1]))
 
                 # skip if the shift would go outside the destination array
                 if dx <= -src_w or dx >= dst_w or dy <= -src_h or dy >= dst_h:
                     continue
-
-                # shift the source into a temporary array
-                ndimage.shift(
-                    source,
-                    (0, dy, dx),
-                    order=1,
-                    output=temp_arr,
-                    mode="constant",
-                    cval=no_data_value,
-                )
-
-                # collect the from the temporary array into the result
-                index = get_index(temp_arr, no_data_value)
-                values[index] = temp_arr[index]
+                elif dx >= 0 and dx <= (dst_w - src_w) and dy >= 0 and dy <= (dst_h - src_h):
+                    # complete place
+                    values[i_t, i_y + dy, i_x + dx] = source[i_t, i_y, i_x]
+                else:
+                    # partial place
+                    i_x_shifted = i_x + dx
+                    i_y_shifted = i_y + dy
+                    inside = (i_x_shifted >= 0) & (i_y_shifted >= 0) & (i_x_shifted < dst_w) & (i_y_shifted < dst_h)
+                    if not inside.any():
+                        continue
+                    values[i_t[inside], i_y_shifted[inside], i_x_shifted[inside]] = source[i_t[inside], i_y[inside], i_x[inside]]
 
         return {"values": values, "no_data_value": no_data_value}
