@@ -5,7 +5,10 @@ Changelog of dask-geomodeling
 2.2.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Handle Nones in geometry.field_operations.Classify and ClassifyFromColumns.
+
+- Validate if labels are unique in geometry.field_operations.Classify and
+  ClassifyFromColumns.
 
 
 2.2.3 (2020-02-28)
