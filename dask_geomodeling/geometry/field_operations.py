@@ -60,7 +60,8 @@ class Classify(BaseSingleSeries):
         (i.e. ``[3, 5]``).
       labels (list): The classification returned if a value falls in a specific
         bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
-        larger or one less than the length of the ``bins`` argument.
+        larger or one less than the length of the ``bins`` argument. Labels
+        should be unique.
       right (boolean, optional): Determines what side of the intervals are
         closed. Defaults to True (the right side of the bin is closed so a
         value assigned to the bin on the left if it is exactly on a bin edge).
@@ -87,6 +88,8 @@ class Classify(BaseSingleSeries):
                     len(bins) - 1, len(bins) + 1, len(labels)
                 )
             )
+        if len(set(labels)) != len(labels):
+            raise ValueError("Labels should be unique")
         super().__init__(source, bins, labels, right)
 
     @property
@@ -106,6 +109,8 @@ class Classify(BaseSingleSeries):
         open_bounds = len(labels) == len(bins) + 1
         if open_bounds:
             bins = np.concatenate([[-np.inf], bins, [np.inf]])
+        if series.dtype == object:
+            series = series.fillna(value=np.nan)
         result = pd.cut(series, bins, right, labels)
         labels_dtype = pd.Series(labels).dtype
         if labels_dtype.name != "object":
@@ -121,14 +126,14 @@ class Classify(BaseSingleSeries):
 
 class ClassifyFromColumns(SeriesBlock):
     """
-    Classify a continuous-valued geometry property based on bins located in 
+    Classify a continuous-valued geometry property based on bins located in
     other columns.
-    
+
     See :class:``dask_geomodeling.geometry.field_operations.Classify`` for
     further information.
 
     Args:
-      source (GeometryBlock):The GeometryBlock which contains the column which 
+      source (GeometryBlock):The GeometryBlock which contains the column which
         should be clasified as well as columns with the bin edges.
       value_column (str): The column with (float) data which should be
         classified.
@@ -137,7 +142,8 @@ class ClassifyFromColumns(SeriesBlock):
         values.
       labels (list): The classification returned if a value falls in a specific
         bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
-        larger or one less than the length of the ``bins`` argument.
+        larger or one less than the length of the ``bins`` argument. Labels
+        should be unique.
       right (boolean, optional): Determines what side of the intervals are
         closed. Defaults to True (the right side of the bin is closed so a
         value assigned to the bin on the left if it is exactly on a bin edge).
@@ -167,6 +173,8 @@ class ClassifyFromColumns(SeriesBlock):
                     len(bin_columns) - 1, len(bin_columns) + 1, len(labels)
                 )
             )
+        if len(set(labels)) != len(labels):
+            raise ValueError("Labels should be unique")
         super().__init__(source, value_column, bin_columns, labels, right)
 
     @property
@@ -194,7 +202,10 @@ class ClassifyFromColumns(SeriesBlock):
         if "features" not in data or len(data["features"]) == 0:
             return pd.Series([], dtype=float)
         features = data["features"]
-        values = features[value_column].values
+        series = features[value_column]
+        if series.dtype == object:
+            series = series.fillna(value=np.nan)
+        values = series.values
         bins = features[bin_columns].values
         n_bins = len(bin_columns)
 
