@@ -229,6 +229,10 @@ class TestGeoTransform(unittest.TestCase):
         # with a tilt
         self.assertRaises(ValueError, utils.GeoTransform, (0, 1, 1, 0, 0, 1))
         self.assertRaises(ValueError, utils.GeoTransform, (0, 1, 0, 0, 1, 1))
+        # allow some space for float32 imprecision
+        self.assertRaises(ValueError, utils.GeoTransform, (0, 1, 0, 0, 1e-6, 1))
+        self.assertRaises(ValueError, utils.GeoTransform, (0, 1, 1e-6, 0, 0, 1))
+        utils.GeoTransform((0, 1, 1e-8, 0, -1e-8, 1))
 
     def test_compare(self):
         for matching in (
