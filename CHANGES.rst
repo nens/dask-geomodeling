@@ -2,10 +2,24 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.2.3 (unreleased)
+2.2.4 (unreleased)
 ------------------
 
-- Added raster.spatial.Place.
+- Allow up to 1E-7 in the GeoTransform 'tilt' terms to account for possible
+  float32 imprecision.
+
+- Handle Nones in geometry.field_operations.Classify and ClassifyFromColumns.
+
+- Validate if labels are unique in geometry.field_operations.Classify and
+  ClassifyFromColumns.
+  
+  - Added raster.spatial.Place.
+
+
+2.2.3 (2020-02-28)
+------------------
+
+-  Fix AggregateRaster: it now returns NaN for no data pixels (#37)
 
 
 2.2.2 (2020-02-13)

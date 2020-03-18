@@ -20,6 +20,7 @@ from dask_geomodeling.tests.factories import (
     MockRaster,
 )
 
+from dask_geomodeling.raster import MemorySource
 from dask_geomodeling.geometry import aggregate
 from dask_geomodeling.geometry import set_operations
 from dask_geomodeling.geometry import field_operations
@@ -1013,6 +1014,28 @@ class TestAggregateRaster(unittest.TestCase):
         result = view.get_data(**self.request)
         self.assertEqual(result["features"]["agg"].values.tolist(), [36.0, 18.0])
 
+    def test_aggregate_percentile_one_empty(self):
+        # if there are only nodata pixels in the geometries, we expect the
+        # statistic of mean, min, max, median and percentile to be NaN.
+        for agg in ["mean", "min", "max", "median", "p90.0"]:
+            data = np.ones((1, 10, 10), dtype=np.uint8)
+            data[:, :5, :] = 255
+            raster = MemorySource(
+                data, 255, "EPSG:3857", pixel_size=1, pixel_origin=(0, 10)
+            )
+            source = MockGeometry(
+                polygons=[
+                    ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),
+                    ((6.0, 6.0), (8.0, 6.0), (8.0, 8.0), (6.0, 8.0)),
+                ],
+                properties=[{"id": 1}, {"id": 2}],
+            )
+            view = geometry.AggregateRaster(
+                source=source, raster=raster, statistic=agg
+            )
+            result = view.get_data(**self.request)
+            assert np.isnan(result["features"]["agg"].values[1])
+
     def test_empty_dataset(self):
         source = MockGeometry(polygons=[], properties=[])
         view = geometry.AggregateRaster(
@@ -1079,17 +1102,18 @@ class TestBucketize(unittest.TestCase):
 class TestSetGetSeries(unittest.TestCase):
     def setUp(self):
         self.N = 10
-        self.properties = [{"id": i, "col_1": i * 2} for i in range(self.N)]
+        properties = [{"id": i, "col_1": i * 2} for i in range(self.N)]
+        polygons = [((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * self.N
         self.source1 = MockGeometry(
-            polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * self.N,
-            properties=self.properties,
+            polygons=polygons,
+            properties=properties,
         )
-        self.properties = [
-            {"id": i, "col_2": i * 3, "col_3": i * 4} for i in range(self.N)
+        properties = [
+            {"id": i, "col_2": i * 3, "col_3": i * 4, "col_4": i if i % 2 else np.nan} for i in range(self.N)
         ]
         self.source2 = MockGeometry(
-            polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * self.N,
-            properties=self.properties,
+            polygons=polygons,
+            properties=properties,
         )
         self.request = dict(
             mode="intersects", projection="EPSG:3857", geometry=box(0, 0, 10, 10)
@@ -1333,6 +1357,7 @@ class TestFieldOperations(unittest.TestCase):
                 "col_source": float(i * 2 + 1),
                 "col_choice_1": chr(i + 65),  # 'A'
                 "col_choice_2": chr(i + 70),  # 'F'
+                "none": None,
             }
             for i, x in enumerate(values)
         ]
@@ -1453,7 +1478,15 @@ class TestFieldOperations(unittest.TestCase):
         self.assertEqual("B", values[2])  # 1.2
         self.assertEqual("C", values[3])  # 5.
         self.assertEqual("C", values[4])  # inf
-        self.assertTrue(np.isnan(values[5]))  # nan
+        self.assertTrue(np.isnan(values[5]))  # nan.
+
+    def test_classify_none(self):
+        series = field_operations.Classify(
+            self.source["none"], bins=[0, 0.2], labels=["A"]
+        )
+        result = series.get_data(**self.request)
+        values = result.values
+        self.assertTrue(all([np.isnan(x) for x in values]))
 
     def test_classify_from_columns_empty(self):
         view = field_operations.ClassifyFromColumns(
@@ -1463,6 +1496,14 @@ class TestFieldOperations(unittest.TestCase):
             mode="intersects", projection="EPSG:3857", geometry=box(0, 0, 0, 0)
         )
         self.assertEqual(0, len(result))
+
+    def test_classify_from_columns_none(self):
+        series = field_operations.ClassifyFromColumns(
+            self.source, "none", ["id_value"], labels=["A", "B"]
+        )
+        result = series.get_data(**self.request)
+        values = result.values
+        self.assertTrue(all([np.isnan(x) for x in values]))
 
     def test_classify_from_columns_varying_bin(self):
         series = field_operations.ClassifyFromColumns(
