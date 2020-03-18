@@ -574,12 +574,12 @@ class Place(BaseSingle):
         size_y = (y2 - y1) / request["height"]
 
         # check what the full source extent would require
-        full_height = np.ceil((ymax - ymin) / size_y)
-        full_width = np.ceil((xmax - xmin) / size_x)
+        full_height = math.ceil((ymax - ymin) / size_y)
+        full_width = math.ceil((xmax - xmin) / size_x)
         if full_height * full_width <= request["width"] * request["height"]:
             _request = request.copy()
-            _request["width"] = int(full_width)
-            _request["height"] = int(full_height)
+            _request["width"] = full_width
+            _request["height"] = full_height
             _request["bbox"] = (
                 xmin,
                 ymin,
@@ -686,8 +686,8 @@ class Place(BaseSingle):
             # create the target array
             x1, y1, x2, y2 = process_kwargs["dst_bbox"]
             coordinates = process_kwargs["coordinates"]
-            dst_h = int(round((y2 - y1) / size_y))
-            dst_w = int(round((x2 - x1) / size_x))
+            dst_h = round((y2 - y1) / size_y)
+            dst_w = round((x2 - x1) / size_x)
             src_d, src_h, src_w = source.shape
             values = np.full((src_d, dst_h, dst_w), no_data_value, dtype=source.dtype)
 
@@ -697,8 +697,9 @@ class Place(BaseSingle):
                 return {"values": values, "no_data_value": no_data_value}
             for x, y in coordinates:
                 # transform coordinate into pixels (indices in 'values')
-                di = int(round(((x - x1) / size_x) - anchor_px[0]))
-                dj = int(round(((y - y1) / size_y) - anchor_px[1]))
+                coord_px = (x - x1) / size_x, (y - y1) / size_y
+                di = round(coord_px[0] - anchor_px[0])
+                dj = round(coord_px[1] - anchor_px[1])
                 # because of the y-axis inversion: dj is measured from the
                 # other side of the array. if you draw it, you'll arrive at:
                 dj = dst_h - src_h - dj
@@ -706,12 +707,7 @@ class Place(BaseSingle):
                 if di <= -src_w or di >= dst_w or dj <= -src_h or dj >= dst_h:
                     # skip as it would shift completely outside
                     continue
-                elif (
-                    di >= 0
-                    and di <= (dst_w - src_w)
-                    and dj >= 0
-                    and dj <= (dst_h - src_h)
-                ):
+                elif 0 <= di <= (dst_w - src_w) and 0 <= dj <= (dst_h - src_h):
                     # complete place
                     values[k, j + dj, i + di] = source[k, j, i]
                 else:
