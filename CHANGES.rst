@@ -12,6 +12,8 @@ Changelog of dask-geomodeling
 
 - Validate if labels are unique in geometry.field_operations.Classify and
   ClassifyFromColumns.
+  
+  - Added raster.spatial.Place.
 
 
 2.2.3 (2020-02-28)

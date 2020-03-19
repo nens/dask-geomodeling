@@ -5,18 +5,24 @@ import math
 
 from scipy import ndimage
 import numpy as np
+from osgeo import ogr
 
 from dask_geomodeling.utils import (
     EPSG3857,
+    EPSG4326,
+    POLYGON,
     get_sr,
     Extent,
     get_dtype_min,
     get_footprint,
+    get_index,
+    shapely_transform,
 )
 
-from .base import BaseSingle
+from .base import BaseSingle, RasterBlock
+from shapely.geometry import Point
 
-__all__ = ["Dilate", "Smooth", "MovingMax", "HillShade"]
+__all__ = ["Dilate", "Smooth", "MovingMax", "HillShade", "Place"]
 
 
 def expand_request_pixels(request, radius=1):
@@ -108,14 +114,14 @@ class Dilate(BaseSingle):
     in each direction, including diagonals.
 
     Dilation is performed in the order of the values parameter.
-    
+
     Args:
       store (RasterBlock): Raster to perform dilation on.
       values (list): Only cells with these values are dilated.
 
     Returns:
       RasterBlock where cells in values list are dilated.
-    
+
     See also:
       https://en.wikipedia.org/wiki/Dilation_%28morphology%29
     """
@@ -150,14 +156,14 @@ class Dilate(BaseSingle):
 class MovingMax(BaseSingle):
     """
     Apply a spatial maximum filter to the data using a circular footprint.
-    
+
     This can be used for visualization of sparse data.
 
     Args:
       store (RasterBlock): Raster to which the filter is applied
       size (integer): Diameter of the circular footprint. This should always be
         an odd number larger than 1.
-    
+
     Returns:
       RasterBlock with maximum values inside the footprint of each input cell.
     """
@@ -218,7 +224,7 @@ class Smooth(BaseSingle):
 
     Returns:
       RasterBlock with spatially smoothed values.
-      
+
     See Also:
       https://en.wikipedia.org/wiki/Gaussian_blur
 
@@ -429,3 +435,288 @@ class HillShade(BaseSingle):
         )
 
         return [(self.store, new_request), (process_kwargs, None)]
+
+
+class Place(BaseSingle):
+    """Place an input raster at given coordinates
+
+    Note that if the store's projection is different from the requested one,
+    the data will be reprojected before placing it at a different position.
+
+    Args:
+      store (RasterBlock): Raster that will be placed.
+      place_projection (str): The projection in which this operation is done.
+        This also specifies the projection of the ``anchor`` and
+        ``coordinates`` args.
+      anchor (list of 2 numbers): The anchor into the source raster that will
+        be placed at given coordinates.
+      coordinates (list of lists of 2 numbers): The target coordinates. The
+        center of the bbox will be placed on each of these coordinates. The
+        last one will go 'on top' in case there is overlap.
+
+    Returns:
+      RasterBlock with the source raster placed
+
+    """
+
+    def __init__(self, store, place_projection, anchor, coordinates):
+        if not isinstance(store, RasterBlock):
+            raise TypeError("'{}' object is not allowed".format(type(store)))
+        try:
+            get_sr(place_projection)
+        except RuntimeError:
+            raise ValueError(
+                "'{}' is not a valid projection string".format(place_projection)
+            )
+        anchor = list(anchor)
+        if len(anchor) != 2:
+            raise ValueError("Expected 2 numbers in the 'anchor' parameter")
+        for x in anchor:
+            if not isinstance(x, (int, float)):
+                raise TypeError("'{}' object is not allowed".format(type(x)))
+        coordinates = np.asarray(coordinates, dtype=float)
+        if coordinates.ndim != 2 or coordinates.shape[1] != 2:
+            raise ValueError(
+                "Expected a list of lists of 2 numbers in the 'coordinates' "
+                "parameter"
+            )
+        super().__init__(store, place_projection, anchor, coordinates.tolist())
+
+    @property
+    def place_projection(self):
+        return self.args[1]
+
+    @property
+    def anchor(self):
+        return self.args[2]
+
+    @property
+    def coordinates(self):
+        return self.args[3]
+
+    @property
+    def projection(self):
+        """The native projection of this block.
+
+        Only returns something if the place projection equals the store
+        projection"""
+        store_projection = self.store.projection
+        if store_projection is None:
+            return
+        if get_sr(self.place_projection).IsSame(get_sr(store_projection)):
+            return store_projection
+
+    @property
+    def geo_transform(self):
+        """The native geo_transform of this block
+
+        Returns None if the store projection and place projections differ."""
+        if self.projection is not None:
+            return self.store.geo_transform
+
+    @property
+    def extent(self):
+        geometry = self.geometry
+        if geometry is None:
+            return
+        if not geometry.GetSpatialReference().IsSame(EPSG4326):
+            geometry = geometry.Clone()
+            geometry.TransformTo(EPSG4326)
+        x1, x2, y1, y2 = geometry.GetEnvelope()
+        return x1, y1, x2, y2
+
+    @property
+    def geometry(self):
+        """Combined geometry in this block's native projection. """
+        store_geometry = self.store.geometry
+        if store_geometry is None:
+            return
+        sr = get_sr(self.place_projection)
+        if not store_geometry.GetSpatialReference().IsSame(sr):
+            store_geometry = store_geometry.Clone()
+            store_geometry.TransformTo(sr)
+        _x1, _x2, _y1, _y2 = store_geometry.GetEnvelope()
+        p, q = self.anchor
+        P, Q = zip(*self.coordinates)
+        x1, x2 = _x1 + min(P) - p, _x2 + max(P) - p
+        y1, y2 = _y1 + min(Q) - q, _y2 + max(Q) - q
+        return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), sr)
+
+    def get_sources_and_requests(self, **request):
+        if request["mode"] != "vals":
+            return ({"mode": request["mode"]}, None), (self.store, request)
+
+        # transform the anchor and coordinates into the requested projection
+        anchor = shapely_transform(
+            Point(self.anchor), self.place_projection, request["projection"]
+        ).coords[0]
+        coordinates = [
+            shapely_transform(
+                Point(coord), self.place_projection, request["projection"]
+            ).coords[0]
+            for coord in self.coordinates
+        ]
+
+        # transform the source's extent
+        extent_geometry = self.store.geometry
+        if extent_geometry is None:
+            # no geometry means: no data
+            return (({"mode": "null"}, None),)
+        sr = get_sr(request["projection"])
+        if not extent_geometry.GetSpatialReference().IsSame(sr):
+            extent_geometry = extent_geometry.Clone()
+            extent_geometry.TransformTo(sr)
+        xmin, xmax, ymin, ymax = extent_geometry.GetEnvelope()
+
+        # compute the requested cellsize
+        x1, y1, x2, y2 = request["bbox"]
+        size_x = (x2 - x1) / request["width"]
+        size_y = (y2 - y1) / request["height"]
+
+        # check what the full source extent would require
+        full_height = math.ceil((ymax - ymin) / size_y)
+        full_width = math.ceil((xmax - xmin) / size_x)
+        if full_height * full_width <= request["width"] * request["height"]:
+            _request = request.copy()
+            _request["width"] = full_width
+            _request["height"] = full_height
+            _request["bbox"] = (
+                xmin,
+                ymin,
+                xmin + full_width * size_x,
+                ymin + full_height * size_y,
+            )
+            process_kwargs = {
+                "mode": "warp",
+                "anchor": anchor,
+                "coordinates": coordinates,
+                "src_bbox": _request["bbox"],
+                "dst_bbox": request["bbox"],
+                "cellsize": (size_x, size_y),
+            }
+            return [(process_kwargs, None), (self.store, _request)]
+
+        # generate a new (backwards shifted) bbox for each coordinate
+        sources_and_requests = []
+        filtered_coordinates = []
+        for _x, _y in coordinates:
+            bbox = [
+                x1 + anchor[0] - _x,
+                y1 + anchor[1] - _y,
+                x2 + anchor[0] - _x,
+                y2 + anchor[1] - _y,
+            ]
+            # check the overlap with the source's extent
+            if bbox[0] >= xmax or bbox[1] >= ymax or bbox[2] <= xmin or bbox[3] <= ymin:
+                continue
+            filtered_coordinates.append((_x, _y))
+            _request = request.copy()
+            _request["bbox"] = bbox
+            sources_and_requests.append((self.store, _request))
+        if len(sources_and_requests) == 0:
+            # No coordinates inside: we still need to return an array
+            # of the correct shape. Send a time request to get the depth.
+            _request = request.copy()
+            _request["mode"] = "time"
+            process_kwargs = {
+                "mode": "empty",
+                "dtype": self.dtype,
+                "fillvalue": self.fillvalue,
+                "width": request["width"],
+                "height": request["height"],
+            }
+            return [(process_kwargs, None), (self.store, _request)]
+        return [({"mode": "group"}, None)] + sources_and_requests
+
+    @staticmethod
+    def process(process_kwargs, *multi):
+        if process_kwargs["mode"] in {"meta", "time"}:
+            return multi[0]
+        if process_kwargs["mode"] == "null":
+            return
+        if process_kwargs["mode"] == "empty":
+            data = multi[0]
+            if data is None:
+                return
+            shape = (
+                len(data["time"]),
+                process_kwargs["height"],
+                process_kwargs["width"],
+            )
+            return {
+                "values": np.full(
+                    shape,
+                    fill_value=process_kwargs["fillvalue"],
+                    dtype=process_kwargs["dtype"],
+                ),
+                "no_data_value": process_kwargs["fillvalue"],
+            }
+        if process_kwargs["mode"] == "group":
+            # We have a bunch of arrays that are already shifted. Stack them.
+            values = None
+            no_data_value = None
+            for data in multi:
+                if data is None:
+                    return
+                if values is None:
+                    values = data["values"].copy()
+                    no_data_value = data["no_data_value"]
+                else:
+                    # index is where the source has data
+                    index = get_index(data["values"], data["no_data_value"])
+                    values[index] = data["values"][index]
+        elif process_kwargs["mode"] == "warp":
+            # There is a single 'source' raster that we are going to shift
+            # multiple times into the result. The cellsize is already correct.
+            data = multi[0]
+            if data is None:
+                return
+            no_data_value = data["no_data_value"]
+            source = data["values"]
+
+            # convert the anchor to pixels (indices inside 'source')
+            anchor = process_kwargs["anchor"]
+            src_bbox = process_kwargs["src_bbox"]
+            size_x, size_y = process_kwargs["cellsize"]
+            anchor_px = (
+                (anchor[0] - src_bbox[0]) / size_x,
+                (anchor[1] - src_bbox[1]) / size_y,
+            )
+
+            # create the target array
+            x1, y1, x2, y2 = process_kwargs["dst_bbox"]
+            coordinates = process_kwargs["coordinates"]
+            dst_h = round((y2 - y1) / size_y)
+            dst_w = round((x2 - x1) / size_x)
+            src_d, src_h, src_w = source.shape
+            values = np.full((src_d, dst_h, dst_w), no_data_value, dtype=source.dtype)
+
+            # determine what indices in 'source' have data
+            k, j, i = np.where(get_index(source, no_data_value))
+            if i.size == 0:  # no data at all
+                return {"values": values, "no_data_value": no_data_value}
+            for x, y in coordinates:
+                # transform coordinate into pixels (indices in 'values')
+                coord_px = (x - x1) / size_x, (y - y1) / size_y
+                di = round(coord_px[0] - anchor_px[0])
+                dj = round(coord_px[1] - anchor_px[1])
+                # because of the y-axis inversion: dj is measured from the
+                # other side of the array. if you draw it, you'll arrive at:
+                dj = dst_h - src_h - dj
+
+                if di <= -src_w or di >= dst_w or dj <= -src_h or dj >= dst_h:
+                    # skip as it would shift completely outside
+                    continue
+                elif 0 <= di <= (dst_w - src_w) and 0 <= dj <= (dst_h - src_h):
+                    # complete place
+                    values[k, j + dj, i + di] = source[k, j, i]
+                else:
+                    # partial place
+                    i_s = i + di
+                    j_s = j + dj
+                    m = (i_s >= 0) & (j_s >= 0) & (i_s < dst_w) & (j_s < dst_h)
+                    if not m.any():
+                        continue
+                    values[k[m], j_s[m], i_s[m]] = source[k[m], j[m], i[m]]
+
+        return {"values": values, "no_data_value": no_data_value}
