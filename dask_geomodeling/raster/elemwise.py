@@ -730,8 +730,11 @@ class FillNoData(BaseElementwise):
                 data_list.append(data["values"])
                 no_data_values.append(data["no_data_value"])
 
-        dtype = np.result_type(*data_list)
+        dtype = args[0]['dtype']
         fillvalue = get_dtype_max(dtype)
+
+        if not data_list:
+            return {"values": fillvalue, "no_data_value": fillvalue}
 
         # initialize values array
         values = np.full(data_list[0].shape, fillvalue, dtype=dtype)
