@@ -579,6 +579,19 @@ class TestFillNoData(unittest.TestCase):
         result = view.get_data(**self.vals_request)
         assert_equal(result["values"], 2)
 
+    def test_fill_nodata_none_data(self):
+        vals_request = dict(
+            mode="vals",
+            start=Datetime(2000, 1, 1),
+            stop=Datetime(2010, 1, 1, 2),
+            width=2,
+            height=3,
+        )
+        args = (MockRaster(None), MockRaster(None))
+        view = self.klass(*args)
+        result = view.get_data(**vals_request)
+        self.assertIsNone(result)
+
 
 class TestCombine(unittest.TestCase):
     klass = raster.combine.BaseCombine

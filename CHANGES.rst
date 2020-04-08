@@ -5,7 +5,7 @@ Changelog of dask-geomodeling
 2.2.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fixed bug in `FillNoData` block.
 
 
 2.2.4 (2020-03-25)
