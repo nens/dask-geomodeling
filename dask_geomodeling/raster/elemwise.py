@@ -715,7 +715,7 @@ class FillNoData(BaseElementwise):
         super(FillNoData, self).__init__(*args)
 
     @staticmethod
-    def process(*args):
+    def process(process_kwargs, *args):
         """Combine data, filling in nodata values."""
         data_list = []
         no_data_values = []
@@ -730,11 +730,11 @@ class FillNoData(BaseElementwise):
                 data_list.append(data["values"])
                 no_data_values.append(data["no_data_value"])
 
-        dtype = args[0]['dtype']
+        dtype = process_kwargs['dtype']
         fillvalue = get_dtype_max(dtype)
 
         if not data_list:
-            return {"values": fillvalue, "no_data_value": fillvalue}
+            return
 
         # initialize values array
         values = np.full(data_list[0].shape, fillvalue, dtype=dtype)

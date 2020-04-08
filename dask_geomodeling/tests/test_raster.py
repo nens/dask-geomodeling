@@ -590,7 +590,7 @@ class TestFillNoData(unittest.TestCase):
         args = (MockRaster(None), MockRaster(None))
         view = self.klass(*args)
         result = view.get_data(**vals_request)
-        assert_equal(result["values"], result["no_data_value"])
+        self.assertIsNone(result)
 
 
 class TestCombine(unittest.TestCase):
