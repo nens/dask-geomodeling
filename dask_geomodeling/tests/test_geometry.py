@@ -1054,11 +1054,13 @@ class TestAggregateRaster(unittest.TestCase):
         source = MockGeometry(
             polygons=[
                 ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),  # contains 7, 8
+                ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),  # contains 7, 8
                 ((7.0, 7.0), (9.0, 7.0), (9.0, 9.0), (7.0, 9.0)),  # contains 2, 3
                 ((6.0, 6.0), (8.0, 6.0), (8.0, 8.0), (6.0, 8.0)),  # contains 3, 4
             ],
             properties=[
                 {"id": 1, "threshold": 8.0},  # threshold halfway
+                {"id": 3, "threshold": 3.0},  # threshold below
                 {"id": 2000000, "threshold": 4.0},  # threshold above
                 {"id": 9},
             ],  # no threshold
@@ -1067,9 +1069,9 @@ class TestAggregateRaster(unittest.TestCase):
         self.request["stop"] = Datetime(2018, 1, 1, 3)
 
         for statistic, expected in [
-            ("sum", [16.0, 0.0, 0.0]),
-            ("count", [2, 0, 0]),
-            ("mean", [8.0, np.nan, np.nan]),
+            ("sum", [16.0, 30.0, 0.0, 0.0]),
+            ("count", [2, 4, 0, 0]),
+            ("mean", [8.0, 7.5, np.nan, np.nan]),
         ]:
             view = geometry.AggregateRasterAboveThreshold(
                 source=source,
@@ -1080,7 +1082,7 @@ class TestAggregateRaster(unittest.TestCase):
             features = view.get_data(**self.request)["features"]
             assert_series_equal(
                 features["agg"],
-                pd.Series(expected, index=[1, 2000000, 9], dtype=np.float32),
+                pd.Series(expected, index=[1, 3, 2000000, 9], dtype=np.float32),
                 check_names=False,
             )
 
