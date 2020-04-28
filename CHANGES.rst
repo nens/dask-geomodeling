@@ -7,6 +7,8 @@ Changelog of dask-geomodeling
 
 - Fixed bug in `FillNoData` block.
 
+- Fixed bug in `AggregateRasterAboveThreshold` (introduced in #37) (#44).
+
 
 2.2.4 (2020-03-25)
 ------------------
