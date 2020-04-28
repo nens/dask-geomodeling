@@ -379,6 +379,13 @@ class AggregateRaster(GeometryBlock):
 
         # this is only there for the AggregateRasterAboveThreshold
         threshold_name = process_kwargs.get("threshold_name")
+        if threshold_name:
+            # get the threshold, appending NaN for unlabeled pixels
+            threshold_values = np.empty((len(features) + 1, ), dtype="f4")
+            threshold_values[:-1] = features[threshold_name].values
+            threshold_values[-1] = np.nan
+        else:
+            threshold_values = None
 
         # investigate the raster data
         if raster_data is None:
@@ -409,8 +416,7 @@ class AggregateRaster(GeometryBlock):
 
             # if there is a threshold, generate a raster with thresholds
             if threshold_name:
-                threshold_values = features[threshold_name].iloc[select]
-                threshold_values = np.append(threshold_values.values, np.nan)
+                # mode="clip" ensures that unlabeled cells use the appended NaN
                 thresholds = np.take(threshold_values, labels, mode="clip")
             else:
                 thresholds = None
