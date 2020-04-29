@@ -5,7 +5,10 @@ Changelog of dask-geomodeling
 2.2.7 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Accept list and dict values in GeometryFileSink / to_file.
+
+- Fix bug in ParseTextColumn that added columns in duplicate when outputting
+  into the input column.
 
 
 2.2.6 (2020-04-28)
