@@ -1900,6 +1900,12 @@ class TestText(unittest.TestCase):
             "\n\nmodelname=rotterdam 01"
             "\nduration=120\nstrength=70\nahn2=true"
         )
+        self.expected = {
+            "model_name": "rotterdam 01",
+            "rainfall_duration": 120,
+            "rainfall_strength": 70,
+            "ahn2_used": True,
+        }
         self.source = MockGeometry(
             polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))],
             properties=[{"id": 1, "description": self.description}],
@@ -1916,19 +1922,22 @@ class TestText(unittest.TestCase):
         )
         self.assertSetEqual(set(data["features"].columns), self.view.columns)
 
-    def test_parser_columns_empty_description(self):
+    def test_parser_results(self):
+        data = self.view.get_data(**self.request)["features"]
+        for col in self.expected:
+            assert data.loc[1, col] == self.expected[col]
+
+    def test_parser_empty_description(self):
         source = MockGeometry(
             polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))],
             properties=[{"id": 1, "description": None}],
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
-        data = view.get_data(**self.request)
-        self.assertTrue(
-            set(self.key_mapping.values()).issubset(data["features"].columns.tolist())
-        )
-        self.assertSetEqual(set(data["features"].columns), view.columns)
+        data = view.get_data(**self.request)["features"]
+        for col in self.expected:
+            assert np.isnan(data.loc[1, col])
 
-    def test_parser_columns_empty_one_description(self):
+    def test_parser_empty_one_description(self):
         source = MockGeometry(
             polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * 2,
             properties=[
@@ -1937,30 +1946,21 @@ class TestText(unittest.TestCase):
             ],
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
-        data = view.get_data(**self.request)
-        self.assertTrue(
-            set(self.key_mapping.values()).issubset(data["features"].columns.tolist())
-        )
-        self.assertSetEqual(set(data["features"].columns), view.columns)
+        data = view.get_data(**self.request)["features"]
+        for col in self.expected:
+            assert np.isnan(data.loc[1, col])
+            assert data.loc[2, col] == self.expected[col]
 
-    def test_parser_columns_empty_all_descriptions(self):
+    def test_parser_empty_all_descriptions(self):
         source = MockGeometry(
             polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * 2,
             properties=[{"id": 1, "description": None}, {"id": 2, "description": None}],
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
-        data = view.get_data(**self.request)
-        self.assertTrue(
-            set(self.key_mapping.values()).issubset(data["features"].columns.tolist())
-        )
-        self.assertSetEqual(set(data["features"].columns), view.columns)
-
-    def test_parser_results(self):
-        data = self.view.get_data(**self.request)["features"].iloc[0]
-        self.assertEqual("rotterdam 01", data["model_name"])
-        self.assertEqual(120, data["rainfall_duration"])
-        self.assertEqual(70, data["rainfall_strength"])
-        self.assertTrue(data["ahn2_used"])
+        data = view.get_data(**self.request)["features"]
+        for col in self.expected:
+            assert np.isnan(data.loc[1, col])
+            assert np.isnan(data.loc[2, col])
 
     def test_parser_two_same(self):
         source = MockGeometry(
@@ -1973,11 +1973,9 @@ class TestText(unittest.TestCase):
         view = text.ParseTextColumn(source, "description", self.key_mapping)
         data = view.get_data(**self.request)["features"]
         self.assertEqual("category", str(data["model_name"].dtype))
-        for i in [1, 2]:
-            self.assertEqual("rotterdam 01", data.loc[i, "model_name"])
-            self.assertEqual(120, data.loc[i, "rainfall_duration"])
-            self.assertEqual(70, data.loc[i, "rainfall_strength"])
-            self.assertTrue(data.loc[i, "ahn2_used"])
+        for col in self.expected:
+            assert data.loc[1, col] == self.expected[col]
+            assert data.loc[2, col] == self.expected[col]
 
     def test_parser_two_different(self):
         other_description = (
@@ -1995,15 +1993,16 @@ class TestText(unittest.TestCase):
         view = text.ParseTextColumn(source, "description", self.key_mapping)
         data = view.get_data(**self.request)["features"]
 
-        self.assertEqual("rotterdam 01", data.loc[1, "model_name"])
-        self.assertEqual(120, data.loc[1, "rainfall_duration"])
-        self.assertEqual(70, data.loc[1, "rainfall_strength"])
-        self.assertTrue(data.loc[1, "ahn2_used"])
+        expected2 = {
+            "model_name": "groningen 01",
+            "rainfall_duration": 60,
+            "rainfall_strength": 120,
+            "ahn2_used": False,
+        }
 
-        self.assertEqual("groningen 01", data.loc[2, "model_name"])
-        self.assertEqual(60, data.loc[2, "rainfall_duration"])
-        self.assertEqual(120, data.loc[2, "rainfall_strength"])
-        self.assertFalse(data.loc[2, "ahn2_used"])
+        for col in self.expected:
+            assert data.loc[1, col] == self.expected[col]
+            assert data.loc[2, col] == expected2[col]
 
     def test_parser_missing_and_null_keys(self):
         description = (
@@ -2021,3 +2020,30 @@ class TestText(unittest.TestCase):
         self.assertEqual(record["rainfall_duration"], 60)
         self.assertEqual(record["rainfall_strength"], 120)
         self.assertTrue(pd.isnull(record["ahn2_used"]))
+
+    def test_parser_into_same_column(self):
+        view = text.ParseTextColumn(
+            self.source, "description", {"modelname": "description"}
+        )
+        data = view.get_data(**self.request)["features"]
+        self.assertEqual("category", str(data["description"].dtype))
+        assert data.loc[1, "description"] == "rotterdam 01"
+
+    def test_parser_into_same_column_non_existing(self):
+        view = text.ParseTextColumn(
+            self.source, "description", {"nonexisting": "description"}
+        )
+        data = view.get_data(**self.request)["features"]
+        assert np.isnan(data.loc[1, "description"])
+
+    def test_parser_into_same_column_empty(self):
+        source = MockGeometry(
+            polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * 2,
+            properties=[
+                {"id": 1, "model_name": None},
+            ],
+        )
+        view = text.ParseTextColumn(source, "model_name", self.key_mapping)
+        data = view.get_data(**self.request)["features"]
+        for col in self.expected:
+            assert np.isnan(data.loc[1, col])
