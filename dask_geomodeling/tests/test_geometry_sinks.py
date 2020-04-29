@@ -1,5 +1,6 @@
 import os
 import unittest
+import json
 
 import geopandas as gpd
 import pytest
@@ -50,8 +51,8 @@ class TestGeometryFileSink(unittest.TestCase):
             ((10.0, 10.0), (10.0, 12.0), (12.0, 12.0), (12.0, 10.0)),
         ]
         self.properties = [
-            {"int": 5, "float": 3.2, "str": "bla"},
-            {"int": 7, "float": 5.2, "str": "bla2"},
+            {"int": 5, "float": 3.2, "str": "bla", "lst": [1], "dct": {"a": "b"}},
+            {"int": 7, "float": 5.2, "str": "bla2", "lst": [], "dct": {}},
         ]
         self.source = MockGeometry(
             self.polygons, projection="EPSG:3857", properties=self.properties
@@ -60,6 +61,25 @@ class TestGeometryFileSink(unittest.TestCase):
         self.expected_combined = self.source.get_data(
             mode="intersects", projection="EPSG:3857", geometry=box(0, 0, 12, 12)
         )["features"]
+
+        # we expect lists and dicts to be serialized to JSON
+        self.expected["lst"] = self.expected["lst"].map(json.dumps)
+        self.expected["dct"] = self.expected["dct"].map(json.dumps)
+        self.expected_combined["lst"] = self.expected_combined["lst"].map(json.dumps)
+        self.expected_combined["dct"] = self.expected_combined["dct"].map(json.dumps)
+
+    @staticmethod
+    def expected_to_geojson(expected):
+        """The result from gpd.read_file for a geojson is different from the
+        others for list and dict typed values:
+
+        - lists are omitted
+        - dicts are deserialized
+
+        Call this function to transform self.expected for GeoJSON testing.
+        """
+        del expected["lst"]
+        expected["dct"] = expected["dct"].map(json.loads)
 
     def test_non_available_extension(self):
         with pytest.raises(ValueError):
@@ -70,7 +90,14 @@ class TestGeometryFileSink(unittest.TestCase):
         block.get_data(**self.request)
 
         filename = [x for x in os.listdir(self.path) if x.endswith(".geojson")][0]
-        actual = gpd.read_file(os.path.join(self.path, filename))
+        path = os.path.join(self.path, filename)
+        actual = gpd.read_file(path)
+
+        # gpd.read_file doesn't read list values. test it separately:
+        with open(path) as f:
+            data = json.load(f)
+            assert data["features"][0]["properties"]["lst"] == [1]
+        self.expected_to_geojson(self.expected)
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
@@ -149,6 +176,8 @@ class TestGeometryFileSink(unittest.TestCase):
         sinks.GeometryFileSink.merge_files(self.path, filename)
         actual = gpd.read_file(filename)
 
+        self.expected_to_geojson(self.expected_combined)
+
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected_combined, check_like=True)
         # compare projections ('init' contains the EPSG code)
@@ -185,6 +214,9 @@ class TestGeometryFileSink(unittest.TestCase):
     def test_to_file_geojson(self):
         self.source.to_file(self.path + ".geojson", **self.request)
         actual = gpd.read_file(self.path + ".geojson")
+
+        self.expected_to_geojson(self.expected)
+
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
 

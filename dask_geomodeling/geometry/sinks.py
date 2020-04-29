@@ -2,8 +2,10 @@ import glob
 import os
 import sys
 import shutil
+import logging
 from contextlib import contextmanager
 
+import json
 import fiona
 import geopandas
 import tempfile
@@ -15,6 +17,18 @@ from .base import BaseSingle
 from .parallelize import GeometryTiler
 
 __all__ = ["GeometryFileSink", "to_file"]
+
+logger = logging.getLogger(__name__)
+
+
+def _to_json(value):
+    if isinstance(value, (list, dict)):
+        try:
+            return json.dumps(value)
+        except TypeError:
+            return "<unable to export>" # cannot output this value
+    else:
+        return value
 
 
 class GeometryFileSink(BaseSingle):
@@ -123,6 +137,15 @@ class GeometryFileSink(BaseSingle):
 
         # rename the columns
         features.columns = ["geometry"] + list(fields.keys())
+
+        # serialize nested fields (lists or dicts)
+        for col in fields.keys():
+            series = features[col]
+            if series.dtype == object or (
+                    str(series.dtype) == "category" and
+                    series.cat.categories.dtype == object
+            ):
+                features[col] = series.map(_to_json)
 
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)
