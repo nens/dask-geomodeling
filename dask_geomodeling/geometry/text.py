@@ -1,6 +1,7 @@
 """
 Module containing text column operations that act on geometry blocks
 """
+import numpy as np
 import pandas as pd
 import re
 
@@ -95,7 +96,9 @@ class ParseTextColumn(BaseSingle):
 
         if len(column.cat.categories) == 0:
             # no data to parse: add empty columns and return directly
-            f = f.reindex(columns=list(f.columns) + list(key_mapping.values()))
+            f = f.copy()
+            for col in key_mapping.values():
+                f[col] = np.nan
             return {"features": f, "projection": data["projection"]}
 
         def parser(description):
