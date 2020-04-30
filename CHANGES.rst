@@ -2,7 +2,7 @@ Changelog of dask-geomodeling
 ===================================================
 
 
-2.2.7 (unreleased)
+2.2.7 (2020-04-30)
 ------------------
 
 - Accept list and dict values in GeometryFileSink / to_file.
