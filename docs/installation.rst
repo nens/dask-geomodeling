@@ -20,13 +20,14 @@ Anaconda (all platforms)
 2. Start the `Anaconda Prompt` via the start menu
 3. ``conda config --add channels conda-forge``
 4. ``conda update conda``
-5. ``conda install python=3.6 gdal=2.4.1 scipy=1.3.1 dask-geomodeling ipyleaflet matplotlib pillow``
+5. ``conda install python=3.6 gdal=2.4.1 scipy=1.3.1 geopandas=0.6 dask-geomodeling ipyleaflet matplotlib pillow``
 
 .. note::
 
    The version pins of python, gdal and scipy are related to issues specific
-   to Windows. On other platforms you may leave them out, although we do not
-   recommend using Python 3.8 yet. If you need other python or GDAL versions
+   to Windows. On other platforms you may leave them out. The version pin of
+   geopandas is due to a known version incompatibility of dask-geomodeling.
+   If you need other python or GDAL versions
    on windows: while `dask-geomodeling` itself is compatible with all current
    versions, you may may have a hard time getting it to work via Anaconda and
    it will probably be easier using the pip route listed below.
