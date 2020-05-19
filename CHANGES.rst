@@ -10,6 +10,8 @@ Changelog of dask-geomodeling
 - Fix bug in ParseTextColumn that added columns in duplicate when outputting
   into the input column.
 
+- Fixed incompatibilities with geopandas >=0.7.
+
 
 2.2.6 (2020-04-28)
 ------------------

@@ -18,6 +18,7 @@ from shapely.geometry import box, Point
 from shapely import wkb as shapely_wkb
 
 import fiona
+import fiona.crs
 
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
 
@@ -353,9 +354,20 @@ def get_crs(user_input):
 def crs_to_srs(crs):
     """
     Recover our own WKT definition of projections from a fiona CRS
+
+    Args:
+      crs (pyproj.CRS or dict): what is returned from GeoDataFrame().crs
+
+    Returns:
+      string: a "EPSG:xxx" or WKT representation of the crs.
     """
-    proj4_str = fiona.crs.to_string(crs)
-    return get_epsg_or_wkt(proj4_str)
+    if crs is None:
+        return
+    elif isinstance(crs, dict):  # geopandas < 0.7
+        proj4_str = fiona.crs.to_string(crs)
+        return get_epsg_or_wkt(proj4_str)
+    else:  # geopandas >= 0.7
+        return crs.to_string()
 
 
 def wkb_transform(wkb, src_sr, dst_sr):

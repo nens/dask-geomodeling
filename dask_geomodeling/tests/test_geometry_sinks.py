@@ -101,8 +101,8 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
-        # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected.crs["init"]
+        # compare projections
+        assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
         "gpkg" not in sinks.GeometryFileSink.supported_extensions,
@@ -118,7 +118,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
         # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected.crs["init"]
+        assert actual.crs == self.expected.crs
 
     def test_shapefile(self):
         block = self.klass(self.source, self.path, "shp")
@@ -130,7 +130,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
         # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected.crs["init"]
+        assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
         "gml" not in sinks.GeometryFileSink.supported_extensions,
@@ -181,7 +181,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected_combined, check_like=True)
         # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected_combined.crs["init"]
+        assert actual.crs == self.expected_combined.crs
 
     def test_merge_files_cleanup(self):
         block = self.klass(self.source, self.path, "geojson")
@@ -209,7 +209,7 @@ class TestGeometryFileSink(unittest.TestCase):
         for filename in os.listdir(self.path):
             df = gpd.read_file(os.path.join(self.path, filename))
             assert len(df) == 1
-            assert df.crs["init"] == "epsg:3857"
+            assert df.crs.to_string() == "EPSG:3857"
 
     def test_to_file_geojson(self):
         self.source.to_file(self.path + ".geojson", **self.request)
