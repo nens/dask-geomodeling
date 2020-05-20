@@ -19,6 +19,13 @@ except ImportError:
     from pandas.util.testing import assert_frame_equal
 
 
+def compare_crs(actual, expected):
+    if utils.GEOPANDAS_0_7_0:
+        assert actual == expected
+    else:
+        assert actual["init"] == expected["init"]
+
+
 class TestGeometryFileSink(unittest.TestCase):
     klass = sinks.GeometryFileSink
 
@@ -104,7 +111,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, expected, check_like=True)
         # compare projections
-        assert actual.crs == expected.crs
+        compare_crs(actual.crs, expected.crs)
 
     @pytest.mark.skipif(
         "gpkg" not in sinks.GeometryFileSink.supported_extensions,
@@ -120,7 +127,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
         # compare projections
-        assert actual.crs == self.expected.crs
+        compare_crs(actual.crs, self.expected.crs)
 
     def test_shapefile(self):
         block = self.klass(self.source, self.path, "shp")
@@ -132,7 +139,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
         # compare projections
-        assert actual.crs == self.expected.crs
+        compare_crs(actual.crs, self.expected.crs)
 
     @pytest.mark.skipif(
         "gml" not in sinks.GeometryFileSink.supported_extensions,
@@ -182,7 +189,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, expected, check_like=True)
         # compare projections
-        assert actual.crs == expected.crs
+        compare_crs(actual.crs, expected.crs)
 
     def test_merge_files_cleanup(self):
         block = self.klass(self.source, self.path, "geojson")
@@ -196,7 +203,7 @@ class TestGeometryFileSink(unittest.TestCase):
 
     def test_with_tiler(self):
         block = parallelize.GeometryTiler(
-            self.klass(self.source, self.path, "gpkg"),
+            self.klass(self.source, self.path, "geojson"),
             size=10.0,
             projection="EPSG:3857",
         )
@@ -210,7 +217,6 @@ class TestGeometryFileSink(unittest.TestCase):
         for filename in os.listdir(self.path):
             df = gpd.read_file(os.path.join(self.path, filename))
             assert len(df) == 1
-            assert df.crs.to_string() == "EPSG:3857"
 
     def test_to_file_geojson(self):
         self.source.to_file(self.path + ".geojson", **self.request)
