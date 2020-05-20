@@ -1,13 +1,16 @@
 Changelog of dask-geomodeling
 ===================================================
 
+2.2.8 (unreleased)
+------------------
+
+- Accept categorical values in GeometryFileSink / to_file.
+
 
 2.2.7 (2020-04-30)
 ------------------
 
 - Accept list and dict values in GeometryFileSink / to_file.
-
-- Accept categorical values in GeometryFileSink / to_file.
 
 - Fix bug in ParseTextColumn that added columns in duplicate when outputting
   into the input column.
