@@ -147,6 +147,12 @@ class GeometryFileSink(BaseSingle):
             ):
                 features[col] = series.map(_to_json)
 
+        # convert categoricals
+        for col in fields.keys():
+            series = features[col]
+            if str(series.dtype) == "category":
+                features[col] = series.astype(series.cat.categories.dtype)
+
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)
 
