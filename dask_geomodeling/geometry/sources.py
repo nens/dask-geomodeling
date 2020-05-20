@@ -85,7 +85,7 @@ class GeometryFileSource(GeometryBlock):
     def process(url, request):
         path = utils.safe_abspath(url)
 
-        # convert the requested projection to a fiona CRS
+        # convert the requested projection to a geopandas CRS
         crs = utils.get_crs(request["projection"])
 
         # convert the requested shapely geometry object to a GeoSeries

@@ -119,7 +119,7 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
-        # compare projections ('init' contains the EPSG code)
+        # compare projections
         assert actual.crs == self.expected.crs
 
     def test_shapefile(self):
@@ -131,7 +131,7 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
-        # compare projections ('init' contains the EPSG code)
+        # compare projections
         assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
@@ -150,7 +150,6 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
-        # GML does not contain a CRS
 
     def test_fields_non_available(self):
         with pytest.raises(ValueError):
@@ -182,7 +181,7 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, expected, check_like=True)
-        # compare projections ('init' contains the EPSG code)
+        # compare projections
         assert actual.crs == expected.crs
 
     def test_merge_files_cleanup(self):
