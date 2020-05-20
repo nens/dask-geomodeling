@@ -14,7 +14,6 @@ import pandas as pd
 import geopandas as gpd
 
 from dask_geomodeling import utils
-import pyproj
 
 
 class TestUtils(unittest.TestCase):
@@ -155,7 +154,11 @@ class TestUtils(unittest.TestCase):
                     f("..\\", "C:\\tmp")
 
     def test_get_crs(self):
-        expected_type = pyproj.CRS if utils.GEOPANDAS_0_7_0 else dict
+        if utils.GEOPANDAS_0_7_0:
+            from pyproj import CRS
+            expected_type = CRS
+        else:
+            expected_type = dict
 
         # from EPSG
         epsg = "EPSG:28992"
