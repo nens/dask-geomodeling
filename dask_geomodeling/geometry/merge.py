@@ -12,12 +12,12 @@ __all__ = ["MergeGeometryBlocks"]
 class MergeGeometryBlocks(GeometryBlock):
     """
     Merge two GeometryBlocks into one by index
-    
-    Provide two GeometryBlocks with the same original source to make sure they 
+
+    Provide two GeometryBlocks with the same original source to make sure they
     can be matched on index. The additional SeriesBlocks that have been added
     to the GeometryBlock will be combined to one GeometryBlock that contains
     all the information.
-    
+
     Args:
       left (GeometryBlock): The left GeometryBlock to be combined.
       right (GeometryBlock): The right GeometryBlock to be combined.
@@ -35,7 +35,7 @@ class MergeGeometryBlocks(GeometryBlock):
         4. ``outer``: The result will contain all the features which are
            present in one of the input GeometryBlocs.
       suffixes (tuple, optional): Text to be added to the column
-        names to distinguish whether they originate from the left or right 
+        names to distinguish whether they originate from the left or right
         GeometryBlock. Default: ``("", "_right")``.
 
     Returns:

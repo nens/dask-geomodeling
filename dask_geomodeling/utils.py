@@ -3,6 +3,7 @@ import math
 import pytz
 import os
 import warnings
+from distutils.version import LooseVersion
 from functools import lru_cache
 from itertools import repeat
 
@@ -19,6 +20,9 @@ from shapely import wkb as shapely_wkb
 
 import fiona
 import fiona.crs
+import geopandas
+import pyproj
+
 
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
 
@@ -26,6 +30,8 @@ try:
     from fiona import Env as fiona_env  # NOQA
 except ImportError:
     from fiona import drivers as fiona_env  # NOQA
+
+GEOPANDAS_0_7_0 = LooseVersion(geopandas.__version__) >= LooseVersion("0.7.0")
 
 
 def get_index(values, no_data_value):
@@ -335,9 +341,17 @@ def get_sr(user_input):
 
 
 def get_crs(user_input):
+    """Return CRS for user input.
+
+    Args:
+      user_input (str): a WKT, PROJ4, or EPSG:xxxx crs representation
+
+    Returns:
+      for geopandas >= 0.7: pyproj.CRS
+      for geopandas < 0.7: dict
     """
-    Return fiona CRS dictionary for user input.
-    """
+    if GEOPANDAS_0_7_0:
+        return pyproj.CRS(user_input)
     wkt = osr.GetUserInputAsWKT(str(user_input))
     sr = osr.SpatialReference(wkt)
     key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
@@ -353,7 +367,7 @@ def get_crs(user_input):
 
 def crs_to_srs(crs):
     """
-    Recover our own WKT definition of projections from a fiona CRS
+    Recover our own WKT definition of projections from a pyproj / fiona CRS
 
     Args:
       crs (pyproj.CRS or dict): what is returned from GeoDataFrame().crs

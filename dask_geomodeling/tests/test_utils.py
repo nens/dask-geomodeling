@@ -14,6 +14,7 @@ import pandas as pd
 import geopandas as gpd
 
 from dask_geomodeling import utils
+import pyproj
 
 
 class TestUtils(unittest.TestCase):
@@ -154,10 +155,12 @@ class TestUtils(unittest.TestCase):
                     f("..\\", "C:\\tmp")
 
     def test_get_crs(self):
+        expected_type = pyproj.CRS if utils.GEOPANDAS_0_7_0 else dict
+
         # from EPSG
         epsg = "EPSG:28992"
         crs = utils.get_crs(epsg)
-        self.assertIsInstance(crs, dict)
+        self.assertIsInstance(crs, expected_type)
 
         # from proj4
         proj4 = """
@@ -167,7 +170,7 @@ class TestUtils(unittest.TestCase):
             +units=m +no_defs
         """
         crs = utils.get_crs(proj4)
-        self.assertIsInstance(crs, dict)
+        self.assertIsInstance(crs, expected_type)
 
     def test_shapely_transform(self):
         src_srs = "EPSG:28992"

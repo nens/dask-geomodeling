@@ -10,6 +10,7 @@ install_requires = (
         "dask[delayed]>=0.18",
         "pandas>=0.19",
         "geopandas>=0.4",
+        "pyproj>=2",
         "pytz",
         "numpy>=1.12",
         "scipy>=0.19",

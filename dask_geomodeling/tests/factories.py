@@ -7,6 +7,7 @@ from osgeo import osr, gdal
 
 import geopandas as gpd
 from shapely.geometry import Polygon
+from pyproj import CRS
 
 from dask import config
 from dask_geomodeling.config import defaults
@@ -16,7 +17,6 @@ from dask_geomodeling.utils import (
     get_dtype_max,
     Extent,
     get_sr,
-    get_crs,
     get_epsg_or_wkt,
     shapely_transform,
     Dataset,
@@ -237,7 +237,7 @@ class MockGeometry(GeometryBlock):
         mode = request.get("mode", "intersects")
 
         geoseries = gpd.GeoSeries(
-            [Polygon(x) for x in polygons], crs=get_crs(projection)
+            [Polygon(x) for x in polygons], crs=CRS(projection)
         )
 
         if get_epsg_or_wkt(projection) != get_epsg_or_wkt(request["projection"]):
