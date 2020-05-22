@@ -147,6 +147,12 @@ class GeometryFileSink(BaseSingle):
             ):
                 features[col] = series.map(_to_json)
 
+        # convert categoricals
+        for col in fields.keys():
+            series = features[col]
+            if str(series.dtype) == "category":
+                features[col] = series.astype(series.cat.categories.dtype)
+
         # GeoJSON needs reprojection to EPSG:4326
         if driver == "GeoJSON" and projection.upper() != "EPSG:4326":
             features = utils.geodataframe_transform(

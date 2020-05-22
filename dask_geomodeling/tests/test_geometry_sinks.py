@@ -8,6 +8,7 @@ from shapely.geometry import box
 
 from dask_geomodeling import utils
 from dask_geomodeling.geometry import parallelize, sinks
+from dask_geomodeling.geometry import Classify
 from dask_geomodeling.tests.factories import (
     MockGeometry,
     setup_temp_root,
@@ -217,6 +218,24 @@ class TestGeometryFileSink(unittest.TestCase):
         for filename in os.listdir(self.path):
             df = gpd.read_file(os.path.join(self.path, filename))
             assert len(df) == 1
+
+    def test_categorical_column(self):
+        with_categorical = self.source.set(
+            "categorical",
+            Classify(self.source["float"], bins=[6], labels=["A", "B"])
+        )
+        block = self.klass(
+            with_categorical,
+            self.path,
+            "geojson",
+            fields={"label": "categorical"},
+        )
+        block.get_data(**self.request)
+
+        actual = gpd.read_file(
+            os.path.join(self.path, os.listdir(self.path)[0])
+        )
+        assert actual["label"].tolist() == ["A"]
 
     def test_to_file_geojson(self):
         self.source.to_file(self.path + ".geojson", **self.request)
