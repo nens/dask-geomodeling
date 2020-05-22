@@ -30,8 +30,8 @@ try:
 except ImportError:
     from fiona import drivers as fiona_env  # NOQA
 
-GEOPANDAS_0_7_0 = LooseVersion(geopandas.__version__) >= LooseVersion("0.7.0")
-if GEOPANDAS_0_7_0:
+GEOPANDAS_GTE_0_7_0 = LooseVersion(geopandas.__version__) >= LooseVersion("0.7.0")
+if GEOPANDAS_GTE_0_7_0:
     from pyproj import CRS
 
 
@@ -351,7 +351,7 @@ def get_crs(user_input):
       for geopandas >= 0.7: pyproj.CRS
       for geopandas < 0.7: dict
     """
-    if GEOPANDAS_0_7_0:
+    if GEOPANDAS_GTE_0_7_0:
         return CRS(user_input)
     wkt = osr.GetUserInputAsWKT(str(user_input))
     sr = osr.SpatialReference(wkt)

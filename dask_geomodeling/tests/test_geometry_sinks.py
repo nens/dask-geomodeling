@@ -20,7 +20,7 @@ except ImportError:
 
 
 def compare_crs(actual, expected):
-    if utils.GEOPANDAS_0_7_0:
+    if utils.GEOPANDAS_GTE_0_7_0:
         assert actual == expected
     else:
         assert actual["init"] == expected["init"]

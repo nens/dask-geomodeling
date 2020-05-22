@@ -154,7 +154,7 @@ class TestUtils(unittest.TestCase):
                     f("..\\", "C:\\tmp")
 
     def test_get_crs(self):
-        if utils.GEOPANDAS_0_7_0:
+        if utils.GEOPANDAS_GTE_0_7_0:
             from pyproj import CRS
             expected_type = CRS
         else:
