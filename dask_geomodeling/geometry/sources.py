@@ -3,7 +3,6 @@ Module containing geometry sources.
 """
 import fiona
 import geopandas as gpd
-from shapely.geometry import box
 
 from dask import config
 from dask_geomodeling import utils
@@ -86,7 +85,7 @@ class GeometryFileSource(GeometryBlock):
     def process(url, request):
         path = utils.safe_abspath(url)
 
-        # convert the requested projection to a fiona CRS
+        # convert the requested projection to a geopandas CRS
         crs = utils.get_crs(request["projection"])
 
         # convert the requested shapely geometry object to a GeoSeries
@@ -240,9 +239,9 @@ class GeometryWKTSource(GeometryBlock):
         elif mode == 'centroid':
             if not geometry.centroid.intersects(request["geometry"]):
                 return {
-                        "projection": request["projection"],
-                        "features": gpd.GeoDataFrame([]),
-                    }
+                    "projection": request["projection"],
+                    "features": gpd.GeoDataFrame([]),
+                }
             return {"features": f, "projection": request['projection']}
 
         elif mode == 'extent':

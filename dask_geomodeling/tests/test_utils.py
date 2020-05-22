@@ -154,10 +154,16 @@ class TestUtils(unittest.TestCase):
                     f("..\\", "C:\\tmp")
 
     def test_get_crs(self):
+        if utils.GEOPANDAS_GTE_0_7_0:
+            from pyproj import CRS
+            expected_type = CRS
+        else:
+            expected_type = dict
+
         # from EPSG
         epsg = "EPSG:28992"
         crs = utils.get_crs(epsg)
-        self.assertIsInstance(crs, dict)
+        self.assertIsInstance(crs, expected_type)
 
         # from proj4
         proj4 = """
@@ -167,7 +173,7 @@ class TestUtils(unittest.TestCase):
             +units=m +no_defs
         """
         crs = utils.get_crs(proj4)
-        self.assertIsInstance(crs, dict)
+        self.assertIsInstance(crs, expected_type)
 
     def test_shapely_transform(self):
         src_srs = "EPSG:28992"

@@ -2,11 +2,11 @@ environment:
   matrix:
     - PYTHON_PATH: "C:\\Miniconda37"
       PYTHON_VERSION: 3.7
-      DEPS: "numpy gdal=2.* scipy pytz dask-core toolz geopandas"
+      DEPS: "numpy gdal=2.* scipy pytz dask-core toolz geopandas pyproj>=2"
 
     - PYTHON_PATH: "C:\\Miniconda37-x64"
       PYTHON_VERSION: 3.7
-      DEPS: "numpy gdal=2.* scipy pytz dask-core toolz geopandas"
+      DEPS: "numpy gdal=2.* scipy pytz dask-core toolz geopandas pyproj>=2"
 
 init:
   - "ECHO %PYTHON% %PYTHON_VERSION%"

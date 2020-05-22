@@ -156,7 +156,11 @@ class TestGeometryFileSource(unittest.TestCase):
         bbox3857 = extent.transformed(get_sr("EPSG:3857")).bbox
         result = self.source.get_data(geometry=box(*bbox3857), projection="EPSG:3857")
         self.assertEqual("EPSG:3857", result["projection"])
-        self.assertEqual("epsg:3857", result["features"].crs["init"])
+        actual = result["features"].crs
+        if isinstance(actual, dict):  # pre-geopandas 0.7
+            self.assertEqual("epsg:3857", actual["init"])
+        else:  # geopandas >=0.7
+            self.assertEqual("EPSG:3857", actual.to_string())
         self.assertEqual(10, len(result["features"]))
 
     def test_limit(self):

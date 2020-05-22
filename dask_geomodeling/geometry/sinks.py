@@ -26,7 +26,7 @@ def _to_json(value):
         try:
             return json.dumps(value)
         except TypeError:
-            return "<unable to export>" # cannot output this value
+            return "<unable to export>"  # cannot output this value
     else:
         return value
 
@@ -142,8 +142,8 @@ class GeometryFileSink(BaseSingle):
         for col in fields.keys():
             series = features[col]
             if series.dtype == object or (
-                    str(series.dtype) == "category" and
-                    series.cat.categories.dtype == object
+                    str(series.dtype) == "category"
+                    and series.cat.categories.dtype == object
             ):
                 features[col] = series.map(_to_json)
 
@@ -152,6 +152,12 @@ class GeometryFileSink(BaseSingle):
             series = features[col]
             if str(series.dtype) == "category":
                 features[col] = series.astype(series.cat.categories.dtype)
+
+        # GeoJSON needs reprojection to EPSG:4326
+        if driver == "GeoJSON" and projection.upper() != "EPSG:4326":
+            features = utils.geodataframe_transform(
+                features, projection, "EPSG:4326"
+            )
 
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)

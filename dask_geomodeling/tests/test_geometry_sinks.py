@@ -6,6 +6,7 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import box
 
+from dask_geomodeling import utils
 from dask_geomodeling.geometry import parallelize, sinks
 from dask_geomodeling.geometry import Classify
 from dask_geomodeling.tests.factories import (
@@ -17,6 +18,13 @@ try:
     from pandas.testing import assert_frame_equal
 except ImportError:
     from pandas.util.testing import assert_frame_equal
+
+
+def compare_crs(actual, expected):
+    if utils.GEOPANDAS_GTE_0_7_0:
+        assert actual == expected
+    else:
+        assert actual["init"] == expected["init"]
 
 
 class TestGeometryFileSink(unittest.TestCase):
@@ -81,6 +89,7 @@ class TestGeometryFileSink(unittest.TestCase):
         """
         del expected["lst"]
         expected["dct"] = expected["dct"].map(json.loads)
+        return utils.geodataframe_transform(expected, "EPSG:3857", "EPSG:4326")
 
     def test_non_available_extension(self):
         with pytest.raises(ValueError):
@@ -98,12 +107,12 @@ class TestGeometryFileSink(unittest.TestCase):
         with open(path) as f:
             data = json.load(f)
             assert data["features"][0]["properties"]["lst"] == [1]
-        self.expected_to_geojson(self.expected)
+        expected = self.expected_to_geojson(self.expected)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, self.expected, check_like=True)
-        # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected.crs["init"]
+        assert_frame_equal(actual, expected, check_like=True)
+        # compare projections
+        compare_crs(actual.crs, expected.crs)
 
     @pytest.mark.skipif(
         "gpkg" not in sinks.GeometryFileSink.supported_extensions,
@@ -118,8 +127,8 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
-        # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected.crs["init"]
+        # compare projections
+        compare_crs(actual.crs, self.expected.crs)
 
     def test_shapefile(self):
         block = self.klass(self.source, self.path, "shp")
@@ -130,8 +139,8 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
-        # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected.crs["init"]
+        # compare projections
+        compare_crs(actual.crs, self.expected.crs)
 
     @pytest.mark.skipif(
         "gml" not in sinks.GeometryFileSink.supported_extensions,
@@ -149,7 +158,6 @@ class TestGeometryFileSink(unittest.TestCase):
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal(actual, self.expected, check_like=True)
-        # GML does not contain a CRS
 
     def test_fields_non_available(self):
         with pytest.raises(ValueError):
@@ -177,12 +185,12 @@ class TestGeometryFileSink(unittest.TestCase):
         sinks.GeometryFileSink.merge_files(self.path, filename)
         actual = gpd.read_file(filename)
 
-        self.expected_to_geojson(self.expected_combined)
+        expected = self.expected_to_geojson(self.expected_combined)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, self.expected_combined, check_like=True)
-        # compare projections ('init' contains the EPSG code)
-        assert actual.crs["init"] == self.expected_combined.crs["init"]
+        assert_frame_equal(actual, expected, check_like=True)
+        # compare projections
+        compare_crs(actual.crs, expected.crs)
 
     def test_merge_files_cleanup(self):
         block = self.klass(self.source, self.path, "geojson")
@@ -210,7 +218,6 @@ class TestGeometryFileSink(unittest.TestCase):
         for filename in os.listdir(self.path):
             df = gpd.read_file(os.path.join(self.path, filename))
             assert len(df) == 1
-            assert df.crs["init"] == "epsg:3857"
 
     def test_categorical_column(self):
         with_categorical = self.source.set(
@@ -234,10 +241,10 @@ class TestGeometryFileSink(unittest.TestCase):
         self.source.to_file(self.path + ".geojson", **self.request)
         actual = gpd.read_file(self.path + ".geojson")
 
-        self.expected_to_geojson(self.expected)
+        expected = self.expected_to_geojson(self.expected)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, self.expected, check_like=True)
+        assert_frame_equal(actual, expected, check_like=True)
 
     def test_to_file_shapefile(self):
         self.source.to_file(self.path + ".shp", **self.request)

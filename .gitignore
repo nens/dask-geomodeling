@@ -44,3 +44,6 @@ etc/*.logrotate
 
 # ignore docs
 docs/_*
+
+notebooks
+*.ipynb

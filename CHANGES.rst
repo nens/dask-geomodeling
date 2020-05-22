@@ -6,6 +6,10 @@ Changelog of dask-geomodeling
 
 - Accept categorical values in GeometryFileSink / to_file.
 
+- Fixed incompatibilities with geopandas >=0.7.
+
+- GeoJSON output is always converted to EPSG:4326 and doesn't have "crs" field.
+
 
 2.2.7 (2020-04-30)
 ------------------

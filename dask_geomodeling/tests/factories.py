@@ -15,8 +15,8 @@ from dask_geomodeling.raster import RasterBlock
 from dask_geomodeling.utils import (
     get_dtype_max,
     Extent,
-    get_sr,
     get_crs,
+    get_sr,
     get_epsg_or_wkt,
     shapely_transform,
     Dataset,
