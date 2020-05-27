@@ -30,7 +30,11 @@ try:
 except ImportError:
     from fiona import drivers as fiona_env  # NOQA
 
-GEOPANDAS_GTE_0_7_0 = LooseVersion(geopandas.__version__) >= LooseVersion("0.7.0")
+try:
+    GEOPANDAS_GTE_0_7_0 = LooseVersion(geopandas.__version__) >= LooseVersion("0.7.0")
+except AttributeError:  # for doctests geopandas is mocked
+    GEOPANDAS_GTE_0_7_0 = True
+
 if GEOPANDAS_GTE_0_7_0:
     from pyproj import CRS
 
