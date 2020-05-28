@@ -56,5 +56,5 @@ html_static_path = ['_static']
 # mock imports so that we don't need all the dependencies to build the docs
 
 autodoc_mock_imports = [
-    "osgeo", "scipy", "pandas", "geopandas", "dask", "pytz", "shapely", "fiona"
+    "osgeo", "scipy", "pandas", "geopandas", "dask", "pytz", "shapely", "fiona", "pyproj"
 ]

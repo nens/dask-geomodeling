@@ -23,6 +23,7 @@ class MergeGeometryBlocks(GeometryBlock):
       right (GeometryBlock): The right GeometryBlock to be combined.
       how (str, optional): The parameter that describes how the merge should
         be performed. There are four options:
+
         1. ``"left"``: The resulting GeometryBlock will have all the features
            that are present in the left GeometryBlock, no matter the features
            in the right GeometryBlock.
@@ -33,7 +34,8 @@ class MergeGeometryBlocks(GeometryBlock):
            that are present in both input GeometryBlocks. Features that are
            absent in one of the GeometryBlocks will be absent in the result.
         4. ``outer``: The result will contain all the features which are
-           present in one of the input GeometryBlocs.
+           present in one of the input GeometryBlocks.
+
       suffixes (tuple, optional): Text to be added to the column
         names to distinguish whether they originate from the left or right
         GeometryBlock. Default: ``("", "_right")``.
