@@ -10,6 +10,11 @@ Changelog of dask-geomodeling
 
 - GeoJSON output is always converted to EPSG:4326 and doesn't have "crs" field.
 
+- Implemented raster.reduction.reduce_rasters.
+
+- Added the 'statistics' argument to raster.spatial.Place to deal with
+  overlapping features. 
+
 
 2.2.7 (2020-04-30)
 ------------------
