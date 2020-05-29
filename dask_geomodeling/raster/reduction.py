@@ -6,6 +6,30 @@ from dask_geomodeling.utils import get_index, parse_percentile_statistic
 
 from functools import partial
 
+STATISTICS = {
+    "first": None,
+    "last": None,
+    "count": None,
+    "nans": None,
+    "sum": np.nansum,
+    "mean": np.nanmean,
+    "min": np.nanmin,
+    "max": np.nanmax,
+    "argmin": np.nanargmin,
+    "argmax": np.nanargmax,
+    "std": np.nanstd,
+    "var": np.nanvar,
+    "median": np.nanmedian,
+    # "p<number>" uses np.nanpercentile
+}
+
+
+def check_statistic(statistic):
+    if statistic not in STATISTICS:
+        percentile = parse_percentile_statistic(statistic)
+        if percentile is None:
+            raise KeyError('Unknown statistic "{}"'.format(statistic))
+
 
 def reduce_rasters(
     stack,
@@ -29,23 +53,7 @@ def reduce_rasters(
     Returns:
       dict with "values" and "no_data_value"
     """
-    statistics = {
-        "first": None,
-        "last": None,
-        "count": None,
-        "nans": None,
-        "sum": np.nansum,
-        "mean": np.nanmean,
-        "min": np.nanmin,
-        "max": np.nanmax,
-        "argmin": np.nanargmin,
-        "argmax": np.nanargmax,
-        "std": np.nanstd,
-        "var": np.nanvar,
-        "median": np.nanmedian,
-        # "p<number>" uses np.nanpercentile
-    }
-    if statistic not in statistics:
+    if statistic not in STATISTICS:
         percentile = parse_percentile_statistic(statistic)
         if percentile is None:
             raise KeyError('Unknown statistic "{}"'.format(statistic))
@@ -85,7 +93,7 @@ def reduce_rasters(
         if statistic == "percentile":
             func = partial(np.nanpercentile, q=percentile)
         else:
-            func = statistics[statistic]
+            func = STATISTICS[statistic]
         # transform 'no data' into 'nan' to be able to use numpy functions
         # NB: the dtype is at least float16 to accomodate NaN
         stack_array = np.full(

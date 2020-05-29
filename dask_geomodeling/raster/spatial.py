@@ -18,6 +18,7 @@ from dask_geomodeling.utils import (
     get_index,
     shapely_transform,
 )
+from dask_geomodeling.raster.reduction import reduce_rasters, check_statistic
 
 from .base import BaseSingle, RasterBlock
 from shapely.geometry import Point
@@ -451,15 +452,19 @@ class Place(BaseSingle):
       anchor (list of 2 numbers): The anchor into the source raster that will
         be placed at given coordinates.
       coordinates (list of lists of 2 numbers): The target coordinates. The
-        center of the bbox will be placed on each of these coordinates. The
-        last one will go 'on top' in case there is overlap.
+        center of the bbox will be placed on each of these coordinates.
+      statistic (str): What method to use to merge overlapping rasters. One of:
+        {"last", "first", "count", "nans", "sum", "mean", "min",
+        "max", "argmin", "argmax", "product", "std", "var", "p<number>"}
 
     Returns:
       RasterBlock with the source raster placed
 
     """
 
-    def __init__(self, store, place_projection, anchor, coordinates):
+    def __init__(
+        self, store, place_projection, anchor, coordinates, statistic="last"
+    ):
         if not isinstance(store, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
         try:
@@ -480,7 +485,10 @@ class Place(BaseSingle):
                 "Expected a list of lists of 2 numbers in the 'coordinates' "
                 "parameter"
             )
-        super().__init__(store, place_projection, anchor, coordinates.tolist())
+        check_statistic(statistic)
+        super().__init__(
+            store, place_projection, anchor, coordinates.tolist(), statistic,
+        )
 
     @property
     def place_projection(self):
@@ -493,6 +501,10 @@ class Place(BaseSingle):
     @property
     def coordinates(self):
         return self.args[3]
+
+    @property
+    def statistic(self):
+        return self.args[4]
 
     @property
     def projection(self):
@@ -593,6 +605,7 @@ class Place(BaseSingle):
                 "src_bbox": _request["bbox"],
                 "dst_bbox": request["bbox"],
                 "cellsize": (size_x, size_y),
+                "statistic": self.statistic,
             }
             return [(process_kwargs, None), (self.store, _request)]
 
@@ -624,9 +637,14 @@ class Place(BaseSingle):
                 "fillvalue": self.fillvalue,
                 "width": request["width"],
                 "height": request["height"],
+                "statistic": self.statistic,
             }
             return [(process_kwargs, None), (self.store, _request)]
-        return [({"mode": "group"}, None)] + sources_and_requests
+        process_kwargs = {
+            "mode": "group",
+            "statistic": self.statistic,
+        }
+        return [(process_kwargs, None)] + sources_and_requests
 
     @staticmethod
     def process(process_kwargs, *multi):
@@ -722,11 +740,13 @@ class Place(BaseSingle):
                     )
 
         # merge the values_stack
-        out_values = np.full(out_shape, out_no_data_value, out_dtype)
-        for data in stack:
-            # index is where the source has data
-            index = get_index(data["values"], data["no_data_value"])
-            out_values[index] = data["values"][index]
+        out_values = reduce_rasters(
+            stack,
+            statistic=process_kwargs["statistic"],
+            shape=out_shape,
+            fill_value=out_no_data_value,
+            dtype=out_dtype
+        )
 
         return {
             "values": out_values,
