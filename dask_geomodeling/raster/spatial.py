@@ -645,20 +645,14 @@ class Place(BaseSingle):
             )
             out_no_data_value = process_kwargs["fillvalue"]
             out_dtype = process_kwargs["dtype"]
-            values_stack = []
-            no_data_values = []
+            stack = []
         elif process_kwargs["mode"] == "group":
             # We have a bunch of arrays that are already shifted. Stack them.
-            values_stack = [
-                data["values"] for data in multi if data is not None
-            ]
-            no_data_values = [
-                data["no_data_value"] for data in multi if data is not None
-            ]
-            if len(values_stack) > 0:
-                out_shape = values_stack[0].shape
-                out_dtype = values_stack[0].dtype
-                out_no_data_value = no_data_values[0]
+            stack = [data for data in multi if data is not None]
+            if len(stack) > 0:
+                out_shape = stack[0]["values"].shape
+                out_dtype = stack[0]["values"].dtype
+                out_no_data_value = stack[0]["no_data_value"]
             else:
                 return  # instead of returning nodata (because inputs are None)
         elif process_kwargs["mode"] == "warp":
@@ -692,7 +686,7 @@ class Place(BaseSingle):
             k, j, i = np.where(get_index(source, out_no_data_value))
 
             # place the data on each coordinate
-            values_stack = []
+            stack = []
             for x, y in coordinates:
                 if i.size == 0:  # shortcut: no data at all to place
                     break
@@ -711,7 +705,9 @@ class Place(BaseSingle):
                     # complete place
                     values = np.full(out_shape, out_no_data_value, out_dtype)
                     values[k, j + dj, i + di] = source[k, j, i]
-                    values_stack.append(values)
+                    stack.append(
+                        {"values": values, "no_data_value": out_no_data_value}
+                    )
                 else:
                     # partial place
                     i_s = i + di
@@ -721,16 +717,16 @@ class Place(BaseSingle):
                         continue
                     values = np.full(out_shape, out_no_data_value, out_dtype)
                     values[k[m], j_s[m], i_s[m]] = source[k[m], j[m], i[m]]
-                    values_stack.append(values)
-
-            no_data_values = [out_no_data_value] * len(values_stack)
+                    stack.append(
+                        {"values": values, "no_data_value": out_no_data_value}
+                    )
 
         # merge the values_stack
         out_values = np.full(out_shape, out_no_data_value, out_dtype)
-        for values, no_data_value in zip(values_stack, no_data_values):
+        for data in stack:
             # index is where the source has data
-            index = get_index(values, no_data_value)
-            out_values[index] = values[index]
+            index = get_index(data["values"], data["no_data_value"])
+            out_values[index] = data["values"][index]
 
         return {
             "values": out_values,
