@@ -462,9 +462,7 @@ class Place(BaseSingle):
 
     """
 
-    def __init__(
-        self, store, place_projection, anchor, coordinates, statistic="last"
-    ):
+    def __init__(self, store, place_projection, anchor, coordinates, statistic="last"):
         if not isinstance(store, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
         try:
@@ -487,7 +485,7 @@ class Place(BaseSingle):
             )
         check_statistic(statistic)
         super().__init__(
-            store, place_projection, anchor, coordinates.tolist(), statistic,
+            store, place_projection, anchor, coordinates.tolist(), statistic
         )
 
     @property
@@ -640,10 +638,7 @@ class Place(BaseSingle):
                 "statistic": self.statistic,
             }
             return [(process_kwargs, None), (self.store, _request)]
-        process_kwargs = {
-            "mode": "group",
-            "statistic": self.statistic,
-        }
+        process_kwargs = {"mode": "group", "statistic": self.statistic}
         return [(process_kwargs, None)] + sources_and_requests
 
     @staticmethod
@@ -723,9 +718,7 @@ class Place(BaseSingle):
                     # complete place
                     values = np.full(out_shape, out_no_data_value, out_dtype)
                     values[k, j + dj, i + di] = source[k, j, i]
-                    stack.append(
-                        {"values": values, "no_data_value": out_no_data_value}
-                    )
+                    stack.append({"values": values, "no_data_value": out_no_data_value})
                 else:
                     # partial place
                     i_s = i + di
@@ -735,9 +728,7 @@ class Place(BaseSingle):
                         continue
                     values = np.full(out_shape, out_no_data_value, out_dtype)
                     values[k[m], j_s[m], i_s[m]] = source[k[m], j[m], i[m]]
-                    stack.append(
-                        {"values": values, "no_data_value": out_no_data_value}
-                    )
+                    stack.append({"values": values, "no_data_value": out_no_data_value})
 
         # merge the values_stack
         out_values = reduce_rasters(
@@ -745,10 +736,7 @@ class Place(BaseSingle):
             statistic=process_kwargs["statistic"],
             shape=out_shape,
             fill_value=out_no_data_value,
-            dtype=out_dtype
+            dtype=out_dtype,
         )
 
-        return {
-            "values": out_values,
-            "no_data_value": out_no_data_value,
-        }
+        return {"values": out_values, "no_data_value": out_no_data_value}

@@ -31,13 +31,7 @@ def check_statistic(statistic):
             raise ValueError('Unknown statistic "{}"'.format(statistic))
 
 
-def reduce_rasters(
-    stack,
-    statistic="last",
-    shape=None,
-    fill_value=None,
-    dtype=None,
-):
+def reduce_rasters(stack, statistic="last", shape=None, fill_value=None, dtype=None):
     """Reduces a stack of rasters, skipping 'no data' values.
 
     Args:
@@ -97,7 +91,7 @@ def reduce_rasters(
         # transform 'no data' into 'nan' to be able to use numpy functions
         # NB: the dtype is at least float16 to accomodate NaN
         stack_array = np.full(
-            (len(stack), ) + shape, np.nan, np.result_type(dtype, np.float16)
+            (len(stack),) + shape, np.nan, np.result_type(dtype, np.float16)
         )
         for i, data in enumerate(stack):
             index = get_index(data["values"], data["no_data_value"])

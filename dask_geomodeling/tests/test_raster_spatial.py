@@ -154,23 +154,25 @@ def test_place_vertical_shift(source, center, vals_request):
     assert (values[:, 0, :] == 255).all()
 
 
-@pytest.mark.parametrize("statistic,expected", [
-    ("first", (255, 7, 7, 7)),  # (no features, first, second, both)
-    ("last", (255, 7, 7, 7)),  # the default
-    ("count", (0, 1, 1, 2)),
-    ("nans", (2, 1, 1, 0)),
-    ("sum", (0, 7, 7, 14)),
-    ("mean", (255, 7, 7, 7)),
-    ("min", (255, 7, 7, 7)),
-    ("max", (255, 7, 7, 7)),
-    ("argmin", (255, 0, 1, 0)),
-    ("argmax", (255, 0, 1, 0)),
-    ("std", (255, 0, 0, 0)),
-    ("var", (255, 0, 0, 0)),
-    ("median", (255, 7, 7, 7)),
-    ("p99", (255, 7, 7, 7)),
-
-])
+@pytest.mark.parametrize(
+    "statistic,expected",
+    [
+        ("first", (255, 7, 7, 7)),  # (no features, first, second, both)
+        ("last", (255, 7, 7, 7)),  # the default
+        ("count", (0, 1, 1, 2)),
+        ("nans", (2, 1, 1, 0)),
+        ("sum", (0, 7, 7, 14)),
+        ("mean", (255, 7, 7, 7)),
+        ("min", (255, 7, 7, 7)),
+        ("max", (255, 7, 7, 7)),
+        ("argmin", (255, 0, 1, 0)),
+        ("argmax", (255, 0, 1, 0)),
+        ("std", (255, 0, 0, 0)),
+        ("var", (255, 0, 0, 0)),
+        ("median", (255, 7, 7, 7)),
+        ("p99", (255, 7, 7, 7)),
+    ],
+)
 def test_place_multiple(source, center, vals_request, statistic, expected):
     # place such that only the left and bottom ridges have values
     place = raster.Place(
