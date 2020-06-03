@@ -93,8 +93,8 @@ class RasterTiler(BaseSingle):
 
         # generate tile IDs (given by tile_height, tile_width, topleft)
         tile_x, tile_y = self.topleft
-        x_ids = floor((x1 - tile_x) / w), ceil((x2 - tile_x) / w)
-        y_ids = floor((y1 - tile_y) / h), ceil((y2 - tile_y) / h)
+        x_ids = floor((x1 - tile_x) / w), ceil((x2 - tile_x - w) / w)
+        y_ids = floor((y1 - tile_y) / h), ceil((y2 - tile_y - h) / h)
 
         # get the tile corners as a single grid
         for x_id, y_id in np.ndindex(y_ids[1] - y_ids[0], x_ids[1] - x_ids[0]):
@@ -117,7 +117,7 @@ class RasterTiler(BaseSingle):
                 "width": int((_x2 - _x1) * cell_width),
                 "height": int((_y2 - _y1) * cell_height),
             }
-            yield (self.source, _request)
+            yield (self.store, _request)
 
     @staticmethod
     def process(*all_data):

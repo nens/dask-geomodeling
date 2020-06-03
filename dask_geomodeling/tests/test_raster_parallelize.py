@@ -58,3 +58,25 @@ def test_tiler_topleft_validation(empty_source):
         raster.RasterTiler(empty_source, 10, "EPSG:28992", [2, 3, 4])
     with pytest.raises(ValueError):
         raster.RasterTiler(empty_source, 10, "EPSG:28992", [2, "a"])
+
+
+@pytest.mark.parametrize("bbox,expected", [
+    ((0.0, 0.0, 7.0, 7.0), [(0.0, 0.0, 7.0, 7.0)]),  # exact
+    ((-7.0, 7.0, 0.0, 14.0), [(-7.0, 7.0, 0.0, 14.0)]),  # exact, shifted
+    ((2.0, 7.0, 7.0, 14.0), [(2.0, 7.0, 7.0, 14.0)]),  # smaller in x1
+    ((0.0, 7.0, 5.0, 14.0), [(0.0, 7.0, 5.0, 14.0)]),  # smaller in x2
+    ((0.0, 9.0, 7.0, 14.0), [(0.0, 9.0, 7.0, 14.0)]),  # smaller in y1
+    ((0.0, 7.0, 7.0, 12.0), [(0.0, 7.0, 7.0, 12.0)]),  # smaller in y2
+    ((0.0, 0.0, 14.0, 7.0), [(0.0, 0.0, 7.0, 7.0), (7.0, 0.0, 14.0, 7.0)]),  # two tiles exact horiz.
+    ((0.0, 0.0, 7.0, 14.0), [(0.0, 0.0, 7.0, 7.0), (0.0, 7.0, 7.0, 14.0)]),  # two tiles exact vert.
+])
+def test_bbox(empty_source, bbox, expected):
+    block = raster.RasterTiler(empty_source, 7, "EPSG:28992")
+    s_r = block.get_sources_and_requests(
+        mode="vals",
+        bbox=(0.0, 7.0, 7.0, 14.0),
+        width=7,
+        height=7,
+        projection="EPSG:28992",
+    )
+    assert [x[1]["bbox"] for x in s_r] == expected
