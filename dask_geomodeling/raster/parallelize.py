@@ -32,18 +32,25 @@ class RasterTiler(BaseSingle):
     """
 
     def __init__(self, source, size, projection, topleft=None):
-        if not hasattr(size, "__iter__"):
-            size = [size, size]
-        elif len(size) != 2:
-            raise ValueError(
-                "The 'size' parameter should be a scalar or a list of length 2."
-            )
-        size = [float(x) for x in size]
+        if hasattr(size, "__iter__"):
+            if len(size) != 2:
+                raise ValueError(
+                    "'size' should be a scalar or a list of length 2."
+                )
+            size = [float(x) for x in size]
+        else:
+            size = [float(size), float(size)]
         if size[0] <= 0 or size[1] <= 0:
-            raise TypeError("Tile size should be greater than 0")
+            raise ValueError("'size' should be greater than 0")
         if not isinstance(projection, str):
             raise TypeError(
                 "'{}' object is not allowed".format(type(projection))
+            )
+        try:
+            utils.get_sr(projection)
+        except RuntimeError:
+            raise ValueError(
+                "Could not parse projection {}".format(projection)
             )
         if topleft is None:
             topleft = [0.0, 0.0]
@@ -51,12 +58,7 @@ class RasterTiler(BaseSingle):
             raise ValueError(
                 "The 'topleft' parameter should be a list of length 2."
             )
-        super().__init__(
-            source,
-            [float(x) for x in size],
-            projection,
-            [float(x) for x in topleft],
-        )
+        super().__init__(source, size, projection, [float(x) for x in topleft])
 
     @property
     def size(self):
