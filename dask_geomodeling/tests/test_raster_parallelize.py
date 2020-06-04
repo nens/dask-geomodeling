@@ -18,6 +18,13 @@ def empty_source():
     )
 
 
+def check_sources_and_requests(sources_and_requests, expected_bboxes, cellsize=(1, 1)):
+    for (_, req), expected in zip(list(sources_and_requests)[1:], expected_bboxes):
+        assert req["bbox"] == expected
+        assert req["width"] == int((expected[2] - expected[0]) / cellsize[0])
+        assert req["height"] == int((expected[3] - expected[1]) / cellsize[1])
+
+
 def test_tiler_defaults(empty_source):
     block = raster.RasterTiler(empty_source, 10, "EPSG:28992")
     assert block.store is empty_source
@@ -93,7 +100,7 @@ def test_tiling(empty_source, bbox, expected_tiles):
         height=int(bbox[3] - bbox[1]),
         projection="EPSG:28992",
     )
-    assert [x[1]["bbox"] for x in s_r] == expected_tiles
+    check_sources_and_requests(s_r, expected_tiles)
 
 
 @pytest.mark.parametrize(
@@ -116,7 +123,7 @@ def test_tiling_cellsize(empty_source, cellsize, expected_tiles):
         height=int(12 / cellsize[1]),
         projection="EPSG:28992",
     )
-    assert [x[1]["bbox"] for x in s_r] == expected_tiles
+    check_sources_and_requests(s_r, expected_tiles, cellsize)
 
 
 @pytest.mark.parametrize(
@@ -137,4 +144,19 @@ def test_tiling_topleft(empty_source, topleft, expected_tiles):
         height=3,
         projection="EPSG:28992",
     )
-    assert [x[1]["bbox"] for x in s_r] == expected_tiles
+    check_sources_and_requests(s_r, expected_tiles)
+
+
+def test_cell_tile_mismatch(empty_source):
+    block = raster.RasterTiler(empty_source, 7, "EPSG:28992")
+    s_r = block.get_sources_and_requests(
+        mode="vals",
+        bbox=(0.0, 0.0, 6.0, 6.0),
+        width=2,  # cellsize_x = 3 will be adjusted with round(7 / 3) to 3.5
+        height=3,  # cellsize_y = 2 will be adjusted with round(7 / 2) to 1.75
+        projection="EPSG:28992",
+    )
+    s_r = list(s_r)[1:]
+    assert len(s_r) == 1
+    assert s_r[0][1]["width"] == 2
+    assert s_r[0][1]["height"] == 4

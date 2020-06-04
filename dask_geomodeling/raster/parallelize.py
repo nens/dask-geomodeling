@@ -73,7 +73,7 @@ class RasterTiler(BaseSingle):
 
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
-            return [(self.source, request)]
+            return [(None, None), (self.source, request)]
 
         sr = utils.get_sr(request["projection"])
         if not sr.IsSame(utils.get_sr(self.projection)):
@@ -84,44 +84,83 @@ class RasterTiler(BaseSingle):
         cell_width = (x2 - x1) / request["width"]
         cell_height = (y2 - y1) / request["height"]
         if cell_width <= 0 or cell_height <= 0:
-            return [(self.source, request)]  # pass point requests through
+            # pass point requests through
+            return [(None, None), (self.source, request)]
 
-        # adjust the cell size so that it fits an integer times in tile size
-        h, w = self.size
-        cell_height = h / max(round(h / cell_height), 1)
-        cell_width = w / max(round(w / cell_width), 1)
-
-        # generate tile IDs (given by tile_height, tile_width, topleft)
+        # get tile grid
+        tile_h, tile_w = self.size
         tile_x, tile_y = self.topleft
-        x_ids = floor((x1 - tile_x) / w), ceil((x2 - tile_x) / w)
-        y_ids = floor((y1 - tile_y) / h), ceil((y2 - tile_y) / h)
 
-        # get the tile corners as a single grid
-        for x_id, y_id in product(range(*x_ids), range(*y_ids)):
-            _x1 = x_id * w + tile_x
-            _y1 = y_id * h + tile_y
-            _x2 = _x1 + w
-            _y2 = _y1 + h
-            # resize the bbox with an integer amount of cells if necessary
-            if _x1 < x1:
-                _x1 += floor((x1 - _x1) / cell_width) * cell_width
-            if _y1 < y1:
-                _y1 += floor((y1 - _y1) / cell_height) * cell_height
-            if _x2 > x2:
-                _x2 -= floor((_x2 - x2) / cell_width) * cell_width
-            if _y2 > y2:
-                _y2 -= floor((_y2 - y2) / cell_height) * cell_height
+        # adjust the cell size so that it fits an integer times in a tile
+        cell_height = tile_h / max(round(tile_h / cell_height), 1)
+        cell_width = tile_w / max(round(tile_w / cell_width), 1)
+
+        # compute the tile edge coordinates (N + 1 edges for N tiles)
+        edges_x = np.arange(
+            floor((x1 - tile_x) / tile_w) * tile_w + tile_x,
+            ceil((x2 - tile_x) / tile_w) * tile_w + tile_x + tile_w,
+            tile_w,
+        )
+        edges_y = np.arange(
+            floor((y1 - tile_y) / tile_h) * tile_h + tile_y,
+            ceil((y2 - tile_y) / tile_h) * tile_h + tile_y + tile_h,
+            tile_h,
+        )
+
+        # shrink the outmost edges with an integer amounto f cells if necessary
+        if edges_x[0] < x1:
+            edges_x[0] += floor((x1 - edges_x[0]) / cell_width) * cell_width
+        if edges_y[0] < y1:
+            edges_y[0] += floor((y1 - edges_y[0]) / cell_height) * cell_height
+        if edges_x[-1] > x2:
+            edges_x[-1] -= floor((edges_x[-1] - x2) / cell_width) * cell_width
+        if edges_y[-1] > y2:
+            edges_y[-1] -= floor((edges_y[-1] - y2) / cell_height) * cell_height
+
+        # yield process_kwargs to piece back together the tiles later
+        yield {
+            "dtype": self.dtype,
+            "fillvalue": self.fillvalue,
+            "edges": (edges_y, edges_x),
+            "shape": (
+                int((edges_y[-1] - edges_y[0]) / cell_height),
+                int((edges_x[-1] - edges_x[0]) / cell_width),
+            ),
+        }, None
+
+        # yield the tile requests
+        for i, j in product(range(len(edges_x) - 1), range(len(edges_y) - 1)):
+            _x1 = edges_x[i]
+            _y1 = edges_y[j]
+            _x2 = edges_x[i + 1]
+            _y2 = edges_y[j + 1]
             _request = {
                 **request,
                 "bbox": (_x1, _y1, _x2, _y2),
                 "width": int((_x2 - _x1) / cell_width),
                 "height": int((_y2 - _y1) / cell_height),
             }
-            yield (self.store, _request)
+            yield self.store, _request
 
     @staticmethod
-    def process(*all_data):
+    def process(process_kwargs, *all_data):
         if len(all_data) == 0:
             return
-        else:
+        elif process_kwargs is None:
             return all_data[0]  # for non-tiled / meta / time requests
+
+        # do not piece together the data if there is none
+        if any(x is not None for x in all_data):
+            return
+
+        values = np.full(
+            process_kwargs["shape"],
+            process_kwargs["fillvalue"],
+            process_kwargs["dtype"],
+        )
+        edges_x, edges_y = process_kwargs["edges"]
+        cursor = (0, 0)
+        for i, j in product(range(tiles[0]), range(tiles[1])):
+            if i * j % tiles[0] == 0:
+                cursor[0] = 0
+            tile_data = 0  # TODO
