@@ -2,6 +2,7 @@
 Module containing blocks that parallelize raster blocks
 """
 from math import floor, ceil
+from itertools import product
 import numpy as np
 
 from dask_geomodeling import utils
@@ -14,6 +15,10 @@ __all__ = ["RasterTiler"]
 class RasterTiler(BaseSingle):
     """Parallelize operations on a RasterBlock by tiling the request.
 
+    Note that the RasterTiler sets the raster grid: the request cellsize is
+    adjusted so that there is an integer amount of pixels inside a single tile
+    and the request bbox is shifted so that the cells align with the tiles.
+
     Args:
       source (GeometryBlock): The source RasterBlock
       size (float or list): The maximum size of a tile in units of the
@@ -25,7 +30,7 @@ class RasterTiler(BaseSingle):
         tile. This defines the tile grid. Default [0, 0].
 
     Note that the tile size is adjusted automatically so that there is an
-    integer amount of cells inside each tile.
+    integer amount of cells inside each tile. The request bbox is snapped
 
     Returns:
       RasterBlock
@@ -34,31 +39,25 @@ class RasterTiler(BaseSingle):
     def __init__(self, source, size, projection, topleft=None):
         if hasattr(size, "__iter__"):
             if len(size) != 2:
-                raise ValueError(
-                    "'size' should be a scalar or a list of length 2."
-                )
+                raise ValueError("'size' should be a scalar or a list of length 2.")
             size = [float(x) for x in size]
         else:
             size = [float(size), float(size)]
         if size[0] <= 0 or size[1] <= 0:
             raise ValueError("'size' should be greater than 0")
         if not isinstance(projection, str):
-            raise TypeError(
-                "'{}' object is not allowed".format(type(projection))
-            )
+            raise TypeError("'{}' object is not allowed".format(type(projection)))
         try:
             utils.get_sr(projection)
         except RuntimeError:
-            raise ValueError(
-                "Could not parse projection {}".format(projection)
-            )
+            raise ValueError("Could not parse projection {}".format(projection))
         if topleft is None:
             topleft = [0.0, 0.0]
         elif len(topleft) != 2:
-            raise ValueError(
-                "The 'topleft' parameter should be a list of length 2."
-            )
-        super().__init__(source, size, projection, [float(x) for x in topleft])
+            raise ValueError("The 'topleft' parameter should be a list of length 2.")
+        else:
+            topleft = [float(x) for x in topleft]
+        super().__init__(source, size, projection, topleft)
 
     @property
     def size(self):
@@ -87,19 +86,20 @@ class RasterTiler(BaseSingle):
         if cell_width <= 0 or cell_height <= 0:
             return [(self.source, request)]  # pass point requests through
 
-        # adjust tile size so that it matches the cell size
-        h = max(round(self.size[0] / cell_width), 1) * cell_width
-        w = max(round(self.size[1] / cell_width), 1) * cell_width
+        # adjust the cell size so that it fits an integer times in tile size
+        h, w = self.size
+        cell_height = h / max(round(h / cell_height), 1)
+        cell_width = w / max(round(w / cell_width), 1)
 
         # generate tile IDs (given by tile_height, tile_width, topleft)
         tile_x, tile_y = self.topleft
-        x_ids = floor((x1 - tile_x) / w), ceil((x2 - tile_x - w) / w)
-        y_ids = floor((y1 - tile_y) / h), ceil((y2 - tile_y - h) / h)
+        x_ids = floor((x1 - tile_x) / w), ceil((x2 - tile_x) / w)
+        y_ids = floor((y1 - tile_y) / h), ceil((y2 - tile_y) / h)
 
         # get the tile corners as a single grid
-        for x_id, y_id in np.ndindex(y_ids[1] - y_ids[0], x_ids[1] - x_ids[0]):
+        for x_id, y_id in product(range(*x_ids), range(*y_ids)):
             _x1 = x_id * w + tile_x
-            _y1 = x_id * w + tile_x
+            _y1 = y_id * h + tile_y
             _x2 = _x1 + w
             _y2 = _y1 + h
             # resize the bbox with an integer amount of cells if necessary
@@ -113,9 +113,9 @@ class RasterTiler(BaseSingle):
                 _y2 -= floor((_y2 - y2) / cell_height) * cell_height
             _request = {
                 **request,
-                "bbox": (_x1, _x2, _y1, _y2),
-                "width": int((_x2 - _x1) * cell_width),
-                "height": int((_y2 - _y1) * cell_height),
+                "bbox": (_x1, _y1, _x2, _y2),
+                "width": int((_x2 - _x1) / cell_width),
+                "height": int((_y2 - _y1) / cell_height),
             }
             yield (self.store, _request)
 
