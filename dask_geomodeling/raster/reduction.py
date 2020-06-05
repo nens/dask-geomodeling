@@ -34,6 +34,9 @@ def reduce_rasters(stack, statistic, no_data_value=None, dtype=None):
     """Apply a statistic (e.g. "mean") to a stack of rasters, skipping
     'no data' values.
 
+    In this context, reduce means that the dimensionality of the input data
+    is reduced by one.
+
     Args:
       stack (list): a list of dicts containing "values" (ndarray)
         and "no_data_value". If the list has zero length or if the ndarrays
