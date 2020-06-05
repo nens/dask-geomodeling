@@ -19,7 +19,7 @@ def test_tiler_defaults(empty_source):
     assert block.store is empty_source
     assert block.size == [10.0, 10.0]
     assert block.projection == "EPSG:28992"
-    assert block.topleft == [0.0, 0.0]
+    assert block.corner == [0.0, 0.0]
 
 
 def test_tiler_source_validation(empty_source):
@@ -45,7 +45,7 @@ def test_tiler_projection_validation(empty_source):
         raster.RasterTiler(empty_source, 10, "not-a-projection")
 
 
-def test_tiler_topleft_validation(empty_source):
+def test_tiler_corner_validation(empty_source):
     with pytest.raises(TypeError):
         raster.RasterTiler(empty_source, 10, "EPSG:28992", 2)
     with pytest.raises(ValueError):
@@ -116,7 +116,7 @@ def test_tiling_cellsize(empty_source, cellsize, expected_tiles):
 
 
 @pytest.mark.parametrize(
-    "topleft,expected_tiles",
+    "corner,expected_tiles",
     [
         ((0, 0), [(2.0, 2.0, 5.0, 5.0)]),
         ((0.1, 0), [(1.1, 2.0, 5.1, 5.0)]),
@@ -124,8 +124,8 @@ def test_tiling_cellsize(empty_source, cellsize, expected_tiles):
         ((0.1, 0.1), [(1.1, 1.1, 5.1, 5.1)]),
     ],
 )
-def test_tiling_topleft(empty_source, topleft, expected_tiles):
-    block = raster.RasterTiler(empty_source, 7, "EPSG:28992", topleft)
+def test_tiling_corner(empty_source, corner, expected_tiles):
+    block = raster.RasterTiler(empty_source, 7, "EPSG:28992", corner)
     s_r = block.get_sources_and_requests(
         mode="vals",
         bbox=(2.0, 2.0, 5.0, 5.0),
