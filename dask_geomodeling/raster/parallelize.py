@@ -73,7 +73,7 @@ class RasterTiler(BaseSingle):
 
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
-            return [(None, None), (self.source, request)]
+            return [(None, None), (self.store, request)]
 
         sr = utils.get_sr(request["projection"])
         if not sr.IsSame(utils.get_sr(self.projection)):
@@ -85,7 +85,7 @@ class RasterTiler(BaseSingle):
         cell_height = (y2 - y1) / request["height"]
         if cell_width <= 0 or cell_height <= 0:
             # pass point requests through
-            return [(None, None), (self.source, request)]
+            return [(None, None), (self.store, request)]
 
         # get tile grid
         tile_h, tile_w = self.size
@@ -95,7 +95,7 @@ class RasterTiler(BaseSingle):
         cell_height = tile_h / max(round(tile_h / cell_height), 1)
         cell_width = tile_w / max(round(tile_w / cell_width), 1)
 
-        # compute the tile edge coordinates (N + 1 edges for N tiles)
+        # compute the tile edge coordinates in (N + 1 edges for N tiles)
         edges_x = np.arange(
             floor((x1 - tile_x) / tile_w) * tile_w + tile_x,
             ceil((x2 - tile_x) / tile_w) * tile_w + tile_x + tile_w,
@@ -107,7 +107,7 @@ class RasterTiler(BaseSingle):
             tile_h,
         )
 
-        # shrink the outmost edges with an integer amounto f cells if necessary
+        # shrink the outmost edges with an integer amount of cells if necessary
         if edges_x[0] < x1:
             edges_x[0] += floor((x1 - edges_x[0]) / cell_width) * cell_width
         if edges_y[0] < y1:
@@ -121,8 +121,11 @@ class RasterTiler(BaseSingle):
         yield {
             "dtype": self.dtype,
             "fillvalue": self.fillvalue,
-            "edges": (edges_y, edges_x),
-            "shape": (
+            "tile_ij": (
+                ((edges_x[:-1] - edges_x[0]) / cell_width).astype(int),
+                ((edges_y[:-1] - edges_y[0]) / cell_height).astype(int),
+            ),
+            "shape_yx": (
                 int((edges_y[-1] - edges_y[0]) / cell_height),
                 int((edges_x[-1] - edges_x[0]) / cell_width),
             ),
@@ -149,18 +152,22 @@ class RasterTiler(BaseSingle):
         elif process_kwargs is None:
             return all_data[0]  # for non-tiled / meta / time requests
 
-        # do not piece together the data if there is none
-        if any(x is not None for x in all_data):
-            return
+        # go through all_data and get the temporal shape
+        shape_yx = process_kwargs["shape_yx"]
+        for data in all_data:
+            if data is not None:
+                shape = (data["values"].shape[0], ) + shape_yx
+                break
+        else:
+            return  # return None if all data is None
 
         values = np.full(
-            process_kwargs["shape"],
+            shape,
             process_kwargs["fillvalue"],
             process_kwargs["dtype"],
         )
-        edges_x, edges_y = process_kwargs["edges"]
-        cursor = (0, 0)
-        for i, j in product(range(tiles[0]), range(tiles[1])):
-            if i * j % tiles[0] == 0:
-                cursor[0] = 0
-            tile_data = 0  # TODO
+        coords_x, coords_y = process_kwargs["tile_ij"]
+        for (x, y), data in zip(product(coords_x, coords_y), all_data):
+            vals = data["values"]
+            values[:, y : y + vals.shape[1], x : x + vals.shape[2]] = vals
+        return {"values": values, "no_data_value": process_kwargs["fillvalue"]}
