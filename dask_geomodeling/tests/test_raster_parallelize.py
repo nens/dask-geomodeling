@@ -151,53 +151,33 @@ def test_cell_tile_mismatch(empty_source):
     assert s_r[0][1]["height"] == 4
 
 
-def test_tiling_process_y(source):
-    # piece back together wiles with nodata at the negative y edge
+@pytest.mark.parametrize(
+    "bbox_offset",
+    [
+        (0, -5, 5, 0),  # covers precisely the 5x5 meters of data in the source
+        (0, -5, 6, 0),
+        (0, -6, 5, 0),
+        (-1, -5, 5, 0),
+        (0, -5, 5, 1),
+    ],
+)
+def test_tiling_process(source, bbox_offset):
+    # piece back together tiles with nodata at the negative y edge
     block = raster.RasterTiler(source, 2, "EPSG:28992")
-    actual = block.get_data(
+    request = dict(
         mode="vals",
         bbox=(
-            source.pixel_origin[0],
-            source.pixel_origin[1] - 6,
-            source.pixel_origin[0] + 5,
-            source.pixel_origin[1],
-        ),  # the source has 5x5 meters of data
-        width=10,  # 0.5 m resolution
-        height=12,  # 0.5 m resolution
+            source.pixel_origin[0] + bbox_offset[0],
+            source.pixel_origin[1] + bbox_offset[1],
+            source.pixel_origin[0] + bbox_offset[2],
+            source.pixel_origin[1] + bbox_offset[3],
+        ),
+        width=(bbox_offset[2] - bbox_offset[0]) * 2,  # 0.5 m resolution
+        height=(bbox_offset[3] - bbox_offset[1]) * 2,  # 0.5 m resolution
         projection="EPSG:28992",
         start=source.period[0],
     )
-    values = actual["values"]
-    assert_equal(
-        values[:, :10, :10], np.full((1, 10, 10), 1, dtype=source.dtype)
-    )
-    assert_equal(
-        values[:, 10:, :10], np.full((1, 10, 2), 255, dtype=source.dtype)
-    )
-    assert actual["no_data_value"] == source.fillvalue
-
-
-def test_tiling_process_x(source):
-    # piece back together tiles with nodata at the positive x edge
-    block = raster.RasterTiler(source, 2, "EPSG:28992")
-    actual = block.get_data(
-        mode="vals",
-        bbox=(
-            source.pixel_origin[0],
-            source.pixel_origin[1] - 5,
-            source.pixel_origin[0] + 6,
-            source.pixel_origin[1],
-        ),  # the source has 5x5 meters of data
-        width=12,  # 0.5 m resolution
-        height=10,  # 0.5 m resolution
-        projection="EPSG:28992",
-        start=source.period[0],
-    )
-    values = actual["values"]
-    assert_equal(
-        values[:, :10, :10], np.full((1, 10, 10), 1, dtype=source.dtype)
-    )
-    assert_equal(
-        values[:, :10, 10:], np.full((1, 10, 2), 255, dtype=source.dtype)
-    )
-    assert actual["no_data_value"] == source.fillvalue
+    actual = block.get_data(**request)
+    expected = source.get_data(**request)
+    assert_equal(actual["values"], expected["values"])
+    assert actual["no_data_value"] == expected["no_data_value"]

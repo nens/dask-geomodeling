@@ -5,6 +5,7 @@ from math import floor, ceil
 from itertools import product
 import numpy as np
 
+from dask import config
 from dask_geomodeling import utils
 from .base import BaseSingle
 
@@ -73,7 +74,9 @@ class RasterTiler(BaseSingle):
 
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
-            return [(None, None), (self.store, request)]
+            yield (None, None)
+            yield (self.store, request)
+            return
 
         sr = utils.get_sr(request["projection"])
         if not sr.IsSame(utils.get_sr(self.projection)):
@@ -85,7 +88,9 @@ class RasterTiler(BaseSingle):
         cell_height = (y2 - y1) / request["height"]
         if cell_width <= 0 or cell_height <= 0:
             # pass point requests through
-            return [(None, None), (self.store, request)]
+            yield (None, None)
+            yield (self.store, request)
+            return
 
         # get tile grid
         tile_h, tile_w = self.size
@@ -123,7 +128,7 @@ class RasterTiler(BaseSingle):
             "fillvalue": self.fillvalue,
             "tile_ij": (
                 ((edges_x[:-1] - edges_x[0]) / cell_width).astype(int),
-                ((edges_y[:-1] - edges_y[0]) / cell_height).astype(int),
+                ((edges_y[-1] - edges_y[:-1]) / cell_height).astype(int),
             ),
             "shape_yx": (
                 int((edges_y[-1] - edges_y[0]) / cell_height),
@@ -152,22 +157,31 @@ class RasterTiler(BaseSingle):
         elif process_kwargs is None:
             return all_data[0]  # for non-tiled / meta / time requests
 
-        # go through all_data and get the temporal shape
+        # go through all_data and get the shape
         shape_yx = process_kwargs["shape_yx"]
         for data in all_data:
             if data is not None:
-                shape = (data["values"].shape[0], ) + shape_yx
+                shape = (data["values"].shape[0],) + shape_yx
                 break
         else:
             return  # return None if all data is None
 
-        values = np.full(
-            shape,
-            process_kwargs["fillvalue"],
-            process_kwargs["dtype"],
-        )
+        max_pixels = config.get("geomodeling.raster-limit")
+        required_pixels = int(np.prod(shape))
+        if required_pixels > max_pixels:
+            raise RuntimeError(
+                "The required raster size after combing the tiles exceeded "
+                "the maximum ({} > {})".format(required_pixels, max_pixels)
+            )
+
+        # create the output array
+        values = np.full(shape, process_kwargs["fillvalue"], process_kwargs["dtype"])
+
+        # piece together the output array
         coords_x, coords_y = process_kwargs["tile_ij"]
         for (x, y), data in zip(product(coords_x, coords_y), all_data):
+            if data is None:
+                continue
             vals = data["values"]
-            values[:, y : y + vals.shape[1], x : x + vals.shape[2]] = vals
+            values[:, y - vals.shape[1] : y, x : x + vals.shape[2]] = vals
         return {"values": values, "no_data_value": process_kwargs["fillvalue"]}

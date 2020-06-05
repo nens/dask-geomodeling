@@ -109,6 +109,18 @@ class TstRasterSourceBase:
         self.assertEqual(data["values"].shape, (1, 1, 2))
         assert_equal(data["values"], [[[5, data["no_data_value"]]]])
 
+    def test_bbox_single_pixel_1x2(self):
+        # y axis swapping: expect nodata on the low-y, so high-index side
+        data = self.source.get_data(
+            mode="vals",
+            projection="EPSG:28992",
+            bbox=(136700, 455800 - 10, 136705, 455800),
+            width=1,
+            height=2,
+        )
+        self.assertEqual(data["values"].shape, (1, 2, 1))
+        assert_equal(data["values"], [[[5], [data["no_data_value"]]]])
+
     def test_bbox_single_pixel_4x2(self):
         data = self.source.get_data(
             mode="vals",
