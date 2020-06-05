@@ -15,6 +15,11 @@ Changelog of dask-geomodeling
 - Added the 'statistics' argument to raster.spatial.Place to deal with
   overlapping features. 
 
+- Allow point requests in raster.spatial.Place.
+
+- Clarifications about raster cell validity ranges in MemorySource and
+  RasterFileSource.
+
 
 2.2.7 (2020-04-30)
 ------------------
