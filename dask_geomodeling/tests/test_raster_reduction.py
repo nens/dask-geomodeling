@@ -55,33 +55,9 @@ def stack_nodata_only():
     ],
 )
 def test_reduce(statistic, expected, dtype, stack):
-    actual = reduce_rasters(stack, statistic, (1, 2, 3), fill_value=255, dtype=dtype)
+    actual = reduce_rasters(stack, statistic, no_data_value=255, dtype=dtype)
     expected = np.array(expected, dtype=dtype)
-    assert_array_equal(actual, expected)
-
-
-@pytest.mark.parametrize(
-    "statistic,expected_value",
-    [
-        ("first", 255),
-        ("last", 255),
-        ("count", 0),
-        ("sum", 0),
-        ("mean", 255),
-        ("min", 255),
-        ("max", 255),
-        ("argmin", 255),
-        ("argmax", 255),
-        ("std", 255),
-        ("var", 255),
-        ("median", 255),
-        ("p99", 255),
-    ],
-)
-def test_reduce_no_input(statistic, expected_value):
-    actual = reduce_rasters([], statistic, (1, 2, 3), fill_value=255, dtype=np.uint8)
-    expected = np.full((1, 2, 3), expected_value, dtype=np.uint8)
-    assert_array_equal(actual, expected)
+    assert_array_equal(actual["values"], expected)
 
 
 @pytest.mark.parametrize(
@@ -104,7 +80,19 @@ def test_reduce_no_input(statistic, expected_value):
 )
 def test_reduce_nan_input(statistic, expected_value, stack_nodata_only):
     actual = reduce_rasters(
-        stack_nodata_only, statistic, (1, 2, 3), fill_value=255, dtype=np.uint8
+        stack_nodata_only, statistic, no_data_value=255, dtype=np.uint8
     )
     expected = np.full((1, 2, 3), expected_value, dtype=np.uint8)
-    assert_array_equal(actual, expected)
+    assert_array_equal(actual["values"], expected)
+
+
+@pytest.mark.parametrize("statistic", ["first", "sum"])
+def test_reduce_defaults(statistic, stack):
+    actual = reduce_rasters(stack, statistic)
+    assert actual["values"].dtype == stack[0]["values"].dtype
+    assert actual["no_data_value"] == stack[0]["no_data_value"]
+
+
+def test_reduce_raises_zero_length(stack):
+    with pytest.raises(ValueError):
+        reduce_rasters([], "first")

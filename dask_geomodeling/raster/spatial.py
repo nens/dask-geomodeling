@@ -662,11 +662,7 @@ class Place(BaseSingle):
         elif process_kwargs["mode"] == "group":
             # We have a bunch of arrays that are already shifted. Stack them.
             stack = [data for data in multi if data is not None]
-            if len(stack) > 0:
-                out_shape = stack[0]["values"].shape
-                out_dtype = stack[0]["values"].dtype
-                out_no_data_value = stack[0]["no_data_value"]
-            else:
+            if len(stack) == 0:
                 return  # instead of returning nodata (because inputs are None)
         elif process_kwargs["mode"] == "warp":
             # There is a single 'source' raster that we are going to shift
@@ -731,12 +727,10 @@ class Place(BaseSingle):
                     stack.append({"values": values, "no_data_value": out_no_data_value})
 
         # merge the values_stack
-        out_values = reduce_rasters(
-            stack,
-            statistic=process_kwargs["statistic"],
-            shape=out_shape,
-            fill_value=out_no_data_value,
-            dtype=out_dtype,
-        )
-
-        return {"values": out_values, "no_data_value": out_no_data_value}
+        if len(stack) == 0:
+            return {
+                "values": np.full(out_shape, out_no_data_value, out_dtype),
+                "no_data_value": out_no_data_value
+            }
+        else:
+            return reduce_rasters(stack, process_kwargs["statistic"])

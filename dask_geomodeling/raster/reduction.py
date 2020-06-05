@@ -30,19 +30,23 @@ def check_statistic(statistic):
             raise ValueError('Unknown statistic "{}"'.format(statistic))
 
 
-def reduce_rasters(stack, statistic="last", shape=None, fill_value=None, dtype=None):
-    """Reduces a stack of rasters, skipping 'no data' values.
+def reduce_rasters(stack, statistic, no_data_value=None, dtype=None):
+    """Apply a statistic (e.g. "mean") to a stack of rasters, skipping
+    'no data' values.
 
     Args:
       stack (list): a list of dicts containing "values" (ndarray)
-        and "no_data_value"
+        and "no_data_value". If the list has zero length or if the ndarrays
+        do not have the same shape, a ValueError is raised.
       statistic (str): the applied statistic (no data is ignored). One of:
         {"last", "first", "count", "sum", "mean", "min",
         "max", "argmin", "argmax", "product", "std", "var", "p<number>"}
-      shape (tuple of number): the output shape of the array
-      fill_value (number): the 'no data' value in the output array
-      dtype (str or dtype): the datatype of the output array. If the input
+      no_data_value (number, optional): the 'no data' value in the output
+        array. Defaults to the no data value of the first element in the stack.
+      dtype (str or dtype): the datatype of the output array. Defaults to the
+        dtype of the first element in the stack. If the input
         data cannot be cast to this dtype, a ValueError is raised.
+
     Returns:
       dict with "values" and "no_data_value"
     """
@@ -53,16 +57,24 @@ def reduce_rasters(stack, statistic="last", shape=None, fill_value=None, dtype=N
         else:
             statistic = "percentile"
 
+    if len(stack) == 0:
+        raise ValueError("Cannot reduce a zero-length stack")
+
+    # get the output array properties (dtype, no_data_value, shape)
+    if dtype is None:
+        dtype = stack[0]["values"].dtype
+    if no_data_value is None:
+        no_data_value = stack[0]["no_data_value"]
+    shape = stack[0]["values"].shape
+
     # sum, count and nans output do not contain no data: fill zeroes right away
     if statistic in {"sum", "count", "nans"}:
         fill_value = 0
+    else:
+        fill_value = no_data_value
 
     # create the output array
     out = np.full(shape, fill_value, dtype)
-
-    # min, max, argmin, argmax error on empty input
-    if len(stack) == 0:
-        return out
 
     if statistic == "last":
         # populate 'out' with the last value that is not 'no data'
@@ -98,4 +110,4 @@ def reduce_rasters(stack, statistic="last", shape=None, fill_value=None, dtype=N
         # perform the math
         out[not_all_nan] = func(stack_array[:, not_all_nan], axis=0)
 
-    return out
+    return {"values": out, "no_data_value": no_data_value}
