@@ -10,6 +10,8 @@ Changelog of dask-geomodeling
 
 - GeoJSON output is always converted to EPSG:4326 and doesn't have "crs" field.
 
+- Implement `RasterTiler`.
+
 
 2.2.7 (2020-04-30)
 ------------------
