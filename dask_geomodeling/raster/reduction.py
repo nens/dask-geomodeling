@@ -10,7 +10,6 @@ STATISTICS = {
     "first": None,
     "last": None,
     "count": None,
-    "nans": None,
     "sum": np.nansum,
     "mean": np.nanmean,
     "min": np.nanmin,
@@ -38,7 +37,7 @@ def reduce_rasters(stack, statistic="last", shape=None, fill_value=None, dtype=N
       stack (list): a list of dicts containing "values" (ndarray)
         and "no_data_value"
       statistic (str): the applied statistic (no data is ignored). One of:
-        {"last", "first", "count", "nans", "sum", "mean", "min",
+        {"last", "first", "count", "sum", "mean", "min",
         "max", "argmin", "argmax", "product", "std", "var", "p<number>"}
       shape (tuple of number): the output shape of the array
       fill_value (number): the 'no data' value in the output array
@@ -79,10 +78,6 @@ def reduce_rasters(stack, statistic="last", shape=None, fill_value=None, dtype=N
         # count the number of values that are not 'no data'
         for data in stack:
             out += get_index(data["values"], data["no_data_value"])
-    elif statistic == "nans":
-        # count the number of values that are 'no data'
-        for data in stack:
-            out += ~get_index(data["values"], data["no_data_value"])
     else:
         if statistic == "percentile":
             func = partial(np.nanpercentile, q=percentile)

@@ -160,7 +160,6 @@ def test_place_vertical_shift(source, center, vals_request):
         ("first", (255, 7, 7, 7)),  # (no features, first, second, both)
         ("last", (255, 7, 7, 7)),  # the default
         ("count", (0, 1, 1, 2)),
-        ("nans", (2, 1, 1, 0)),
         ("sum", (0, 7, 7, 14)),
         ("mean", (255, 7, 7, 7)),
         ("min", (255, 7, 7, 7)),

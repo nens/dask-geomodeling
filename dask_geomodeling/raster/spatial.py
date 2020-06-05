@@ -454,7 +454,7 @@ class Place(BaseSingle):
       coordinates (list of lists of 2 numbers): The target coordinates. The
         center of the bbox will be placed on each of these coordinates.
       statistic (str): What method to use to merge overlapping rasters. One of:
-        {"last", "first", "count", "nans", "sum", "mean", "min",
+        {"last", "first", "count", "sum", "mean", "min",
         "max", "argmin", "argmax", "product", "std", "var", "p<number>"}
 
     Returns:
