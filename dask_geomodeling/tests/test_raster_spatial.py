@@ -79,6 +79,13 @@ def test_place_attrs(source, center):
     assert place.extent == pytest.approx(extent_epsg4326, rel=1e-4)
 
 
+def test_place_invalid_statistic(source, center):
+    with pytest.raises(ValueError):
+        place = raster.Place(
+            source, "EPSG:28992", center, [(50, 50)], statistic="nonexisting"
+        )
+
+
 def test_place_attrs_reproject(source, center_epsg3857):
     # Place should adapt the spatial attributes (extent & geometry)
     place = raster.Place(
@@ -147,15 +154,39 @@ def test_place_vertical_shift(source, center, vals_request):
     assert (values[:, 0, :] == 255).all()
 
 
-def test_place_multiple(source, center, vals_request):
+@pytest.mark.parametrize(
+    "statistic,expected",
+    [
+        ("first", (255, 7, 7, 7)),  # (no features, first, second, both)
+        ("last", (255, 7, 7, 7)),  # the default
+        ("count", (0, 1, 1, 2)),
+        ("sum", (0, 7, 7, 14)),
+        ("mean", (255, 7, 7, 7)),
+        ("min", (255, 7, 7, 7)),
+        ("max", (255, 7, 7, 7)),
+        ("argmin", (255, 0, 1, 0)),
+        ("argmax", (255, 0, 1, 0)),
+        ("std", (255, 0, 0, 0)),
+        ("var", (255, 0, 0, 0)),
+        ("median", (255, 7, 7, 7)),
+        ("p99", (255, 7, 7, 7)),
+    ],
+)
+def test_place_multiple(source, center, vals_request, statistic, expected):
     # place such that only the left and bottom ridges have values
-    place = raster.Place(source, "EPSG:28992", center, [(-40, 50), (50, -40)])
+    place = raster.Place(
+        source, "EPSG:28992", center, [(-40, 50), (50, -40)], statistic
+    )
     values = place.get_data(**vals_request)["values"]
     # swap Y axis for readable test
     values = values[:, ::-1, :]
-    assert (values[:, :10, 0] == 7).all()
-    assert (values[:, 0, :10] == 7).all()
-    assert (values[:, 1:, 1:] == 255).all()
+    # zero features
+    assert (values[:, 1:, 1:] == expected[0]).all()
+    # one feature
+    assert (values[:, 1:10, 0] == expected[1]).all()
+    assert (values[:, 0, 1:10] == expected[2]).all()
+    # two features
+    assert (values[:, 0, 0] == expected[3]).all()
 
 
 def test_place_outside(source, center, vals_request):
