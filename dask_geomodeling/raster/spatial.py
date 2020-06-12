@@ -583,8 +583,9 @@ class Place(BaseSingle):
         size_x = (x2 - x1) / request["width"]
         size_y = (y2 - y1) / request["height"]
 
-        # check what the full source extent would require
+        # point requests: never request the full source extent
         if size_x > 0 and size_y > 0:
+            # check what the full source extent would require
             full_height = math.ceil((ymax - ymin) / size_y)
             full_width = math.ceil((xmax - xmin) / size_x)
             if full_height * full_width <= request["width"] * request["height"]:

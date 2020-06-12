@@ -208,10 +208,10 @@ def test_place_meta_request(source, center):
 
 
 @pytest.mark.parametrize("point,expected", [
-    ((5, 15), 7),  # box 1
-    ((15, 15), 255),  # box 2
-    ((5, 5), 255),  # box 3
-    ((15, 5), 7),  # box 4
+    ((5, 15), 7),  # zone 1
+    ((15, 15), 255),  # zone 2
+    ((5, 5), 255),  # zone 3
+    ((15, 5), 7),  # zone 4
     ((10, 15), 255),  # line 1-2
     ((5, 10), 255),  # line 1-3
     ((15, 10), 7),  # line 2-4
@@ -220,20 +220,22 @@ def test_place_meta_request(source, center):
 ])
 def test_place_point_request(source, center, point, expected):
     # For point requests, edges are important. Let's do a drawing:
-    # 20  _______ _______
-    #    |       |       |
-    #    |   1   |   2   |
-    # 10 |_______|_______|
-    #    |       |       |
-    #    |   3   |   4   |
-    #  0 |_______|_______|
+    # 20  _______
+    #    |       |
+    #    |   1   |   2
+    # 10 |_______|_______
+    #            |       |
+    #        3   |   4   |
+    #  0         |_______|
     #    0       10     20
-    # - boxes 1 and 4 are filled; box 2 and 3 are empty (see below coordinates)
-    # A cell includes its topleft corner and top and left edges
+    # - zone 1 and 4 are filled; zone 2 and 3 are empty (see below coordinates)
+    # A pixel includes its topleft corner and top and left edges
     # - line between 2-4 and 3-4 are filled; line 1-2 and 1-3 are empty
     # - center point at (10, 10) is filled
     coordinates = [(60, -40), (-40, 60)]
-    place = raster.Place(source, "EPSG:28992", center, coordinates)
+    place = raster.Place(
+        source, "EPSG:28992", anchor=center, coordinates=coordinates
+    )
     point_request = dict(
         mode="vals",
         bbox=point * 2,
@@ -242,6 +244,5 @@ def test_place_point_request(source, center, point, expected):
         height=1,
     )
     values = place.get_data(**point_request)["values"]
-    # swap Y axis for readable test
     assert values.shape == (1, 1, 1)
     assert values.item() == expected

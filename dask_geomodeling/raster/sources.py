@@ -20,9 +20,9 @@ class MemorySource(RasterBlock):
     Nodata values are supported, but when upsampling the data, these are
     assumed to be 0 biasing data edges towards 0.
 
-    Note that raster cells will define ranges [x, x + dx) and (y - dy, y]. If
-    the y axis is directed upwards, this means that the topleft corner and top
-    and left edges belong to a cell.
+    The raster pixel with its topleft corner at [x, y] will define ranges
+    [x, x + dx) and (y - dy, y]. Here [dx, dy] denotes the (unsigned) pixel
+    size. The topleft corner and top and left edges belong to a pixel.
 
     :param data: the pixel values
         this value will be transformed in a 3D array (t, y, x)
@@ -286,9 +286,10 @@ class MemorySource(RasterBlock):
 class RasterFileSource(RasterBlock):
     """A raster source that interfaces data from a file path.
 
-    The value at raster cell (x, y) is assumed to define a value for ranges
-    [x, x + dx) and (y - dy, y]. If the y axis is directed upwards, this means 
-    that the topleft corner and top and left edges belong to a cell.
+    The value at raster cell with its topleft corner at [x, y] is assumed to
+    define a value for ranges [x, x + dx) and (y - dy, y]. Here [dx, dy]
+    denotes the (unsigned) pixel size. The topleft corner and top and
+    left edges belong to a pixel.
 
     :param url: the path to the file. File paths have to be contained inside
       the current root setting. Relative paths are interpreted relative to this
