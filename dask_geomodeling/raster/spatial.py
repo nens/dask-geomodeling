@@ -583,29 +583,31 @@ class Place(BaseSingle):
         size_x = (x2 - x1) / request["width"]
         size_y = (y2 - y1) / request["height"]
 
-        # check what the full source extent would require
-        full_height = math.ceil((ymax - ymin) / size_y)
-        full_width = math.ceil((xmax - xmin) / size_x)
-        if full_height * full_width <= request["width"] * request["height"]:
-            _request = request.copy()
-            _request["width"] = full_width
-            _request["height"] = full_height
-            _request["bbox"] = (
-                xmin,
-                ymin,
-                xmin + full_width * size_x,
-                ymin + full_height * size_y,
-            )
-            process_kwargs = {
-                "mode": "warp",
-                "anchor": anchor,
-                "coordinates": coordinates,
-                "src_bbox": _request["bbox"],
-                "dst_bbox": request["bbox"],
-                "cellsize": (size_x, size_y),
-                "statistic": self.statistic,
-            }
-            return [(process_kwargs, None), (self.store, _request)]
+        # point requests: never request the full source extent
+        if size_x > 0 and size_y > 0:
+            # check what the full source extent would require
+            full_height = math.ceil((ymax - ymin) / size_y)
+            full_width = math.ceil((xmax - xmin) / size_x)
+            if full_height * full_width <= request["width"] * request["height"]:
+                _request = request.copy()
+                _request["width"] = full_width
+                _request["height"] = full_height
+                _request["bbox"] = (
+                    xmin,
+                    ymin,
+                    xmin + full_width * size_x,
+                    ymin + full_height * size_y,
+                )
+                process_kwargs = {
+                    "mode": "warp",
+                    "anchor": anchor,
+                    "coordinates": coordinates,
+                    "src_bbox": _request["bbox"],
+                    "dst_bbox": request["bbox"],
+                    "cellsize": (size_x, size_y),
+                    "statistic": self.statistic,
+                }
+                return [(process_kwargs, None), (self.store, _request)]
 
         # generate a new (backwards shifted) bbox for each coordinate
         sources_and_requests = []
@@ -618,7 +620,9 @@ class Place(BaseSingle):
                 y2 + anchor[1] - _y,
             ]
             # check the overlap with the source's extent
-            if bbox[0] >= xmax or bbox[1] >= ymax or bbox[2] <= xmin or bbox[3] <= ymin:
+            # Note that raster cells are defined [xmin, xmax) and (ymin, ymax]
+            # so points precisely at xmax or ymin certainly do not have data.
+            if bbox[0] >= xmax or bbox[1] > ymax or bbox[2] < xmin or bbox[3] <= ymin:
                 continue
             filtered_coordinates.append((_x, _y))
             _request = request.copy()
