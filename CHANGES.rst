@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.2.8 (unreleased)
+2.2.8 (2020-06-12)
 ------------------
 
 - Accept categorical values in GeometryFileSink / to_file.
