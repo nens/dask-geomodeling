@@ -3,6 +3,8 @@ from numpy.testing import assert_equal
 
 from dask_geomodeling import raster
 
+## See conftest.py for the common fixtures
+
 
 def check_sources_and_requests(sources_and_requests, expected_bboxes, cellsize=(1, 1)):
     for (_, req), expected in zip(list(sources_and_requests)[1:], expected_bboxes):
@@ -14,7 +16,7 @@ def check_sources_and_requests(sources_and_requests, expected_bboxes, cellsize=(
 def test_tiler_defaults(empty_source):
     block = raster.RasterTiler(empty_source, 10)
     assert block.store is empty_source
-    assert block.size == [10.0, 10.0]
+    assert block.tile_size == [10.0, 10.0]
 
 
 def test_tiler_source_validation(empty_source):
@@ -22,7 +24,7 @@ def test_tiler_source_validation(empty_source):
         raster.RasterTiler("a", 10)
 
 
-def test_tiler_size_validation(empty_source):
+def test_tiler_tile_size_validation(empty_source):
     with pytest.raises(ValueError):
         raster.RasterTiler(empty_source, "a")
     with pytest.raises(ValueError):
@@ -55,7 +57,7 @@ def test_tiler_size_validation(empty_source):
         ),
     ],
 )
-def test_tiling(empty_source, bbox, expected_tiles):
+def test_tiler(empty_source, bbox, expected_tiles):
     block = raster.RasterTiler(empty_source, 7)
     s_r = block.get_sources_and_requests(
         mode="vals",
@@ -70,7 +72,7 @@ def test_tiling(empty_source, bbox, expected_tiles):
 @pytest.mark.parametrize(
     "cellsize", [((1, 1)), ((2, 2)), ((3, 3)), ((4, 4)), ((2, 3)), ((1, 4))]
 )
-def test_tiling_cellsize(empty_source, cellsize):
+def test_tiler_cellsize(empty_source, cellsize):
     block = raster.RasterTiler(empty_source, 24)
     s_r = block.get_sources_and_requests(
         mode="vals",
@@ -92,7 +94,7 @@ def test_tiling_cellsize(empty_source, cellsize):
         (0, -5, 5, 1),
     ],
 )
-def test_tiling_process(source, bbox_offset):
+def test_tiler_process(source, bbox_offset):
     # piece back together tiles with nodata at the negative y edge
     block = raster.RasterTiler(source, 2)
     request = dict(
@@ -112,3 +114,21 @@ def test_tiling_process(source, bbox_offset):
     expected = source.get_data(**request)
     assert_equal(actual["values"], expected["values"])
     assert actual["no_data_value"] == expected["no_data_value"]
+
+
+def test_tiler_point_request(source, point_request):
+    view = raster.RasterTiler(source, 2)
+    actual = view.get_data(**point_request)
+    assert actual["values"].tolist() == [[[1]], [[7]], [[255]]]
+
+
+def test_tiler_meta_request(source, vals_request, expected_meta):
+    tiler = raster.RasterTiler(source, 2)
+    vals_request["mode"] = "meta"
+    assert tiler.get_data(**vals_request)["meta"] == expected_meta
+
+
+def test_tiler_time_request(source, vals_request, expected_time):
+    tiler = raster.RasterTiler(source, 2)
+    vals_request["mode"] = "time"
+    assert tiler.get_data(**vals_request)["time"] == expected_time

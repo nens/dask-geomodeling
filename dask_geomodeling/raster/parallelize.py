@@ -1,12 +1,9 @@
 """
 Module containing blocks that parallelize raster blocks
 """
-from math import floor, ceil
 from itertools import product
 import numpy as np
 
-from dask import config
-from dask_geomodeling import utils
 from .base import BaseSingle
 
 
@@ -20,25 +17,27 @@ class RasterTiler(BaseSingle):
 
     Args:
       source (GeometryBlock): The source RasterBlock
-      size (int or list): The maximum size of a tile in pixels (cells)
+      tile_size (int or list): The maximum size of a tile in pixels (cells)
+         To specify different tile sizes for horizontal and vertical
+         directions, provide the two as a list [width, height].
 
     Returns:
       RasterBlock
     """
 
-    def __init__(self, source, size):
-        if hasattr(size, "__iter__"):
-            if len(size) != 2:
-                raise ValueError("'size' should be a scalar or a list of length 2.")
-            size = [int(x) for x in size]
+    def __init__(self, source, tile_size):
+        if hasattr(tile_size, "__iter__"):
+            if len(tile_size) != 2:
+                raise ValueError("'tile_size' should be a scalar or a list of length 2.")
+            tile_size = [int(x) for x in tile_size]
         else:
-            size = [int(size), int(size)]
-        if size[0] <= 0 or size[1] <= 0:
-            raise ValueError("'size' should be greater than 0")
-        super().__init__(source, size)
+            tile_size = [int(tile_size), int(tile_size)]
+        if tile_size[0] <= 0 or tile_size[1] <= 0:
+            raise ValueError("'tile_size' should be greater than 0")
+        super().__init__(source, tile_size)
 
     @property
-    def size(self):
+    def tile_size(self):
         return self.args[1]
 
     def get_sources_and_requests(self, **request):
@@ -54,8 +53,8 @@ class RasterTiler(BaseSingle):
             return [(None, None), (self.store, request)]
 
         # get tile size and compute tile edge coordinates
-        tilesize_x = cellsize_x * self.size[0]
-        tilesize_y = cellsize_y * self.size[1]
+        tilesize_x = cellsize_x * self.tile_size[0]
+        tilesize_y = cellsize_y * self.tile_size[1]
         x = np.arange(x1, x2, tilesize_x)
         y = np.arange(y1, y2, tilesize_y)
 
@@ -75,7 +74,7 @@ class RasterTiler(BaseSingle):
                     "fillvalue": self.fillvalue,
                     "shape_yx": (request["height"], request["width"]),
                     "count_xy": (count_x, count_y),
-                    "size_xy": self.size,
+                    "tilesize_xy": self.tile_size,
                 },
                 None,
             )
@@ -113,12 +112,12 @@ class RasterTiler(BaseSingle):
         # The tile requests where generated from topleft to bottomright. Due to
         # y-axis swapping, the returned boxes are from bottomleft to topright.
         count_x, count_y = process_kwargs["count_xy"]
-        size_x, size_y = process_kwargs["size_xy"]
+        tilesize_x, tilesize_y = process_kwargs["tilesize_xy"]
         for (i, j), data in zip(product(range(count_x), range(count_y)), all_data):
             if data is None:
                 continue
             vals = data["values"]
-            x = i * size_x
-            y = j * size_y
+            x = i * tilesize_x
+            y = j * tilesize_y
             values[:, -(y + vals.shape[1]) : -y or None, x : x + vals.shape[2]] = vals
         return {"values": values, "no_data_value": process_kwargs["fillvalue"]}
