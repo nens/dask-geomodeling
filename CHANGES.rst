@@ -1,7 +1,13 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.2.8 (unreleased)
+2.2.9 (unreleased)
+------------------
+
+- Implemented `RasterTiler`.
+
+
+2.2.8 (2020-06-12)
 ------------------
 
 - Accept categorical values in GeometryFileSink / to_file.
@@ -10,7 +16,15 @@ Changelog of dask-geomodeling
 
 - GeoJSON output is always converted to EPSG:4326 and doesn't have "crs" field.
 
-- Implement `RasterTiler`.
+- Implemented raster.reduction.reduce_rasters.
+
+- Added the 'statistics' argument to raster.spatial.Place to deal with
+  overlapping features. 
+
+- Allow point requests in raster.spatial.Place.
+
+- Clarifications about raster cell validity ranges in MemorySource and
+  RasterFileSource.
 
 
 2.2.7 (2020-04-30)

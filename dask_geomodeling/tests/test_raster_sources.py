@@ -52,6 +52,7 @@ class TstRasterSourceBase:
         self.assertEqual(expected, self.source.geometry.ExportToWkt())
 
     def test_point_single_pixel(self):
+        # data is defined at [136700, 136705) and (455795, 455800]
         for dx, dy in ((0, 0), (0, -4.99), (4.99, 0), (4.99, -4.99)):
             data = self.source.get_data(
                 mode="vals",
@@ -64,7 +65,10 @@ class TstRasterSourceBase:
             assert_equal(data["values"], 5)
 
     def test_point_single_pixel_nodata(self):
-        for dx, dy in ((-0.01, -1), (1, 0.01), (5.01, -1), (1, -5.01)):
+        # data is defined at [136700, 136705) and (455795, 455800]
+        for dx, dy in (
+            (0, -5.0), (5.0, 0), (-5.0, 5.0), (-0.01, 0), (0, 0.01),
+        ):
             data = self.source.get_data(
                 mode="vals",
                 projection="EPSG:28992",

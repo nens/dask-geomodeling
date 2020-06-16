@@ -18,6 +18,7 @@ from dask_geomodeling.utils import (
     get_index,
     shapely_transform,
 )
+from dask_geomodeling.raster.reduction import reduce_rasters, check_statistic
 
 from .base import BaseSingle, RasterBlock
 from shapely.geometry import Point
@@ -451,15 +452,17 @@ class Place(BaseSingle):
       anchor (list of 2 numbers): The anchor into the source raster that will
         be placed at given coordinates.
       coordinates (list of lists of 2 numbers): The target coordinates. The
-        center of the bbox will be placed on each of these coordinates. The
-        last one will go 'on top' in case there is overlap.
+        center of the bbox will be placed on each of these coordinates.
+      statistic (str): What method to use to merge overlapping rasters. One of:
+        {"last", "first", "count", "sum", "mean", "min",
+        "max", "argmin", "argmax", "product", "std", "var", "p<number>"}
 
     Returns:
       RasterBlock with the source raster placed
 
     """
 
-    def __init__(self, store, place_projection, anchor, coordinates):
+    def __init__(self, store, place_projection, anchor, coordinates, statistic="last"):
         if not isinstance(store, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
         try:
@@ -480,7 +483,10 @@ class Place(BaseSingle):
                 "Expected a list of lists of 2 numbers in the 'coordinates' "
                 "parameter"
             )
-        super().__init__(store, place_projection, anchor, coordinates.tolist())
+        check_statistic(statistic)
+        super().__init__(
+            store, place_projection, anchor, coordinates.tolist(), statistic
+        )
 
     @property
     def place_projection(self):
@@ -493,6 +499,10 @@ class Place(BaseSingle):
     @property
     def coordinates(self):
         return self.args[3]
+
+    @property
+    def statistic(self):
+        return self.args[4]
 
     @property
     def projection(self):
@@ -573,28 +583,31 @@ class Place(BaseSingle):
         size_x = (x2 - x1) / request["width"]
         size_y = (y2 - y1) / request["height"]
 
-        # check what the full source extent would require
-        full_height = math.ceil((ymax - ymin) / size_y)
-        full_width = math.ceil((xmax - xmin) / size_x)
-        if full_height * full_width <= request["width"] * request["height"]:
-            _request = request.copy()
-            _request["width"] = full_width
-            _request["height"] = full_height
-            _request["bbox"] = (
-                xmin,
-                ymin,
-                xmin + full_width * size_x,
-                ymin + full_height * size_y,
-            )
-            process_kwargs = {
-                "mode": "warp",
-                "anchor": anchor,
-                "coordinates": coordinates,
-                "src_bbox": _request["bbox"],
-                "dst_bbox": request["bbox"],
-                "cellsize": (size_x, size_y),
-            }
-            return [(process_kwargs, None), (self.store, _request)]
+        # point requests: never request the full source extent
+        if size_x > 0 and size_y > 0:
+            # check what the full source extent would require
+            full_height = math.ceil((ymax - ymin) / size_y)
+            full_width = math.ceil((xmax - xmin) / size_x)
+            if full_height * full_width <= request["width"] * request["height"]:
+                _request = request.copy()
+                _request["width"] = full_width
+                _request["height"] = full_height
+                _request["bbox"] = (
+                    xmin,
+                    ymin,
+                    xmin + full_width * size_x,
+                    ymin + full_height * size_y,
+                )
+                process_kwargs = {
+                    "mode": "warp",
+                    "anchor": anchor,
+                    "coordinates": coordinates,
+                    "src_bbox": _request["bbox"],
+                    "dst_bbox": request["bbox"],
+                    "cellsize": (size_x, size_y),
+                    "statistic": self.statistic,
+                }
+                return [(process_kwargs, None), (self.store, _request)]
 
         # generate a new (backwards shifted) bbox for each coordinate
         sources_and_requests = []
@@ -607,7 +620,9 @@ class Place(BaseSingle):
                 y2 + anchor[1] - _y,
             ]
             # check the overlap with the source's extent
-            if bbox[0] >= xmax or bbox[1] >= ymax or bbox[2] <= xmin or bbox[3] <= ymin:
+            # Note that raster cells are defined [xmin, xmax) and (ymin, ymax]
+            # so points precisely at xmax or ymin certainly do not have data.
+            if bbox[0] >= xmax or bbox[1] > ymax or bbox[2] < xmin or bbox[3] <= ymin:
                 continue
             filtered_coordinates.append((_x, _y))
             _request = request.copy()
@@ -624,9 +639,11 @@ class Place(BaseSingle):
                 "fillvalue": self.fillvalue,
                 "width": request["width"],
                 "height": request["height"],
+                "statistic": self.statistic,
             }
             return [(process_kwargs, None), (self.store, _request)]
-        return [({"mode": "group"}, None)] + sources_and_requests
+        process_kwargs = {"mode": "group", "statistic": self.statistic}
+        return [(process_kwargs, None)] + sources_and_requests
 
     @staticmethod
     def process(process_kwargs, *multi):
@@ -638,41 +655,28 @@ class Place(BaseSingle):
             data = multi[0]
             if data is None:
                 return
-            shape = (
+            out_shape = (
                 len(data["time"]),
                 process_kwargs["height"],
                 process_kwargs["width"],
             )
-            return {
-                "values": np.full(
-                    shape,
-                    fill_value=process_kwargs["fillvalue"],
-                    dtype=process_kwargs["dtype"],
-                ),
-                "no_data_value": process_kwargs["fillvalue"],
-            }
-        if process_kwargs["mode"] == "group":
+            out_no_data_value = process_kwargs["fillvalue"]
+            out_dtype = process_kwargs["dtype"]
+            stack = []
+        elif process_kwargs["mode"] == "group":
             # We have a bunch of arrays that are already shifted. Stack them.
-            values = None
-            no_data_value = None
-            for data in multi:
-                if data is None:
-                    return
-                if values is None:
-                    values = data["values"].copy()
-                    no_data_value = data["no_data_value"]
-                else:
-                    # index is where the source has data
-                    index = get_index(data["values"], data["no_data_value"])
-                    values[index] = data["values"][index]
+            stack = [data for data in multi if data is not None]
+            if len(stack) == 0:
+                return  # instead of returning nodata (because inputs are None)
         elif process_kwargs["mode"] == "warp":
             # There is a single 'source' raster that we are going to shift
             # multiple times into the result. The cellsize is already correct.
             data = multi[0]
             if data is None:
                 return
-            no_data_value = data["no_data_value"]
+            out_no_data_value = data["no_data_value"]
             source = data["values"]
+            out_dtype = source.dtype
 
             # convert the anchor to pixels (indices inside 'source')
             anchor = process_kwargs["anchor"]
@@ -683,19 +687,22 @@ class Place(BaseSingle):
                 (anchor[1] - src_bbox[1]) / size_y,
             )
 
-            # create the target array
+            # compute the output shape
             x1, y1, x2, y2 = process_kwargs["dst_bbox"]
             coordinates = process_kwargs["coordinates"]
             dst_h = round((y2 - y1) / size_y)
             dst_w = round((x2 - x1) / size_x)
             src_d, src_h, src_w = source.shape
-            values = np.full((src_d, dst_h, dst_w), no_data_value, dtype=source.dtype)
+            out_shape = (src_d, dst_h, dst_w)
 
             # determine what indices in 'source' have data
-            k, j, i = np.where(get_index(source, no_data_value))
-            if i.size == 0:  # no data at all
-                return {"values": values, "no_data_value": no_data_value}
+            k, j, i = np.where(get_index(source, out_no_data_value))
+
+            # place the data on each coordinate
+            stack = []
             for x, y in coordinates:
+                if i.size == 0:  # shortcut: no data at all to place
+                    break
                 # transform coordinate into pixels (indices in 'values')
                 coord_px = (x - x1) / size_x, (y - y1) / size_y
                 di = round(coord_px[0] - anchor_px[0])
@@ -709,7 +716,9 @@ class Place(BaseSingle):
                     continue
                 elif 0 <= di <= (dst_w - src_w) and 0 <= dj <= (dst_h - src_h):
                     # complete place
+                    values = np.full(out_shape, out_no_data_value, out_dtype)
                     values[k, j + dj, i + di] = source[k, j, i]
+                    stack.append({"values": values, "no_data_value": out_no_data_value})
                 else:
                     # partial place
                     i_s = i + di
@@ -717,6 +726,15 @@ class Place(BaseSingle):
                     m = (i_s >= 0) & (j_s >= 0) & (i_s < dst_w) & (j_s < dst_h)
                     if not m.any():
                         continue
+                    values = np.full(out_shape, out_no_data_value, out_dtype)
                     values[k[m], j_s[m], i_s[m]] = source[k[m], j[m], i[m]]
+                    stack.append({"values": values, "no_data_value": out_no_data_value})
 
-        return {"values": values, "no_data_value": no_data_value}
+        # merge the values_stack
+        if len(stack) == 0:
+            return {
+                "values": np.full(out_shape, out_no_data_value, out_dtype),
+                "no_data_value": out_no_data_value
+            }
+        else:
+            return reduce_rasters(stack, process_kwargs["statistic"])
