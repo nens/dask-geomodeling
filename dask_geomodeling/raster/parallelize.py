@@ -16,104 +16,56 @@ __all__ = ["RasterTiler"]
 class RasterTiler(BaseSingle):
     """Parallelize operations on a RasterBlock by tiling the request.
 
-    Note that the RasterTiler may adjust the request bbox, width and height
-    so that the raster cells precisely fit in a tile.
+    The tiles are computed starting at the topleft corner of the requested box.
 
     Args:
       source (GeometryBlock): The source RasterBlock
-      size (float or list): The maximum size of a tile in units of the
-        projection. To specify different tile sizes for horizontal and vertical
-        directions, provide the two as a list [x,y] or [lon, lat].
-      projection (str): The projection as EPSG or WKT string in which to
-        compute tiles (e.g. ``"EPSG:28992"``). This request projection should
-        equal the tiling projection.
-      corner (list): The [x, y] or [lon, lat] coordinates of a tile corner.
-        This defines the tile grid (together with `size`). Default [0, 0].
+      size (int or list): The maximum size of a tile in pixels (cells)
 
     Returns:
       RasterBlock
     """
 
-    def __init__(self, source, size, projection, corner=None):
+    def __init__(self, source, size):
         if hasattr(size, "__iter__"):
             if len(size) != 2:
                 raise ValueError("'size' should be a scalar or a list of length 2.")
-            size = [float(x) for x in size]
+            size = [int(x) for x in size]
         else:
-            size = [float(size), float(size)]
+            size = [int(size), int(size)]
         if size[0] <= 0 or size[1] <= 0:
             raise ValueError("'size' should be greater than 0")
-        if not isinstance(projection, str):
-            raise TypeError("'{}' object is not allowed".format(type(projection)))
-        try:
-            utils.get_sr(projection)
-        except RuntimeError:
-            raise ValueError("Could not parse projection {}".format(projection))
-        if corner is None:
-            corner = [0.0, 0.0]
-        elif len(corner) != 2:
-            raise ValueError("The 'corner' parameter should None or lenght-2 list.")
-        else:
-            corner = [float(x) for x in corner]
-        super().__init__(source, size, projection, corner)
+        super().__init__(source, size)
 
     @property
     def size(self):
         return self.args[1]
 
-    @property
-    def projection(self):
-        return self.args[2]
-
-    @property
-    def corner(self):
-        return self.args[3]
-
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
             return [(None, None), (self.store, request)]
 
-        sr = utils.get_sr(request["projection"])
-        if not sr.IsSame(utils.get_sr(self.projection)):
-            raise RuntimeError("RasterTiler does not support reprojection")
-
         # get the requested cell size
         x1, y1, x2, y2 = request["bbox"]
-        cell_width = (x2 - x1) / request["width"]
-        cell_height = (y2 - y1) / request["height"]
-        if cell_width <= 0 or cell_height <= 0:
+        cellsize_x = (x2 - x1) / request["width"]
+        cellsize_y = (y2 - y1) / request["height"]
+        if cellsize_x == 0 and cellsize_y == 0:
             # pass point requests through
             return [(None, None), (self.store, request)]
 
-        # get tile grid
-        tile_h, tile_w = self.size
-        tile_x, tile_y = self.corner
+        # get tile size and compute tile edge coordinates
+        tilesize_x = cellsize_x * self.size[0]
+        tilesize_y = cellsize_y * self.size[1]
+        x = np.arange(x1, x2, tilesize_x)
+        y = np.arange(y1, y2, tilesize_y)
 
-        # adjust the cell size so that it fits an integer times in a tile
-        cell_height = tile_h / max(round(tile_h / cell_height), 1)
-        cell_width = tile_w / max(round(tile_w / cell_width), 1)
+        # handle the 'leftover' tiles
+        if x[-1] != x2:
+            x = np.append(x, x2)
+        if y[-1] != y2:
+            y = np.append(y, y2)
 
-        # compute the tile edge coordinates (N + 1 edges for N tiles)
-        edges_x = np.arange(
-            floor((x1 - tile_x) / tile_w) * tile_w + tile_x,
-            ceil((x2 - tile_x) / tile_w) * tile_w + tile_x + tile_w,
-            tile_w,
-        )
-        edges_y = np.arange(
-            floor((y1 - tile_y) / tile_h) * tile_h + tile_y,
-            ceil((y2 - tile_y) / tile_h) * tile_h + tile_y + tile_h,
-            tile_h,
-        )
-
-        # shrink the outmost edges with an integer amount of cells if necessary
-        if edges_x[0] < x1:
-            edges_x[0] += floor((x1 - edges_x[0]) / cell_width) * cell_width
-        if edges_y[0] < y1:
-            edges_y[0] += floor((y1 - edges_y[0]) / cell_height) * cell_height
-        if edges_x[-1] > x2:
-            edges_x[-1] -= floor((edges_x[-1] - x2) / cell_width) * cell_width
-        if edges_y[-1] > y2:
-            edges_y[-1] -= floor((edges_y[-1] - y2) / cell_height) * cell_height
+        count_x, count_y = len(x) - 1, len(y) - 1
 
         # yield process_kwargs to be able piece back together the tiles later
         result = [
@@ -121,30 +73,19 @@ class RasterTiler(BaseSingle):
                 {
                     "dtype": self.dtype,
                     "fillvalue": self.fillvalue,
-                    "tile_ij": (
-                        ((edges_x[:-1] - edges_x[0]) / cell_width).astype(int),
-                        ((edges_y[-1] - edges_y[:-1]) / cell_height).astype(int),
-                    ),
-                    "shape_yx": (
-                        int((edges_y[-1] - edges_y[0]) / cell_height),
-                        int((edges_x[-1] - edges_x[0]) / cell_width),
-                    ),
+                    "shape_yx": (request["height"], request["width"]),
+                    "count_xy": (count_x, count_y),
+                    "size_xy": self.size,
                 },
                 None,
             )
         ]
-
-        # yield the tile requests
-        for i, j in product(range(len(edges_x) - 1), range(len(edges_y) - 1)):
-            _x1 = edges_x[i]
-            _y1 = edges_y[j]
-            _x2 = edges_x[i + 1]
-            _y2 = edges_y[j + 1]
+        for i, j in product(range(count_x), range(count_y)):
             _request = {
                 **request,
-                "bbox": (_x1, _y1, _x2, _y2),
-                "width": int((_x2 - _x1) / cell_width),
-                "height": int((_y2 - _y1) / cell_height),
+                "bbox": (x[i], y[j], x[i + 1], y[j + 1]),
+                "width": int((x[i + 1] - x[i]) / cellsize_x),
+                "height": int((y[j + 1] - y[j]) / cellsize_y),
             }
             result.append((self.store, _request))
 
@@ -157,7 +98,7 @@ class RasterTiler(BaseSingle):
         elif process_kwargs is None:
             return all_data[0]  # for non-tiled / meta / time requests
 
-        # go through all_data and get the shape
+        # go through all_data and get the temporal shape
         shape_yx = process_kwargs["shape_yx"]
         for data in all_data:
             if data is not None:
@@ -166,23 +107,18 @@ class RasterTiler(BaseSingle):
         else:
             return  # return None if all data is None
 
-        # check the size of the total raster to prevent going out of memory
-        max_pixels = config.get("geomodeling.raster-limit")
-        required_pixels = int(np.prod(shape))
-        if required_pixels > max_pixels:
-            raise RuntimeError(
-                "The required raster size after combing the tiles exceeded "
-                "the maximum ({} > {})".format(required_pixels, max_pixels)
-            )
-
         # create the output array
         values = np.full(shape, process_kwargs["fillvalue"], process_kwargs["dtype"])
 
-        # piece together the output array
-        coords_x, coords_y = process_kwargs["tile_ij"]
-        for (x, y), data in zip(product(coords_x, coords_y), all_data):
+        # The tile requests where generated from topleft to bottomright. Due to
+        # y-axis swapping, the returned boxes are from bottomleft to topright.
+        count_x, count_y = process_kwargs["count_xy"]
+        size_x, size_y = process_kwargs["size_xy"]
+        for (i, j), data in zip(product(range(count_x), range(count_y)), all_data):
             if data is None:
                 continue
             vals = data["values"]
-            values[:, y - vals.shape[1] : y, x : x + vals.shape[2]] = vals
+            x = i * size_x
+            y = j * size_y
+            values[:, -(y + vals.shape[1]) : -y or None, x : x + vals.shape[2]] = vals
         return {"values": values, "no_data_value": process_kwargs["fillvalue"]}
