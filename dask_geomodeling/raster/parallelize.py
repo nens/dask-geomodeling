@@ -13,8 +13,6 @@ __all__ = ["RasterTiler"]
 class RasterTiler(BaseSingle):
     """Parallelize operations on a RasterBlock by tiling the request.
 
-    The tiles are computed starting at the topleft corner of the requested box.
-
     Args:
       source (GeometryBlock): The source RasterBlock
       tile_size (int or list): The maximum size of a tile in pixels (cells)
@@ -109,15 +107,17 @@ class RasterTiler(BaseSingle):
         # create the output array
         values = np.full(shape, process_kwargs["fillvalue"], process_kwargs["dtype"])
 
-        # The tile requests where generated from topleft to bottomright. Due to
-        # y-axis swapping, the returned boxes are from bottomleft to topright.
+        # The tile order that was generated in the get_sources_and_request
+        # starts at low x, low y and ends at high x, high y. As we are working
+        # here with array indices [i, j] we need to take into account that the
+        # vertical axis swaps direction: high y maps to low i.
         count_x, count_y = process_kwargs["count_xy"]
         tilesize_x, tilesize_y = process_kwargs["tilesize_xy"]
-        for (i, j), data in zip(product(range(count_x), range(count_y)), all_data):
+        for index, data in zip(product(range(count_x), range(count_y)), all_data):
             if data is None:
                 continue
             vals = data["values"]
-            x = i * tilesize_x
-            y = j * tilesize_y
-            values[:, -(y + vals.shape[1]) : -y or None, x : x + vals.shape[2]] = vals
+            j = index[0] * tilesize_x
+            i = index[1] * tilesize_y
+            values[:, -(i + vals.shape[1]) : -i or None, j : j + vals.shape[2]] = vals
         return {"values": values, "no_data_value": process_kwargs["fillvalue"]}
