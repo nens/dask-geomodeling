@@ -41,6 +41,19 @@ class TestUtils(unittest.TestCase):
         self.assertIsInstance(utils.get_dtype_min("f4"), float)
         self.assertIsInstance(utils.get_dtype_min("u4"), int)
 
+    def test_get_int_dtype(self):
+        for dtype in ["i1", "i2", "i4", "i8"]:
+            hi = np.iinfo(dtype).max
+            lo = np.iinfo(dtype).max
+            self.assertEqual(utils.get_int_dtype(hi - 1), dtype)
+            self.assertEqual(utils.get_int_dtype(lo), dtype)
+
+    def test_get_uint_dtype(self):
+        self.assertRaises(ValueError, utils.get_uint_dtype, -1)
+        for dtype in ["u1", "u2", "u4", "u8"]:
+            hi = np.iinfo(dtype).max
+            self.assertEqual(utils.get_uint_dtype(hi - 1), dtype)
+
     def test_get_projection(self):
         projection_rd = str("EPSG:28992")
         projection_wgs = str("EPSG:4326")

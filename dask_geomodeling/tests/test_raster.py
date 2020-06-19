@@ -1663,6 +1663,18 @@ class TestBase(unittest.TestCase):
         self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
         self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
+        # larger dtypes are supported too
+        view = raster.Mask(store=self.raster, value=1000)
+        data = view.get_data(**self.vals_request)
+        self.assertEqual(str(view.dtype), "uint16")
+        assert_equal(data["values"], 1000)
+
+        # larger dtypes are supported too
+        view = raster.Mask(store=self.raster, value=-1000)
+        data = view.get_data(**self.vals_request)
+        self.assertEqual(str(view.dtype), "int16")
+        assert_equal(data["values"], -1000)
+
     def test_mask_below(self):
         # filled result
         view = raster.MaskBelow(store=self.raster, value=0)

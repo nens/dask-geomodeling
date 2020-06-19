@@ -123,10 +123,10 @@ class Mask(BaseSingle):
 
     Args:
       store (RasterBlock): The raster whose values are to be converted.
-      value (number): The constant value to be given to 'data' values.
+      value (number or bool): The constant value to be given to 'data' values.
 
     Returns:
-      RasterBlock containing a single value
+      RasterBlock containing a single constant value
     """
 
     def __init__(self, store, value):
@@ -140,11 +140,21 @@ class Mask(BaseSingle):
 
     @property
     def fillvalue(self):
-        return 1 if self.value == 0 else 0
+        fillvalue = 1 if self.value == 0 else 0
+        return self.dtype.type(fillvalue)
 
     @property
     def dtype(self):
-        return "float32" if isinstance(self.value, float) else "uint8"
+        return self._dtype_from_value(self.value)
+
+    @staticmethod
+    def _dtype_from_value(value):
+        if isinstance(value, float):
+            return np.float32
+        elif value >= 0:
+            return utils.get_uint_dtype(value)
+        else:
+            return utils.get_int_dtype(value)
 
     @staticmethod
     def process(data, value):
@@ -156,7 +166,7 @@ class Mask(BaseSingle):
         )
 
         fillvalue = 1 if value == 0 else 0
-        dtype = "float32" if isinstance(value, float) else "uint8"
+        dtype = Mask._dtype_from_value(value)
 
         values = np.full_like(data["values"], fillvalue, dtype=dtype)
         values[index] = value
