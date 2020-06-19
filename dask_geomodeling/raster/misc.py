@@ -123,10 +123,10 @@ class Mask(BaseSingle):
 
     Args:
       store (RasterBlock): The raster whose values are to be converted.
-      value (number or bool): The constant value to be given to 'data' values.
+      value (number): The constant value to be given to 'data' values.
 
     Returns:
-      RasterBlock containing a single constant value
+      RasterBlock containing a single value
     """
 
     def __init__(self, store, value):
@@ -140,8 +140,7 @@ class Mask(BaseSingle):
 
     @property
     def fillvalue(self):
-        fillvalue = 1 if self.value == 0 else 0
-        return self.dtype.type(fillvalue)
+        return 1 if self.value == 0 else 0
 
     @property
     def dtype(self):
