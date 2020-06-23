@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.2.9 (unreleased)
+2.2.9 (2020-06-23)
 ------------------
 
 - Implemented `RasterTiler`.
