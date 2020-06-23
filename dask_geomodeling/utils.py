@@ -70,7 +70,8 @@ def get_dtype_min(dtype):
 
 
 def get_int_dtype(n):
-    """Get the smallest int dtype that accomodates 'n' values"""
+    """Get the smallest int dtype that accomodates 'n' values, leaving space
+    for a no data value."""
     for dtype in ("i1", "i2", "i4", "i8"):
         if (n - 1 <= np.iinfo(dtype).max) and (n >= np.iinfo(dtype).min):
             return np.dtype(dtype)
@@ -78,7 +79,8 @@ def get_int_dtype(n):
 
 
 def get_uint_dtype(n):
-    """Get the smallest uint dtype that accomodates 'n' values"""
+    """Get the smallest uint dtype that accomodates 'n' values, leaving space
+    for a no data value."""
     if n < 0:
         raise ValueError("Value does not fit in uint dtype ({})".format(n))
     for dtype in ("u1", "u2", "u4", "u8"):

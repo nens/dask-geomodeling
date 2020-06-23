@@ -149,7 +149,7 @@ class Mask(BaseSingle):
     @staticmethod
     def _dtype_from_value(value):
         if isinstance(value, float):
-            return np.float32
+            return np.dtype("float32")
         elif value >= 0:
             return utils.get_uint_dtype(value)
         else:
