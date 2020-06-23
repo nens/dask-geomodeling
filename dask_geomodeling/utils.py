@@ -69,12 +69,24 @@ def get_dtype_min(dtype):
     return np.iinfo(d).min
 
 
+def get_int_dtype(n):
+    """Get the smallest int dtype that accomodates 'n' values, leaving space
+    for a no data value."""
+    for dtype in ("i1", "i2", "i4", "i8"):
+        if (n - 1 <= np.iinfo(dtype).max) and (n >= np.iinfo(dtype).min):
+            return np.dtype(dtype)
+    raise ValueError("Value does not fit in int dtype ({})".format(n))
+
+
 def get_uint_dtype(n):
-    """Get the smallest uint dtype that accomodates 'n' values"""
+    """Get the smallest uint dtype that accomodates 'n' values, leaving space
+    for a no data value."""
+    if n < 0:
+        raise ValueError("Value does not fit in uint dtype ({})".format(n))
     for dtype in ("u1", "u2", "u4", "u8"):
         if n - 1 <= np.iinfo(dtype).max:
             return np.dtype(dtype)
-    raise ValueError("Too many values for uint dtype ({})".format(n))
+    raise ValueError("Value does not fit in uint dtype ({})".format(n))
 
 
 def get_rounded_repr(obj, significant=4, fmt="{} (rounded)"):

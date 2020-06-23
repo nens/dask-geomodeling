@@ -6,6 +6,8 @@ Changelog of dask-geomodeling
 
 - Implemented `RasterTiler`.
 
+- Let raster.Mask accomodate int values larger than uint8.
+
 
 2.2.8 (2020-06-12)
 ------------------

@@ -144,7 +144,16 @@ class Mask(BaseSingle):
 
     @property
     def dtype(self):
-        return "float32" if isinstance(self.value, float) else "uint8"
+        return self._dtype_from_value(self.value)
+
+    @staticmethod
+    def _dtype_from_value(value):
+        if isinstance(value, float):
+            return np.dtype("float32")
+        elif value >= 0:
+            return utils.get_uint_dtype(value)
+        else:
+            return utils.get_int_dtype(value)
 
     @staticmethod
     def process(data, value):
@@ -156,7 +165,7 @@ class Mask(BaseSingle):
         )
 
         fillvalue = 1 if value == 0 else 0
-        dtype = "float32" if isinstance(value, float) else "uint8"
+        dtype = Mask._dtype_from_value(value)
 
         values = np.full_like(data["values"], fillvalue, dtype=dtype)
         values[index] = value
