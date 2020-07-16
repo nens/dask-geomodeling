@@ -77,17 +77,20 @@ def expand_request_meters(request, radius_m=1):
     x1, y1, x2, y2 = bbox
     shape_m = y2 - y1, x2 - x1
 
-    # omit the +1 in zoom for efficiency: zoom=0.2 is a zoom factor of 1.2
-    zoom = [2 * radius_m / s for s in shape_m]
-
-    # compute the size in pixels, and compute the margins (rounded size)
-    shape_px = request["height"], request["width"]
-    radius_px = [z * s / 2 for (z, s) in zip(zoom, shape_px)]
-    margins_px = [int(round(sz)) for sz in radius_px]
-
-    # use these (int-valued) margins to compute the actual zoom and margins
-    zoom = [2 * m / s for (s, m) in zip(shape_px, margins_px)]
-    margins_m = [z * s / 2 for (z, s) in zip(zoom, shape_m)]
+    if shape_m[0] > 0 and shape_m[1] > 0:
+        # Resolution in pixels per meter:
+        resolution = request["height"] / shape_m[0], request["width"] / shape_m[1]
+        # How many pixels to add:
+        radius_px = [radius_m * res for res in resolution]
+        # How many pixels to add, rounded to integers:
+        margins_px = [int(round(r)) for r in radius_px]
+        # How many meters to add (based on rounded pixels):
+        margins_m = [m / res for m, res in zip(margins_px, resolution)]
+    else:
+        # There is no resolution. Add MARGIN_THRESHOLD pixels to the request.
+        radius_px = margins_px = [Smooth.MARGIN_THRESHOLD] * 2
+        # Expand the request with radius_m exactly.
+        margins_m = [radius_m] * 2
 
     # assemble the request
     new_request = request.copy()

@@ -1888,6 +1888,13 @@ class TestBase(unittest.TestCase):
         self.assertEqual(view.get_data(**self.meta_request)["meta"], self.expected_meta)
         self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
+        # point request
+        request["bbox"] = (50, 50, 50, 50)
+        request["height"] = 1
+        request["width"] = 1
+        data = view.get_data(**request)
+        data["values"][0, 0, 0] == peak
+
     def test_hill_shade(self):
         view = raster.HillShade(store=self.raster)
         self.assertEqual(view.dtype, "u1")
