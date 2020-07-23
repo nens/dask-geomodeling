@@ -3,6 +3,7 @@ Module containing geometry sources.
 """
 import fiona
 import geopandas as gpd
+import warnings
 
 from dask import config
 from dask_geomodeling import utils
@@ -133,7 +134,9 @@ class GeometryFileSource(GeometryBlock):
 
         # only return geometries that truly intersect the requested geometry
         if request["mode"] == "centroid":
-            f = f[f["geometry"].centroid.within(filt_geom.iloc[0])]
+            with warnings.catch_warnings():    # geopandas warns if in WGS84
+                warnings.simplefilter("ignore")
+                f = f[f["geometry"].centroid.within(filt_geom.iloc[0])]
         else:
             f = f[f["geometry"].intersects(filt_geom.iloc[0])]
 
@@ -237,7 +240,10 @@ class GeometryWKTSource(GeometryBlock):
             return {"features": f, "projection": request['projection']}
 
         elif mode == 'centroid':
-            if not geometry.centroid.intersects(request["geometry"]):
+            with warnings.catch_warnings():    # geopandas warns if in WGS84
+                warnings.simplefilter("ignore")
+                centroid = geometry.centroid
+            if not centroid.intersects(request["geometry"]):
                 return {
                     "projection": request["projection"],
                     "features": gpd.GeoDataFrame([]),
