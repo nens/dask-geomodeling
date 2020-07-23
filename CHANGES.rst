@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.2.10 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Fix point requests in raster.Smooth.
 
 
 2.2.9 (2020-06-23)

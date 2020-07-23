@@ -475,7 +475,9 @@ def transform_min_size(min_size, geometry, src_srs, dst_srs):
     Note that in order to guarantee the minimum size, the reverse operation may
     result in a larger value than the original minimum size.
     """
-    source = geometry.centroid.buffer(min_size / 2)
+    with warnings.catch_warnings():  # geopandas warns if in WGS84
+        warnings.simplefilter("ignore")
+        source = geometry.centroid.buffer(min_size / 2)
     target = shapely_transform(source, src_srs=src_srs, dst_srs=dst_srs)
     x1, y1, x2, y2 = target.bounds
     return max(x2 - x1, y2 - y1)

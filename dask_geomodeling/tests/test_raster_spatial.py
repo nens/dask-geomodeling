@@ -81,7 +81,7 @@ def test_place_attrs(source, center):
 
 def test_place_invalid_statistic(source, center):
     with pytest.raises(ValueError):
-        place = raster.Place(
+        raster.Place(
             source, "EPSG:28992", center, [(50, 50)], statistic="nonexisting"
         )
 
