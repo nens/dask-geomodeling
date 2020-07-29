@@ -377,7 +377,7 @@ class Reclassify(BaseSingle):
         if not hasattr(data, "__iter__"):
             raise TypeError("'{}' object is not allowed".format(type(data)))
         try:
-            source, target = map(np.asarray, zip(*data))
+            source, target = self._data_as_ndarray(data)
         except ValueError:
             raise ValueError("Please supply a list of [from, to] values")
         # "from" can have bool or int dtype, "to" can also be float
@@ -398,6 +398,11 @@ class Reclassify(BaseSingle):
             raise TypeError("'{}' object is not allowed".format(type(select)))
         super().__init__(store, data, select)
 
+    @staticmethod
+    def _data_as_ndarray(data):
+        source, target = zip(*data)
+        return np.asarray(source), np.asarray(target)
+
     @property
     def data(self):
         return self.args[1]
@@ -408,7 +413,7 @@ class Reclassify(BaseSingle):
 
     @property
     def dtype(self):
-        _, target = map(np.asarray, zip(*self.data))
+        _, target = self._data_as_ndarray(self.data)
         return target.dtype
 
     @property
@@ -431,7 +436,7 @@ class Reclassify(BaseSingle):
 
         no_data_value = store_data["no_data_value"]
         values = store_data["values"]
-        source, target = map(np.asarray, zip(*process_kwargs["data"]))
+        source, target = Reclassify._data_as_ndarray(process_kwargs["data"])
         dtype = np.dtype(process_kwargs["dtype"])
         fillvalue = process_kwargs["fillvalue"]
 

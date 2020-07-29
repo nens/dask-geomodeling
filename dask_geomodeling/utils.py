@@ -39,6 +39,8 @@ if GEOPANDAS_GTE_0_7_0:
     from pyproj import CRS
 
 
+GDAL3 = gdal.VersionInfo().startswith("3")
+
 def get_index(values, no_data_value):
     """ Return an index to access for data values in values. """
     equal = np.isclose if values.dtype.kind == "f" else np.equal
@@ -354,7 +356,14 @@ class GeoTransform(tuple):
 @lru_cache(32)  # least-recently-used cache of size 32
 def get_sr(user_input):
     """ Return osr.SpatialReference for user input. """
-    return osr.SpatialReference(osr.GetUserInputAsWKT(str(user_input)))
+    sr = osr.SpatialReference(osr.GetUserInputAsWKT(str(user_input)))
+    # https://github.com/OSGeo/gdal/blob/release/3.0/gdal/MIGRATION_GUIDE.TXT
+    # 
+    # GDAL takes into account official axis order.
+    # Traditional GIS-friendly axis order can be restored with:
+    if GDAL3:
+        sr.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+    return sr
 
 
 def get_crs(user_input):
