@@ -78,13 +78,17 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out, "EPSG:3857")
         # no epsg
         wkt = """GEOGCS["GCS_WGS_1984",
-                     DATUM["D_WGS_1984",SPHEROID[
-                         "WGS_1984",6378137,298.257223563]],
-                     PRIMEM["Greenwich",0],
-                     UNIT["Degree",
-                         0.017453292519943295]]"""
+                        DATUM["D_WGS_1984",SPHEROID[
+                            "WGS_1984",6378137,298.257223563]],
+                        PRIMEM["Greenwich",0],
+                        UNIT["Degree",
+                            0.017453292519943295]]"""
         out = utils.get_epsg_or_wkt(wkt)
-        self.assertEqual(out, wkt.replace(" ", "").replace("\n", ""))
+        # do not test exact equality: different GDAL versions give different
+        # results
+        assert out.startswith("GEOGCS")
+        assert 'PRIMEM["Greenwich",0]' in out
+        assert 'UNIT["Degree"' in out
 
     def test_get_footprint(self):
         output = utils.get_footprint(size=5)
