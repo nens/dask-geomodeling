@@ -6,6 +6,8 @@ Changelog of dask-geomodeling
 
 - Fix point requests in raster.Smooth.
 
+- GDAL 3 compatibility fixes.
+
 
 2.2.9 (2020-06-23)
 ------------------
