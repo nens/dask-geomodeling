@@ -69,7 +69,6 @@ class Clip(BaseSingle):
 
         return ((source, request) for source in self.args)
 
-
     @staticmethod
     def process(data, source_data):
         """ Mask store_data where source_data has no data """

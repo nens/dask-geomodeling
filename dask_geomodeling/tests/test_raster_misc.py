@@ -119,7 +119,7 @@ def test_clip_time_request(source, vals_request, expected_time):
 
 
 def test_clip_partial_temporal_overlap(source, vals_request):
-     # create a clipping mask in that temporally does not overlap the store
+    # create a clipping mask in that temporally does not overlap the store
     clipping_mask = MemorySource(
         data=source.data,
         no_data_value=source.no_data_value,
@@ -135,7 +135,7 @@ def test_clip_partial_temporal_overlap(source, vals_request):
 
 
 def test_clip_no_temporal_overlap(source, vals_request):
-     # create a clipping mask in that temporally does not overlap the store
+    # create a clipping mask in that temporally does not overlap the store
     clipping_mask = MemorySource(
         data=source.data,
         no_data_value=source.no_data_value,
