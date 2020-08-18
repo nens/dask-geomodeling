@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.2.11 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Make transformation exceptions more comprehensible.
 
 
 2.2.10 (2020-07-29)
