@@ -449,9 +449,13 @@ def shapely_transform(geometry, src_srs, dst_srs):
         output_wkb = wkb_transform(**transform_kwargs)
     except RuntimeError:
         # include the geometry in the error message, truncated to 64 chars
+        wkt = geometry.wkt
+        if len(wkt) > 64:
+            wkt = wkt[:61] + "..."
         raise TransformException(
-            f"An error occured while transforming {geometry.wkt:.64} from "
-            f"{src_srs} to {dst_srs}."
+            "An error occured while transforming {} from {} to {}.".format(
+                wkt, src_srs, dst_srs
+            )
         )
     return shapely_wkb.loads(output_wkb)
 
