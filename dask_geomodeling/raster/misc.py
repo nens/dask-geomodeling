@@ -39,6 +39,8 @@ class Clip(BaseSingle):
 
     If the 'source' raster is a boolean raster, False will result in 'no data'.
 
+    Note that both input rasters are required to have the same time resolution.
+
     Args:
       store (RasterBlock): Raster whose values are clipped
       source (RasterBlock): Raster that is used as the clipping mask
@@ -51,7 +53,7 @@ class Clip(BaseSingle):
         if not isinstance(source, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
         # assert that timedeltas are equal (if self.store is temporal)
-        if store.timedelta is not None and store.timedelta != source.timedelta:
+        if store.timedelta != source.timedelta:
             raise ValueError(
                 "Time resolution of the clipping mask does not match that of "
                 "the values raster. Consider using Snap."

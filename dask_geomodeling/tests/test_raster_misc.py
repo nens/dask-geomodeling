@@ -12,7 +12,7 @@ from dask_geomodeling.raster.sources import MemorySource
 
 def test_clip_attrs_store_empty(source, empty_source):
     # clip should propagate the (empty) extent of the store
-    clip = raster.Clip(empty_source, source)
+    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
     assert clip.extent is None
     assert clip.geometry is None
 
@@ -84,28 +84,17 @@ def test_clip_matching_timedelta(source):
     assert clip.timedelta == source.timedelta
     
 
-def test_clip_unequal_timedelta(source):
-    # clip checks for matching timedeltas
-    clipping_mask = MemorySource(
-        data=source.data,
-        no_data_value=source.no_data_value,
-        projection=source.projection,
-        pixel_size=source.pixel_size,
-        pixel_origin=source.pixel_origin,
-        time_first=source.time_first,
-        time_delta=source.time_delta + 1,
-    )
+def test_clip_unequal_timedelta(source, empty_source):
+    # clip checks for matching timedeltas; test that here
+    # NB: note that `source` is temporal and `empty_source` is not
     with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
-        clip = raster.Clip(source, clipping_mask)
+        clip = raster.Clip(source, empty_source)
+    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+        clip = raster.Clip(empty_source, source)
 
-
-def test_clip_no_timedelta(source, empty_source):
-    # clip does not check for matching timedeltas if the store has no timedelta
-    clip = raster.Clip(empty_source, source)
-    assert clip.timedelta is None
 
 def test_clip_empty_source(source, empty_source, vals_request):
-    clip = raster.Clip(empty_source, source)
+    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
     assert clip.get_data(**vals_request) is None
 
 
