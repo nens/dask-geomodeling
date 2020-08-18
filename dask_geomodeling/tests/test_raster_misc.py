@@ -19,7 +19,7 @@ def test_clip_attrs_store_empty(source, empty_source):
 
 def test_clip_attrs_mask_empty(source, empty_source):
     # clip should propagate the (empty) extent of the clipping mask
-    clip = raster.Clip(source, empty_source)
+    clip = raster.Clip(source, raster.Snap(empty_source, source))
     assert clip.extent is None
     assert clip.geometry is None
 
@@ -63,7 +63,7 @@ def test_clip_attrs_with_reprojection(source, empty_source):
     assert clip.geometry.GetEnvelope() == source.geometry.GetEnvelope()
 
 
-def test_clip_attrs_no_intersection(source, empty_source):
+def test_clip_attrs_no_intersection(source):
     # create a raster in that does not overlap the store
     clipping_mask = MemorySource(
         data=source.data,
@@ -79,13 +79,38 @@ def test_clip_attrs_no_intersection(source, empty_source):
     assert clip.geometry is None
 
 
+def test_clip_matching_timedelta(source):
+    clip = raster.Clip(source, source == 7)
+    assert clip.timedelta == source.timedelta
+    
+
+def test_clip_unequal_timedelta(source):
+    # clip checks for matching timedeltas
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection=source.projection,
+        pixel_size=source.pixel_size,
+        pixel_origin=source.pixel_origin,
+        time_first=source.time_first,
+        time_delta=source.time_delta + 1,
+    )
+    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+        clip = raster.Clip(source, clipping_mask)
+
+
+def test_clip_no_timedelta(source, empty_source):
+    # clip does not check for matching timedeltas if the store has no timedelta
+    clip = raster.Clip(empty_source, source)
+    assert clip.timedelta is None
+
 def test_clip_empty_source(source, empty_source, vals_request):
     clip = raster.Clip(empty_source, source)
     assert clip.get_data(**vals_request) is None
 
 
 def test_clip_with_empty_mask(source, empty_source, vals_request):
-    clip = raster.Clip(source, empty_source)
+    clip = raster.Clip(source, raster.Snap(empty_source, source))
     assert clip.get_data(**vals_request) is None
 
 
