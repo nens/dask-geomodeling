@@ -39,7 +39,7 @@ class Clip(BaseSingle):
 
     If the 'source' raster is a boolean raster, False will result in 'no data'.
 
-    Note that both input rasters are required to have the same time resolution.
+    Note that the input rasters are required to have the same time resolution.
 
     Args:
       store (RasterBlock): Raster whose values are clipped
