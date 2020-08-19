@@ -52,7 +52,7 @@ class Clip(BaseSingle):
     def __init__(self, store, source):
         if not isinstance(source, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
-        # assert that timedeltas are equal (if self.store is temporal)
+        # timedeltas are required to be equal
         if store.timedelta != source.timedelta:
             raise ValueError(
                 "Time resolution of the clipping mask does not match that of "
