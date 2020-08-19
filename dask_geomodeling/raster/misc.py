@@ -39,6 +39,8 @@ class Clip(BaseSingle):
 
     If the 'source' raster is a boolean raster, False will result in 'no data'.
 
+    Note that the input rasters are required to have the same time resolution.
+
     Args:
       store (RasterBlock): Raster whose values are clipped
       source (RasterBlock): Raster that is used as the clipping mask
@@ -50,11 +52,30 @@ class Clip(BaseSingle):
     def __init__(self, store, source):
         if not isinstance(source, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
+        # timedeltas are required to be equal
+        if store.timedelta != source.timedelta:
+            raise ValueError(
+                "Time resolution of the clipping mask does not match that of "
+                "the values raster. Consider using Snap."
+            )
         super(Clip, self).__init__(store, source)
 
     @property
     def source(self):
         return self.args[1]
+
+    def get_sources_and_requests(self, **request):
+        start = request.get("start", None)
+        stop = request.get("stop", None)
+
+        if start is not None and stop is not None:
+            # limit request to self.period so that resulting data is aligned
+            period = self.period
+            if period is not None:
+                request["start"] = max(start, period[0])
+                request["stop"] = min(stop, period[1])
+
+        return ((source, request) for source in self.args)
 
     @staticmethod
     def process(data, source_data):
@@ -114,6 +135,21 @@ class Clip(BaseSingle):
         if result.GetArea() == 0.0:
             return
         return result
+
+    @property
+    def period(self):
+        """ Return period datetime tuple. """
+        periods = [x.period for x in self.args]
+        if any(period is None for period in periods):
+            return None  # None precedes
+
+        # multiple periods: return the overlapping period
+        start = max([p[0] for p in periods])
+        stop = min([p[1] for p in periods])
+        if stop < start:
+            return None  # no overlap
+        else:
+            return start, stop
 
 
 class Mask(BaseSingle):

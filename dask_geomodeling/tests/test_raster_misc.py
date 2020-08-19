@@ -12,14 +12,14 @@ from dask_geomodeling.raster.sources import MemorySource
 
 def test_clip_attrs_store_empty(source, empty_source):
     # clip should propagate the (empty) extent of the store
-    clip = raster.Clip(empty_source, source)
+    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
     assert clip.extent is None
     assert clip.geometry is None
 
 
 def test_clip_attrs_mask_empty(source, empty_source):
     # clip should propagate the (empty) extent of the clipping mask
-    clip = raster.Clip(source, empty_source)
+    clip = raster.Clip(source, raster.Snap(empty_source, source))
     assert clip.extent is None
     assert clip.geometry is None
 
@@ -63,7 +63,7 @@ def test_clip_attrs_with_reprojection(source, empty_source):
     assert clip.geometry.GetEnvelope() == source.geometry.GetEnvelope()
 
 
-def test_clip_attrs_no_intersection(source, empty_source):
+def test_clip_attrs_no_intersection(source):
     # create a raster in that does not overlap the store
     clipping_mask = MemorySource(
         data=source.data,
@@ -79,13 +79,27 @@ def test_clip_attrs_no_intersection(source, empty_source):
     assert clip.geometry is None
 
 
+def test_clip_matching_timedelta(source):
+    clip = raster.Clip(source, source == 7)
+    assert clip.timedelta == source.timedelta
+
+
+def test_clip_unequal_timedelta(source, empty_source):
+    # clip checks for matching timedeltas; test that here
+    # NB: note that `source` is temporal and `empty_source` is not
+    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+        clip = raster.Clip(source, empty_source)
+    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+        clip = raster.Clip(empty_source, source)
+
+
 def test_clip_empty_source(source, empty_source, vals_request):
-    clip = raster.Clip(empty_source, source)
+    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
     assert clip.get_data(**vals_request) is None
 
 
 def test_clip_with_empty_mask(source, empty_source, vals_request):
-    clip = raster.Clip(source, empty_source)
+    clip = raster.Clip(source, raster.Snap(empty_source, source))
     assert clip.get_data(**vals_request) is None
 
 
@@ -116,6 +130,38 @@ def test_clip_time_request(source, vals_request, expected_time):
     clip = raster.Clip(source, source)
     vals_request["mode"] = "time"
     assert clip.get_data(**vals_request)["time"] == expected_time
+
+
+def test_clip_partial_temporal_overlap(source, vals_request):
+    # create a clipping mask in that temporally does not overlap the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection=source.projection,
+        pixel_size=source.pixel_size,
+        pixel_origin=source.pixel_origin,
+        time_first=source.time_first + source.time_delta,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
+    assert clip.period == (clipping_mask.period[0], source.period[1])
+    assert clip.get_data(**vals_request)["values"][:, 0, 0].tolist() == [7, 255]
+
+
+def test_clip_no_temporal_overlap(source, vals_request):
+    # create a clipping mask in that temporally does not overlap the store
+    clipping_mask = MemorySource(
+        data=source.data,
+        no_data_value=source.no_data_value,
+        projection=source.projection,
+        pixel_size=source.pixel_size,
+        pixel_origin=source.pixel_origin,
+        time_first=source.time_first + 10 * source.time_delta,
+        time_delta=source.time_delta,
+    )
+    clip = raster.Clip(source, clipping_mask)
+    assert clip.period == None
+    assert clip.get_data(**vals_request) is None
 
 
 def test_reclassify(source, vals_request):
