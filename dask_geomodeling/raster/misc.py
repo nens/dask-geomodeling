@@ -56,20 +56,6 @@ class Clip(BaseSingle):
     def source(self):
         return self.args[1]
 
-    def get_sources_and_requests(self, **request):
-        start = request.get("start", None)
-        stop = request.get("stop", None)
-
-        if start is not None and stop is not None:
-            # limit request to self.period so that resulting data is aligned
-            period = self.period
-            if period is not None:
-                request["start"] = max(start, period[0])
-                request["stop"] = min(stop, period[1])
-
-        return ((source, request) for source in self.args)
-
-
     @staticmethod
     def process(data, source_data):
         """ Mask store_data where source_data has no data """
@@ -128,21 +114,6 @@ class Clip(BaseSingle):
         if result.GetArea() == 0.0:
             return
         return result
-
-    @property
-    def period(self):
-        """ Return period datetime tuple. """
-        periods = [x.period for x in self.args]
-        if any(period is None for period in periods):
-            return None  # None precedes
-
-        # multiple periods: return the overlapping period
-        start = max([p[0] for p in periods])
-        stop = min([p[1] for p in periods])
-        if stop < start:
-            return None  # no overlap
-        else:
-            return start, stop
 
 
 class Mask(BaseSingle):

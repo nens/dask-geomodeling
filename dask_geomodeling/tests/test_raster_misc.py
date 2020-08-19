@@ -118,38 +118,6 @@ def test_clip_time_request(source, vals_request, expected_time):
     assert clip.get_data(**vals_request)["time"] == expected_time
 
 
-def test_clip_partial_temporal_overlap(source, vals_request):
-     # create a clipping mask in that temporally does not overlap the store
-    clipping_mask = MemorySource(
-        data=source.data,
-        no_data_value=source.no_data_value,
-        projection=source.projection,
-        pixel_size=source.pixel_size,
-        pixel_origin=source.pixel_origin,
-        time_first=source.time_first + source.time_delta,
-        time_delta=source.time_delta,
-    )
-    clip = raster.Clip(source, clipping_mask)
-    assert clip.period == (clipping_mask.period[0], source.period[1])
-    assert clip.get_data(**vals_request)["values"][:, 0, 0].tolist() == [7, 255]
-
-
-def test_clip_no_temporal_overlap(source, vals_request):
-     # create a clipping mask in that temporally does not overlap the store
-    clipping_mask = MemorySource(
-        data=source.data,
-        no_data_value=source.no_data_value,
-        projection=source.projection,
-        pixel_size=source.pixel_size,
-        pixel_origin=source.pixel_origin,
-        time_first=source.time_first + 10 * source.time_delta,
-        time_delta=source.time_delta,
-    )
-    clip = raster.Clip(source, clipping_mask)
-    assert clip.period == None
-    assert clip.get_data(**vals_request) is None
-
-
 def test_reclassify(source, vals_request):
     view = raster.Reclassify(store=source, data=[[7, 1000]])
     data = view.get_data(**vals_request)
