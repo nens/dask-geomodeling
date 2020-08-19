@@ -6,6 +6,8 @@ Changelog of dask-geomodeling
 
 - Make transformation exceptions more comprehensible.
 
+- Check for matching time resolutions in raster.Clip.
+
 
 2.2.10 (2020-07-29)
 -------------------
