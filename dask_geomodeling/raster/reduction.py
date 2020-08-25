@@ -19,6 +19,7 @@ STATISTICS = {
     "std": np.nanstd,
     "var": np.nanvar,
     "median": np.nanmedian,
+    "product": np.nanprod,
     # "p<number>" uses np.nanpercentile
 }
 
