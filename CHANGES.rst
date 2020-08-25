@@ -6,6 +6,7 @@ Changelog of dask-geomodeling
 
 - Check for matching time resolutions in raster.Clip.
 
+- Added 'product' to raster.reduction STATISTICS.
 
 2.2.10 (2020-07-29)
 -------------------
