@@ -51,6 +51,7 @@ def stack_nodata_only():
         ("std", [[[np.sqrt(2 / 3), np.sqrt(2 / 3), np.sqrt(2 / 3)], [0, 0, 255]]]),
         ("var", [[[2 / 3, 2 / 3, 2 / 3], [0, 0, 255]]]),
         ("median", [[[2, 2, 2], [4, 5, 255]]]),
+        ("product", [[[6, 6, 6], [16, 25, 255]]]),
         ("p99", [[[2.98, 2.98, 2.98], [4, 5, 255]]]),
     ],
 )
@@ -61,7 +62,7 @@ def test_reduce(statistic, expected, dtype, stack):
 
 
 @pytest.mark.parametrize(
-    "statistic,expected_value",
+    "statistic, expected_value",
     [
         ("first", 255),
         ("last", 255),
@@ -75,6 +76,7 @@ def test_reduce(statistic, expected, dtype, stack):
         ("std", 255),
         ("var", 255),
         ("median", 255),
+        ("product", 255),
         ("p99", 255),
     ],
 )
