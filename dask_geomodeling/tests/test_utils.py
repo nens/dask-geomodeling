@@ -199,6 +199,13 @@ class TestUtils(unittest.TestCase):
         box4326 = utils.shapely_transform(box28992, src_srs=src_srs, dst_srs=dst_srs)
         assert_almost_equal((5.4, 52.0), list(box4326.centroid.coords)[0], decimal=1)
 
+    def test_shapely_transform_invalid(self):
+        src_srs = "EPSG:4326"
+        dst_srs = "EPSG:28992"
+        box4326 = geometry.box(100000, 400000, 200000, 500000)
+        with pytest.raises(utils.TransformException):
+            utils.shapely_transform(box4326, src_srs=src_srs, dst_srs=dst_srs)
+
     @mock.patch("dask_geomodeling.utils.shapely_transform")
     def test_min_size_transform(self, shapely_transform):
         min_size = 100

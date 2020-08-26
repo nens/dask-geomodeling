@@ -4,6 +4,8 @@ Changelog of dask-geomodeling
 2.2.11 (unreleased)
 -------------------
 
+- Make transformation exceptions more comprehensible.
+
 - Check for matching time resolutions in raster.Clip.
 
 - Added 'product' to raster.reduction STATISTICS.

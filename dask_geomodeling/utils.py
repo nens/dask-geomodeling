@@ -410,6 +410,12 @@ def crs_to_srs(crs):
         return crs.to_string()
 
 
+class TransformException(Exception):
+    """Exception used for errors occuring while transforming between spatial
+    reference systems"""
+    pass
+
+
 def wkb_transform(wkb, src_sr, dst_sr):
     """
     Return a shapely geometry transformed from src_sr to dst_sr.
@@ -434,9 +440,24 @@ def shapely_transform(geometry, src_srs, dst_srs):
     Note that we do not use geopandas for the transformation, because this is
     much slower than OGR.
     """
-    return shapely_wkb.loads(
-        wkb_transform(geometry.wkb, src_sr=get_sr(src_srs), dst_sr=get_sr(dst_srs))
-    )
+    transform_kwargs = {
+        "wkb": geometry.wkb,
+        "src_sr": get_sr(src_srs),
+        "dst_sr": get_sr(dst_srs),
+    }
+    try:
+        output_wkb = wkb_transform(**transform_kwargs)
+    except RuntimeError:
+        # include the geometry in the error message, truncated to 64 chars
+        wkt = geometry.wkt
+        if len(wkt) > 64:
+            wkt = wkt[:61] + "..."
+        raise TransformException(
+            "An error occured while transforming {} from {} to {}.".format(
+                wkt, src_srs, dst_srs
+            )
+        )
+    return shapely_wkb.loads(output_wkb)
 
 
 def geoseries_transform(df, src_srs, dst_srs):
