@@ -1090,6 +1090,25 @@ class TestAggregateRaster(unittest.TestCase):
                 check_names=False,
             )
 
+    def test_pixel_with_two_geometries(self):
+        source = MockGeometry(
+            polygons=[
+                ((2.0, 2.0), (3.0, 2.0), (3.0, 3.0)),
+                ((2.0, 2.0), (2.0, 3.0), (3.0, 3.0)),
+            ],
+            properties=[{"id": 1}, {"id": 2}],
+        )
+        view = geometry.AggregateRaster(
+            source=source, raster=self.raster, statistic="max"
+        )
+        request = dict(
+            mode="intersects",
+            projection="EPSG:3857",
+            geometry=box(0, 0, 10, 10),
+        )
+        result = view.get_data(**self.request)
+        assert result["features"]["agg"].tolist() == [1.0, 1.0]
+
 
 class TestBucketize(unittest.TestCase):
     def test_bucketize(self):
