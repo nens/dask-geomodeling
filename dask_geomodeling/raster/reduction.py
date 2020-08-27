@@ -127,6 +127,39 @@ class BaseReduction(BaseElementwise):
                 raise TypeError("'{}' object is not allowed".format(type(arg)))
         super().__init__(*args)
 
+    @property
+    def extent(self):
+        """ Boundingbox of combined contents in WGS84 projection. """
+        extents = filter_none([x.extent for x in self.args])
+        if len(extents) == 0:
+            return None
+        elif len(extents) == 1:
+            return extents[0]
+
+        # multiple extents: return the joined box
+        x1 = min([e[0] for e in extents])
+        y1 = min([e[1] for e in extents])
+        x2 = max([e[2] for e in extents])
+        y2 = max([e[3] for e in extents])
+        return x1, y1, x2, y2
+
+    @property
+    def geometry(self):
+        """Combined geometry in the projection of the first store geometry. """
+        geometries = filter_none([x.geometry for x in self.args])
+        if len(geometries) == 0:
+            return
+        elif len(geometries) == 1:
+            return geometries[0]
+        result = geometries[0]
+        sr = result.GetSpatialReference()
+        for geometry in geometries[1:]:
+            if not geometry.GetSpatialReference().IsSame(sr):
+                geometry = geometry.Clone()
+                geometry.TransformTo(sr)
+            result = result.Union(geometry)
+        return result
+
 
 def wrap_reduction_function(statistic):
     def reduction_function(process_kwargs, *args):
@@ -159,3 +192,8 @@ class Max(BaseReduction):
       RasterBlock with the maximum values
 	"""
     process = staticmethod(wrap_reduction_function("max"))
+
+    @property
+    def dtype(self):
+        # skip the default behaviour where we use at least int32 / float32
+        return np.result_type(*self.args)
