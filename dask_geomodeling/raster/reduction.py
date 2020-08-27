@@ -3,8 +3,11 @@ Module containing reduction raster blocks.
 """
 import numpy as np
 from dask_geomodeling.utils import get_index, parse_percentile_statistic
-
+from .base import RasterBlock
+from .elemwise import BaseElementwise
 from functools import partial
+
+__all__ = ["Max"]
 
 STATISTICS = {
     "first": None,
@@ -115,3 +118,44 @@ def reduce_rasters(stack, statistic, no_data_value=None, dtype=None):
         out[not_all_nan] = func(stack_array[:, not_all_nan], axis=0)
 
     return {"values": out, "no_data_value": no_data_value}
+
+
+class BaseReduction(BaseElementwise):
+    def __init__(self, *args):
+        for arg in args:
+            if not isinstance(arg, RasterBlock):
+                raise TypeError("'{}' object is not allowed".format(type(arg)))
+        super().__init__(*args)
+
+
+def wrap_reduction_function(statistic):
+    def reduction_function(process_kwargs, *args):
+        # remove None values
+        stack = [x for x in args if x is not None]
+        # return None if all source data is None
+        if len(stack) == 0:
+            return
+
+        # see BaseElementWise.get_sources_and_requests
+        no_data_value = process_kwargs["fillvalue"]
+        dtype = process_kwargs["dtype"]
+        return reduce_rasters(
+            stack,
+            statistic,
+            process_kwargs["fillvalue"],
+            process_kwargs["dtype"],
+        )
+    return reduction_function
+
+
+class Max(BaseReduction):
+    """
+    Take the maximum value of two or more rasters, ignoring no data.
+
+    Args:
+      *args (list of RasterBlocks): list of rasters to be combined.
+
+    Returns:
+      RasterBlock with the maximum values
+	"""
+    process = staticmethod(wrap_reduction_function("max"))
