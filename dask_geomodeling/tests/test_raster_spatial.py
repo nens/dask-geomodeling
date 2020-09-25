@@ -112,6 +112,12 @@ def test_place_empty(empty, center, vals_request):
     assert place.get_data(**vals_request) is None
 
 
+def test_place_no_coords(source, center, vals_request):
+    place = raster.Place(source, "EPSG:28992", center, [])
+    values = place.get_data(**vals_request)["values"]
+    assert (values[:, :10, :10] == source.fillvalue).all()
+
+
 def test_place_exact(source, center, vals_request):
     place = raster.Place(source, "EPSG:28992", center, [(50, 50)])
     values = place.get_data(**vals_request)["values"]
