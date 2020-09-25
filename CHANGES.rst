@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.2.12 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Fixed point requests for RasterizeWKT.
 
 
 2.2.11 (2020-09-01)

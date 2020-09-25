@@ -6,6 +6,7 @@ import numpy as np
 from geopandas import GeoSeries
 
 from shapely.geometry import box
+from shapely.geometry import Point
 from shapely.errors import WKTReadingError
 from shapely.wkt import loads as load_wkt
 
@@ -782,14 +783,22 @@ class RasterizeWKT(RasterBlock):
             geometry = utils.shapely_transform(
                 geometry, data["projection"], request["projection"]
             )
+
         # take a shortcut when the geometry does not intersect the bbox
-        if not geometry.intersects(box(*request["bbox"])):
+        x1, y1, x2, y2 = request["bbox"]
+        if (x1 == x2) and (y1 == y2):
+            # Don't do box(x1, y1, x2, y2), this gives an invalid geometry.
+            bbox_geom = Point(x1, y1)
+        else:
+            bbox_geom = box(x1, y1, x2, y2)
+        if not geometry.intersects(bbox_geom):
             return {
                 "values": np.full(
                     (1, request["height"], request["width"]), False, dtype=np.bool
                 ),
                 "no_data_value": None,
             }
+
         return utils.rasterize_geoseries(
             geoseries=GeoSeries([geometry]) if not geometry.is_empty else None,
             bbox=request["bbox"],
