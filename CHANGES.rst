@@ -6,6 +6,8 @@ Changelog of dask-geomodeling
 
 - Fixed point requests for RasterizeWKT.
 
+- Allow empty coordinate list in Place.
+
 
 2.2.11 (2020-09-01)
 -------------------

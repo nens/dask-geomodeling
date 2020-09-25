@@ -480,15 +480,19 @@ class Place(BaseSingle):
         for x in anchor:
             if not isinstance(x, (int, float)):
                 raise TypeError("'{}' object is not allowed".format(type(x)))
-        coordinates = np.asarray(coordinates, dtype=float)
-        if coordinates.ndim != 2 or coordinates.shape[1] != 2:
-            raise ValueError(
-                "Expected a list of lists of 2 numbers in the 'coordinates' "
-                "parameter"
-            )
+        if coordinates is None or len(coordinates) == 0:
+            coordinates = []
+        else:
+            coordinates = np.asarray(coordinates, dtype=float)
+            if coordinates.ndim != 2 or coordinates.shape[1] != 2:
+                raise ValueError(
+                    "Expected a list of lists of 2 numbers in the "
+                    "'coordinates' parameter"
+                )
+            coordinates = coordinates.tolist()
         check_statistic(statistic)
         super().__init__(
-            store, place_projection, anchor, coordinates.tolist(), statistic
+            store, place_projection, anchor, coordinates, statistic
         )
 
     @property

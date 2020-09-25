@@ -112,6 +112,12 @@ def test_place_empty(empty, center, vals_request):
     assert place.get_data(**vals_request) is None
 
 
+def test_place_no_coords(source, center, vals_request):
+    place = raster.Place(source, "EPSG:28992", center, [])
+    values = place.get_data(**vals_request)["values"]
+    assert (values[:, :10, :10] == source.fillvalue).all()
+
+
 def test_place_exact(source, center, vals_request):
     place = raster.Place(source, "EPSG:28992", center, [(50, 50)])
     values = place.get_data(**vals_request)["values"]
@@ -217,6 +223,7 @@ def test_place_meta_request(source, center):
     ((15, 10), 7),  # line 2-4
     ((10, 5), 7),  # line 3-4
     ((10, 10), 7),  # center
+    ((1000, 1000), 255),  # outside
 ])
 def test_place_point_request(source, center, point, expected):
     # For point requests, edges are important. Let's do a drawing:
