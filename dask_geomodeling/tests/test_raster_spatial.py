@@ -223,6 +223,7 @@ def test_place_meta_request(source, center):
     ((15, 10), 7),  # line 2-4
     ((10, 5), 7),  # line 3-4
     ((10, 10), 7),  # center
+    ((1000, 1000), 255),  # outside
 ])
 def test_place_point_request(source, center, point, expected):
     # For point requests, edges are important. Let's do a drawing:
