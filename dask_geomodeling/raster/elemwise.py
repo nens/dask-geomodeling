@@ -408,17 +408,40 @@ class Exp(BaseSingle):
     Returns:
       RasterBlock.
     """
-    process = staticmethod(wrap_math_process_func(np.exp))
-
     def __init__(self, x):
         if x.dtype == np.dtype("bool"):
             raise TypeError("input block must not have boolean dtype")
-        super(Invert, self).__init__(x)
+        super(Exp, self).__init__(x)
+
+    def get_sources_and_requests(self, **request):
+        process_kwargs = {"dtype": self.dtype.name, "fillvalue": self.fillvalue}
+        return [(process_kwargs, None), (self.args[0], request)]
+
+    @staticmethod
+    def process(process_kwargs, data):
+        if "values" not in data:
+            return data
+
+        values = data["values"]
+        no_data_value = data["no_data_value"]
+        active = get_index(values=values, no_data_value=no_data_value)
+
+        dtype = process_kwargs["dtype"]
+        fillvalue = process_kwargs["fillvalue"]
+
+        result = np.full(values.shape, fillvalue, dtype=dtype)
+        result[active] = np.exp(values[active], dtype=dtype)
+
+        return {"values": result, "no_data_value": fillvalue}
 
     @property
     def dtype(self):
         # use at least float32
         return np.result_type(np.float32, *self.args)
+
+    @property
+    def fillvalue(self):
+        return get_dtype_max(self.dtype)
 
 
 class Equal(BaseComparison):
