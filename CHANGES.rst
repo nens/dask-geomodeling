@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.2.13 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Added Exp RasterBlock.
 
 
 2.2.12 (2020-09-29)
