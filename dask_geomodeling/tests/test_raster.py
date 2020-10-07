@@ -476,6 +476,16 @@ class TestMath(unittest.TestCase):
             view.get_data(**self.vals_request)["values"][0, :2, 0], [True, True]
         )
 
+    def test_exp(self):
+        view = raster.Exp(self.bool_storage)
+        expected = np.exp([1, 7, np.log(view.fillvalue)])
+        assert_allclose(
+            view.get_data(**self.vals_request)["values"][0, :, 0], expected,
+        )
+
+        # cannot take Exp from boolean storage
+        self.assertRaises(TypeError, raster.Exp, self.bool_storage == 7)
+
     def test_isdata(self):
         view = raster.IsData(self.bool_storage)
         assert_equal(
