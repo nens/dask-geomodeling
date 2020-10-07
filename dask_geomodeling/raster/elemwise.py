@@ -305,7 +305,7 @@ class Add(BaseMath):
 
     Returns:
       RasterBlock containing the result of the addition.
-	"""
+    """
 
     process = staticmethod(wrap_math_process_func(np.add))
 
@@ -340,7 +340,7 @@ class Multiply(BaseMath):
     Args:
       a (RasterBlock, number): Multiplication factor a
       b (RasterBlock, number): Multiplication factor b
-     
+
     Returns:
       RasterBlock containing the result of the multiplication.
     """
@@ -359,7 +359,7 @@ class Divide(BaseMath):
     Args:
       a (RasterBlock, number): Numerator
       b (RasterBlock, number): Denominator
-     
+
     Returns:
       RasterBlock containing the result of the division.
     """
@@ -383,9 +383,9 @@ class Power(BaseMath):
     Args:
       a (RasterBlock, number): Base
       b (RasterBlock, number): Exponent
-      
+
     Returns:
-      RasterBlock containing the result of the exponential function. 
+      RasterBlock containing the result of the exponential function.
     """
 
     process = staticmethod(wrap_math_process_func(np.power))
@@ -436,7 +436,7 @@ class Equal(BaseComparison):
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
-      
+
     Returns:
       RasterBlock containing boolean values
     """
@@ -503,7 +503,7 @@ class GreaterEqual(BaseComparison):
     Either one or both of the inputs should be a RasterBlock. In case of
     two raster inputs the temporal properties of the rasters should be equal,
     however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
@@ -527,7 +527,7 @@ class Less(BaseComparison):
     Either one or both of the inputs should be a RasterBlock. In case of
     two raster inputs the temporal properties of the rasters should be equal,
     however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
@@ -551,7 +551,7 @@ class LessEqual(BaseComparison):
     Either one or both of the inputs should be a RasterBlock. In case of
     two raster inputs the temporal properties of the rasters should be equal,
     however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
@@ -566,7 +566,7 @@ class LessEqual(BaseComparison):
 class Invert(BaseSingle):
     """
     Logically invert a raster (swap True and False).
-    
+
     Takes a single input raster containing boolean values and outputs a boolean
     raster with the same spatial and temportal properties.
 
@@ -574,7 +574,7 @@ class Invert(BaseSingle):
       x (RasterBlock): Boolean raster with values to invert
 
     Returns:
-      RasterBlock with boolean values opposite to the input raster. 
+      RasterBlock with boolean values opposite to the input raster.
     """
 
     def __init__(self, x):
@@ -597,7 +597,7 @@ class Invert(BaseSingle):
 class IsData(BaseSingle):
     """
     Returns True where raster has data.
-    
+
     Takes a single input raster and outputs a boolean raster with the same
     spatial and temporal properties.
 
@@ -605,7 +605,7 @@ class IsData(BaseSingle):
       store (RasterBlock): Input raster
 
     Returns:
-      RasterBlock with boolean values. 
+      RasterBlock with boolean values.
     """
 
     def __init__(self, store):
@@ -641,7 +641,7 @@ class IsNoData(IsData):
       store (RasterBlock): Input raster
 
     Returns:
-      RasterBlock with boolean values. 
+      RasterBlock with boolean values.
     """
 
     @staticmethod
@@ -660,7 +660,7 @@ class And(BaseLogic):
     Either one or both of the inputs should be a boolean RasterBlock. In case
     of two raster inputs the temporal properties of the rasters should be
     equal, however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, boolean): Logical term a
       b (RasterBlock, boolean): Logical term b
@@ -726,7 +726,7 @@ class FillNoData(BaseElementwise):
 
     Args:
       *args (list of RasterBlocks): Rasters to be combined.
-      
+
     Returns:
       RasterBlock that combines values from the inputs.
     """
