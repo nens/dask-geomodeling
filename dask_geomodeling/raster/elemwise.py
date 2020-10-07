@@ -23,6 +23,7 @@ __all__ = [
     "Less",
     "LessEqual",
     "Invert",
+    "Exp",
     "And",
     "Or",
     "Xor",
@@ -395,6 +396,29 @@ class Power(BaseMath):
         if isinstance(b, int) and b < 0:
             b = float(b)
         super(Power, self).__init__(a, b)
+
+
+class Exp(BaseSingle):
+    """
+    Return e raised to the power of the raster values.
+
+    Args:
+      x (RasterBlock): Raster
+
+    Returns:
+      RasterBlock.
+    """
+    process = staticmethod(wrap_math_process_func(np.exp))
+
+    def __init__(self, x):
+        if x.dtype == np.dtype("bool"):
+            raise TypeError("input block must not have boolean dtype")
+        super(Invert, self).__init__(x)
+
+    @property
+    def dtype(self):
+        # use at least float32
+        return np.result_type(np.float32, *self.args)
 
 
 class Equal(BaseComparison):
