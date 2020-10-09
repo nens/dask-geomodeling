@@ -23,12 +23,14 @@ __all__ = [
     "Less",
     "LessEqual",
     "Invert",
-    "Exp",
     "And",
     "Or",
     "Xor",
     "IsData",
     "IsNoData",
+    "Exp",
+    "Log",
+    "Log10",
 ]
 
 
@@ -398,52 +400,6 @@ class Power(BaseMath):
         super(Power, self).__init__(a, b)
 
 
-class Exp(BaseSingle):
-    """
-    Return e raised to the power of the raster values.
-
-    Args:
-      x (RasterBlock): Raster
-
-    Returns:
-      RasterBlock.
-    """
-    def __init__(self, x):
-        if x.dtype == np.dtype("bool"):
-            raise TypeError("input block must not have boolean dtype")
-        super(Exp, self).__init__(x)
-
-    def get_sources_and_requests(self, **request):
-        process_kwargs = {"dtype": self.dtype.name, "fillvalue": self.fillvalue}
-        return [(process_kwargs, None), (self.args[0], request)]
-
-    @staticmethod
-    def process(process_kwargs, data):
-        if "values" not in data:
-            return data
-
-        values = data["values"]
-        no_data_value = data["no_data_value"]
-        active = get_index(values=values, no_data_value=no_data_value)
-
-        dtype = process_kwargs["dtype"]
-        fillvalue = process_kwargs["fillvalue"]
-
-        result = np.full(values.shape, fillvalue, dtype=dtype)
-        result[active] = np.exp(values[active], dtype=dtype)
-
-        return {"values": result, "no_data_value": fillvalue}
-
-    @property
-    def dtype(self):
-        # use at least float32
-        return np.result_type(np.float32, *self.args)
-
-    @property
-    def fillvalue(self):
-        return get_dtype_max(self.dtype)
-
-
 class Equal(BaseComparison):
     """
     Compares the values of two rasters and returns True for equal elements.
@@ -793,3 +749,77 @@ class FillNoData(BaseElementwise):
             values[index] = data[index]
 
         return {"values": values, "no_data_value": fillvalue}
+
+
+class BaseLogExp(BaseSingle):
+    """
+    Base Block for Exp, Log and Log10 Blocks.
+    """
+    def __init__(self, x):
+        if x.dtype == np.dtype("bool"):
+            raise TypeError("input block must not have boolean dtype")
+        super(BaseLogExp, self).__init__(x)
+
+    def get_sources_and_requests(self, **request):
+        process_kwargs = {"dtype": self.dtype.name, "fillvalue": self.fillvalue}
+        return [(process_kwargs, None), (self.args[0], request)]
+
+    @property
+    def dtype(self):
+        # use at least float32
+        return np.result_type(np.float32, *self.args)
+
+    @property
+    def fillvalue(self):
+        return get_dtype_max(self.dtype)
+
+
+class Exp(BaseLogExp):
+    """
+    Return e raised to the power of the raster values.
+
+    Args:
+      x (RasterBlock): Raster
+
+    Returns:
+      RasterBlock.
+    """
+    process = staticmethod(wrap_math_process_func(np.exp))
+
+
+class Log(BaseLogExp):
+    """
+    Return natural logarithm of the raster values.
+
+    Input values <= 0 are set to no data.
+
+    Args:
+      x (RasterBlock): Raster
+
+    Returns:
+      RasterBlock.
+    """
+    @staticmethod
+    def process(process_kwargs, data):
+        if "values" in data:
+            data["values"][data["values"] <= 0] = data["no_data_value"]
+        return wrap_math_process_func(np.log)(process_kwargs, data)
+
+
+class Log10(BaseLogExp):
+    """
+    Return the base 10 logarithm of the raster values.
+
+    Input values <= 0 are set to no data.
+
+    Args:
+      x (RasterBlock): Raster
+
+    Returns:
+      RasterBlock.
+    """
+    @staticmethod
+    def process(process_kwargs, data):
+        if "values" in data:
+            data["values"][data["values"] <= 0] = data["no_data_value"]
+        return wrap_math_process_func(np.log10)(process_kwargs, data)

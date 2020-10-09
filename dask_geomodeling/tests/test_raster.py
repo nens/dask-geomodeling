@@ -7,7 +7,8 @@ from numpy.testing import assert_equal, assert_allclose
 from scipy import ndimage
 
 from dask_geomodeling import raster
-from dask_geomodeling.utils import EPSG4326, EPSG3857, Extent, get_epsg_or_wkt
+from dask_geomodeling.utils import EPSG4326, EPSG3857
+from dask_geomodeling.utils import Extent, get_dtype_max, get_epsg_or_wkt
 from dask_geomodeling.raster import RasterBlock
 from dask_geomodeling.tests.factories import MockRaster, MockGeometry
 
@@ -292,6 +293,15 @@ class TestMath(unittest.TestCase):
             bands=1,
             value=[[1, 1], [7, 7], [255, 255]],  # 2x3 shape. 255 is nodata
         )
+        self.logexp_storage = MockRaster(
+            origin=Datetime(2000, 1, 1),
+            timedelta=Timedelta(hours=1),
+            bands=1,
+            value=np.array([
+                [-1, 0],
+                [1, np.e],
+                [10, get_dtype_max('f4')],
+            ], dtype='f4'))  # 127 becomes nodata
         self.vals_request = dict(
             mode="vals",
             start=Datetime(2000, 1, 1),
@@ -476,16 +486,6 @@ class TestMath(unittest.TestCase):
             view.get_data(**self.vals_request)["values"][0, :2, 0], [True, True]
         )
 
-    def test_exp(self):
-        view = raster.Exp(self.bool_storage)
-        expected = np.exp([1, 7, np.log(view.fillvalue)])
-        assert_allclose(
-            view.get_data(**self.vals_request)["values"][0, :, 0], expected,
-        )
-
-        # cannot take Exp from boolean storage
-        self.assertRaises(TypeError, raster.Exp, self.bool_storage == 7)
-
     def test_isdata(self):
         view = raster.IsData(self.bool_storage)
         assert_equal(
@@ -547,6 +547,35 @@ class TestMath(unittest.TestCase):
             view = raster.Divide(*args)
             result = view.get_data(**self.vals_request)
             assert_equal(result["values"], result["no_data_value"])
+
+    def test_base_log_exp_init(self):
+        # cannot take Exp from boolean storage
+        arg = self.logexp_storage == 7
+        self.assertRaises(TypeError, raster.elemwise.BaseLogExp, arg)
+
+    def test_exp(self):
+        view = raster.Exp(self.logexp_storage)
+        n = view.fillvalue
+        expected = [[1 / np.e, 1], [np.e, np.exp(np.e)], [np.exp(10), n]]
+        assert_allclose(
+            view.get_data(**self.vals_request)["values"][0], expected,
+        )
+
+    def test_log_e(self):
+        view = raster.Log(self.logexp_storage)
+        n = view.fillvalue
+        expected = [[n, n], [0, 1], [np.log(10), n]]
+        assert_allclose(
+            view.get_data(**self.vals_request)["values"][0], expected,
+        )
+
+    def test_log_10(self):
+        view = raster.Log10(self.logexp_storage)
+        n = view.fillvalue
+        expected = [[n, n], [0, np.log10(np.e)], [1, n]]
+        assert_allclose(
+            view.get_data(**self.vals_request)["values"][0], expected,
+        )
 
 
 class TestFillNoData(unittest.TestCase):
