@@ -6,6 +6,8 @@ Changelog of dask-geomodeling
 
 - Added Exp, Log and Log10 RasterBlocks.
 
+- Added "std" and "var" statistics to TemporalAggregate.
+
 
 2.2.12 (2020-09-29)
 -------------------

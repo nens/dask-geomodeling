@@ -38,7 +38,7 @@ class Snap(RasterBlock):
       store (RasterBlock): Return cell values from this raster
       index (RasterBlock): Snap values to the timestamps from this raster
 
-    Returns: 
+    Returns:
       RasterBlock with temporal properties of the index.
     """
 
@@ -335,7 +335,7 @@ def count_not_nan(x, *args, **kwargs):
 class TemporalAggregate(BaseSingle):
     """
     Resample a raster in time.
-    
+
     This operation performs temporal aggregation of rasters, for example a
     hourly average of data that has a 5 minute resolution.. The timedelta of
     the resulting raster is determined by the 'frequency' parameter.
@@ -348,7 +348,7 @@ class TemporalAggregate(BaseSingle):
         with output timestamp at the end of the source raster period.
         Defaults to None.
       statistic (string): The type of statistic to perform. Can be one of
-        ``{"sum", "count", "min", "max", "mean", "median", "p<percentile>"}``.
+        ``{"sum", "count", "min", "max", "mean", "median", "std", "var", "p<percentile>"}``.
         Defaults to ``"sum"``.
       closed (string or None): Determines what side of the interval is closed.
         Can be ``"left"`` or ``"right"``. The default depends on the frequency.
@@ -373,6 +373,8 @@ class TemporalAggregate(BaseSingle):
         "max": {"func": np.nanmax, "extensive": False},
         "mean": {"func": np.nanmean, "extensive": False},
         "median": {"func": np.nanmedian, "extensive": False},
+        "std": {"func": np.nanstd, "extensive": False},
+        "var": {"func": np.nanvar, "extensive": False},
         # 'percentile' is hardcoded to np.nanpercentile
     }
 
