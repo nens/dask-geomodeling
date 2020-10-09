@@ -801,9 +801,11 @@ class Log(BaseLogExp):
     """
     @staticmethod
     def process(process_kwargs, data):
-        if "values" in data:
-            data["values"][data["values"] <= 0] = data["no_data_value"]
-        return wrap_math_process_func(np.log)(process_kwargs, data)
+        result = wrap_math_process_func(np.log)(process_kwargs, data)
+        if "values" in result:
+            mask = ~np.isfinite(result["values"])
+            result["values"][mask] = result["no_data_value"]
+        return result
 
 
 class Log10(BaseLogExp):
@@ -820,6 +822,8 @@ class Log10(BaseLogExp):
     """
     @staticmethod
     def process(process_kwargs, data):
-        if "values" in data:
-            data["values"][data["values"] <= 0] = data["no_data_value"]
-        return wrap_math_process_func(np.log10)(process_kwargs, data)
+        result = wrap_math_process_func(np.log10)(process_kwargs, data)
+        if "values" in result:
+            mask = ~np.isfinite(result["values"])
+            result["values"][mask] = result["no_data_value"]
+        return result
