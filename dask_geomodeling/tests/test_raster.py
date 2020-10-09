@@ -1398,6 +1398,16 @@ class TestTemporalAggregate(unittest.TestCase):
         result = view.get_data(**self.request_all)
         assert_equal(result["values"], [[[1.0, 0.0, result["no_data_value"]]]])
 
+    def test_get_data_std(self):
+        view = self.klass(self.raster, "M", statistic="std")
+        result = view.get_data(**self.request_all)
+        assert_equal(result["values"], [[[0.0, 0.0, result["no_data_value"]]]])
+
+    def test_get_data_var(self):
+        view = self.klass(self.raster, "M", statistic="var")
+        result = view.get_data(**self.request_all)
+        assert_equal(result["values"], [[[0.0, 0.0, result["no_data_value"]]]])
+
     def test_get_data_percentile(self):
         view = self.klass(self.raster, "M", statistic="p95")
         result = view.get_data(**self.request_all)
