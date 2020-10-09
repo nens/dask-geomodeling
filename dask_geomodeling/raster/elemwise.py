@@ -286,6 +286,9 @@ def wrap_math_process_func(func):
         with np.errstate(all="ignore"):  # suppresses warnings
             result_values = func(*compute_args, **func_kwargs)
 
+        # mask nan & inf values
+        result_values[~np.isfinite(result_values)] = fillvalue
+
         if nodata_mask is not None:
             result_values[nodata_mask] = fillvalue
         return {"no_data_value": no_data_value, "values": result_values}
@@ -778,6 +781,9 @@ class Exp(BaseLogExp):
     """
     Return e raised to the power of the raster values.
 
+    Out-of-range results (not representable by the resulting datatype) are set
+    to `no data`.
+
     Args:
       x (RasterBlock): Raster
 
@@ -791,7 +797,8 @@ class Log(BaseLogExp):
     """
     Return natural logarithm of the raster values.
 
-    Input values <= 0 are set to no data.
+    Out-of-range results (not representable by the resulting datatype) are set
+    to `no data` as well as the result of input values < 0.
 
     Args:
       x (RasterBlock): Raster
@@ -799,20 +806,15 @@ class Log(BaseLogExp):
     Returns:
       RasterBlock.
     """
-    @staticmethod
-    def process(process_kwargs, data):
-        result = wrap_math_process_func(np.log)(process_kwargs, data)
-        if "values" in result:
-            mask = ~np.isfinite(result["values"])
-            result["values"][mask] = result["no_data_value"]
-        return result
+    process = staticmethod(wrap_math_process_func(np.log))
 
 
 class Log10(BaseLogExp):
     """
     Return the base 10 logarithm of the raster values.
 
-    Input values <= 0 are set to no data.
+    Out-of-range results (not representable by the resulting datatype) are set
+    to `no data` as well as the result of input values < 0.
 
     Args:
       x (RasterBlock): Raster
@@ -820,10 +822,4 @@ class Log10(BaseLogExp):
     Returns:
       RasterBlock.
     """
-    @staticmethod
-    def process(process_kwargs, data):
-        result = wrap_math_process_func(np.log10)(process_kwargs, data)
-        if "values" in result:
-            mask = ~np.isfinite(result["values"])
-            result["values"][mask] = result["no_data_value"]
-        return result
+    process = staticmethod(wrap_math_process_func(np.log10))

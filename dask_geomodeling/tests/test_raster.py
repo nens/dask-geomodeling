@@ -299,8 +299,8 @@ class TestMath(unittest.TestCase):
             bands=1,
             value=np.array([
                 [-1, 0],
-                [1, np.e],
-                [10, get_dtype_max('f8')],
+                [np.e, 10],
+                [999, get_dtype_max('f8')],
             ], dtype='f8'))
         self.vals_request = dict(
             mode="vals",
@@ -556,7 +556,7 @@ class TestMath(unittest.TestCase):
     def test_exp(self):
         view = raster.Exp(self.logexp_storage)
         n = view.fillvalue
-        expected = [[1 / np.e, 1], [np.e, np.exp(np.e)], [np.exp(10), n]]
+        expected = [[1 / np.e, 1], [np.exp(np.e), np.exp(10)], [n, n]]
         assert_allclose(
             view.get_data(**self.vals_request)["values"][0], expected,
         )
@@ -564,7 +564,7 @@ class TestMath(unittest.TestCase):
     def test_log_e(self):
         view = raster.Log(self.logexp_storage)
         n = view.fillvalue
-        expected = [[n, n], [0, 1], [np.log(10), n]]
+        expected = [[n, n], [1, np.log(10)], [np.log(999), n]]
         assert_allclose(
             view.get_data(**self.vals_request)["values"][0], expected,
         )
@@ -572,7 +572,7 @@ class TestMath(unittest.TestCase):
     def test_log_10(self):
         view = raster.Log10(self.logexp_storage)
         n = view.fillvalue
-        expected = [[n, n], [0, np.log10(np.e)], [1, n]]
+        expected = [[n, n], [np.log10(np.e), 1], [np.log10(999), n]]
         assert_allclose(
             view.get_data(**self.vals_request)["values"][0], expected,
         )
