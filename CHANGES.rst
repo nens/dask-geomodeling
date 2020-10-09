@@ -1,8 +1,8 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.2.13 (unreleased)
--------------------
+2.3.0 (2020-10-09)
+------------------
 
 - Added Exp, Log and Log10 RasterBlocks.
 
