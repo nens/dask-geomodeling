@@ -28,6 +28,9 @@ __all__ = [
     "Xor",
     "IsData",
     "IsNoData",
+    "Exp",
+    "Log",
+    "Log10",
 ]
 
 
@@ -283,6 +286,9 @@ def wrap_math_process_func(func):
         with np.errstate(all="ignore"):  # suppresses warnings
             result_values = func(*compute_args, **func_kwargs)
 
+        # mask nan & inf values
+        result_values[~np.isfinite(result_values)] = fillvalue
+
         if nodata_mask is not None:
             result_values[nodata_mask] = fillvalue
         return {"no_data_value": no_data_value, "values": result_values}
@@ -304,7 +310,7 @@ class Add(BaseMath):
 
     Returns:
       RasterBlock containing the result of the addition.
-	"""
+    """
 
     process = staticmethod(wrap_math_process_func(np.add))
 
@@ -339,7 +345,7 @@ class Multiply(BaseMath):
     Args:
       a (RasterBlock, number): Multiplication factor a
       b (RasterBlock, number): Multiplication factor b
-     
+
     Returns:
       RasterBlock containing the result of the multiplication.
     """
@@ -358,7 +364,7 @@ class Divide(BaseMath):
     Args:
       a (RasterBlock, number): Numerator
       b (RasterBlock, number): Denominator
-     
+
     Returns:
       RasterBlock containing the result of the division.
     """
@@ -382,9 +388,9 @@ class Power(BaseMath):
     Args:
       a (RasterBlock, number): Base
       b (RasterBlock, number): Exponent
-      
+
     Returns:
-      RasterBlock containing the result of the exponential function. 
+      RasterBlock containing the result of the exponential function.
     """
 
     process = staticmethod(wrap_math_process_func(np.power))
@@ -412,7 +418,7 @@ class Equal(BaseComparison):
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
-      
+
     Returns:
       RasterBlock containing boolean values
     """
@@ -479,7 +485,7 @@ class GreaterEqual(BaseComparison):
     Either one or both of the inputs should be a RasterBlock. In case of
     two raster inputs the temporal properties of the rasters should be equal,
     however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
@@ -503,7 +509,7 @@ class Less(BaseComparison):
     Either one or both of the inputs should be a RasterBlock. In case of
     two raster inputs the temporal properties of the rasters should be equal,
     however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
@@ -527,7 +533,7 @@ class LessEqual(BaseComparison):
     Either one or both of the inputs should be a RasterBlock. In case of
     two raster inputs the temporal properties of the rasters should be equal,
     however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, number): Comparison term a
       b (RasterBlock, number): Comparison term b
@@ -542,7 +548,7 @@ class LessEqual(BaseComparison):
 class Invert(BaseSingle):
     """
     Logically invert a raster (swap True and False).
-    
+
     Takes a single input raster containing boolean values and outputs a boolean
     raster with the same spatial and temportal properties.
 
@@ -550,7 +556,7 @@ class Invert(BaseSingle):
       x (RasterBlock): Boolean raster with values to invert
 
     Returns:
-      RasterBlock with boolean values opposite to the input raster. 
+      RasterBlock with boolean values opposite to the input raster.
     """
 
     def __init__(self, x):
@@ -573,7 +579,7 @@ class Invert(BaseSingle):
 class IsData(BaseSingle):
     """
     Returns True where raster has data.
-    
+
     Takes a single input raster and outputs a boolean raster with the same
     spatial and temporal properties.
 
@@ -581,7 +587,7 @@ class IsData(BaseSingle):
       store (RasterBlock): Input raster
 
     Returns:
-      RasterBlock with boolean values. 
+      RasterBlock with boolean values.
     """
 
     def __init__(self, store):
@@ -617,7 +623,7 @@ class IsNoData(IsData):
       store (RasterBlock): Input raster
 
     Returns:
-      RasterBlock with boolean values. 
+      RasterBlock with boolean values.
     """
 
     @staticmethod
@@ -636,7 +642,7 @@ class And(BaseLogic):
     Either one or both of the inputs should be a boolean RasterBlock. In case
     of two raster inputs the temporal properties of the rasters should be
     equal, however spatial properties can be different.
-    
+
     Args:
       a (RasterBlock, boolean): Logical term a
       b (RasterBlock, boolean): Logical term b
@@ -702,7 +708,7 @@ class FillNoData(BaseElementwise):
 
     Args:
       *args (list of RasterBlocks): Rasters to be combined.
-      
+
     Returns:
       RasterBlock that combines values from the inputs.
     """
@@ -746,3 +752,74 @@ class FillNoData(BaseElementwise):
             values[index] = data[index]
 
         return {"values": values, "no_data_value": fillvalue}
+
+
+class BaseLogExp(BaseSingle):
+    """
+    Base Block for Exp, Log and Log10 Blocks.
+    """
+    def __init__(self, x):
+        if x.dtype == np.dtype("bool"):
+            raise TypeError("input block must not have boolean dtype")
+        super(BaseLogExp, self).__init__(x)
+
+    def get_sources_and_requests(self, **request):
+        process_kwargs = {"dtype": self.dtype.name, "fillvalue": self.fillvalue}
+        return [(process_kwargs, None), (self.args[0], request)]
+
+    @property
+    def dtype(self):
+        # use at least float32
+        return np.result_type(np.float32, *self.args)
+
+    @property
+    def fillvalue(self):
+        return get_dtype_max(self.dtype)
+
+
+class Exp(BaseLogExp):
+    """
+    Return e raised to the power of the raster values.
+
+    Out-of-range results (not representable by the resulting datatype) are set
+    to `no data`.
+
+    Args:
+      x (RasterBlock): Raster
+
+    Returns:
+      RasterBlock.
+    """
+    process = staticmethod(wrap_math_process_func(np.exp))
+
+
+class Log(BaseLogExp):
+    """
+    Return natural logarithm of the raster values.
+
+    Out-of-range results (not representable by the resulting datatype) are set
+    to `no data` as well as the result of input values < 0.
+
+    Args:
+      x (RasterBlock): Raster
+
+    Returns:
+      RasterBlock.
+    """
+    process = staticmethod(wrap_math_process_func(np.log))
+
+
+class Log10(BaseLogExp):
+    """
+    Return the base 10 logarithm of the raster values.
+
+    Out-of-range results (not representable by the resulting datatype) are set
+    to `no data` as well as the result of input values < 0.
+
+    Args:
+      x (RasterBlock): Raster
+
+    Returns:
+      RasterBlock.
+    """
+    process = staticmethod(wrap_math_process_func(np.log10))

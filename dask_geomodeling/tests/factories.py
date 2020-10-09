@@ -49,7 +49,7 @@ class MockRaster(RasterBlock):
         try:
             return self.value.dtype
         except AttributeError:
-            return np.uint8
+            return np.dtype(np.uint8)
 
     @property
     def fillvalue(self):
