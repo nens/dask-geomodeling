@@ -300,8 +300,8 @@ class TestMath(unittest.TestCase):
             value=np.array([
                 [-1, 0],
                 [1, np.e],
-                [10, get_dtype_max('f4')],
-            ], dtype='f4'))  # 127 becomes nodata
+                [10, get_dtype_max('f8')],
+            ], dtype='f8'))
         self.vals_request = dict(
             mode="vals",
             start=Datetime(2000, 1, 1),
