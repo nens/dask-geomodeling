@@ -315,7 +315,6 @@ class HillShade(BaseSingle):
 
     Args:
       store (RasterBlock): Raster to which the hillshade algorithm is applied.
-      size (number): Size of the effect in projected units.
       altitude (number): Light source altitude in degrees, defaults to 45.
       azimuth (number): Light source azimuth in degrees, defaults to 315.
       fill (number): Fill value to be used for 'no data' values.
