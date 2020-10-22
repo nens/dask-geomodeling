@@ -112,9 +112,8 @@ class Classify(BaseSingleSeries):
         if series.dtype == object:
             series = series.fillna(value=np.nan)
         result = pd.cut(series, bins, right, labels)
-        labels_dtype = pd.Series(labels).dtype
-        if labels_dtype.name != "object":
-            result = pd.Series(result, dtype=labels_dtype)
+        # transform from categorical to whatever suits the "labels"
+        result = pd.Series(result, dtype=pd.Series(labels).dtype)
         if open_bounds:
             # patch the result, we actually want to classify np.inf
             if right:
@@ -218,17 +217,22 @@ class ClassifyFromColumns(SeriesBlock):
             else:
                 indices = np.sum(values[:, np.newaxis] >= bins, axis=1)
 
-        # If we have e.g. 2 labels and 3 bins, the outside intervals are closed
-        # any index that is 0 or 3 should become -1 (unclassified).
-        if len(labels) == n_bins + 1:  # open bounds
-            indices[np.isnan(values)] = -1  # else NaN gets classified
-        else:  # closed bounds
-            indices[indices == n_bins] = 0
+        # If values was NaN this is now assigned the value 0 (the first bin).
+        # Convert to the last label so that we can map it later to NaN
+        if len(labels) == n_bins + 1:
+            indices[np.isnan(values)] = len(labels)
+        else:
+            # If we have e.g. 2 labels and 3 bins, the outside intervals are
+            # closed. Indices 0 and 3 do not map to a bin.
             indices -= 1
+            indices[(indices > len(labels)) | (indices < 0)] = len(labels)
 
-        # The output of pd.cut is a categorical Series.
-        labeled_data = pd.Categorical.from_codes(indices, labels, ordered=True)
-        return pd.Series(labeled_data, index=features.index)
+        # Index into lables to convertes to labels, appended with np.nan to
+        # cover unclassified data.
+        labeled_data = pd.Series(labels + [np.nan]).loc[indices]
+        # Set the index to the features index
+        labeled_data.index = features.index
+        return labeled_data
 
 
 class BaseFieldOperation(BaseSingleSeries):
