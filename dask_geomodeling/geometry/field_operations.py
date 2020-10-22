@@ -223,12 +223,13 @@ class ClassifyFromColumns(SeriesBlock):
             indices[np.isnan(values)] = len(labels)
         else:
             # If we have e.g. 2 labels and 3 bins, the outside intervals are
-            # closed. Indices 0 and 3 do not map to a bin.
-            indices -= 1
-            indices[(indices > len(labels)) | (indices < 0)] = len(labels)
+            # closed. Therefore, indices 0 and 3 do not map to a bin. Index 0
+            # also covers the values = NaN situation.
+            indices -= 1  # indices become -1, 0, 1, 2
+            indices[indices == -1] = len(labels)  # -1 --> 2
 
-        # Index into lables to convertes to labels, appended with np.nan to
-        # cover unclassified data.
+        # Convert indices to labels, append labels with with np.nan to cover
+        # unclassified data.
         labeled_data = pd.Series(labels + [np.nan]).loc[indices]
         # Set the index to the features index
         labeled_data.index = features.index
