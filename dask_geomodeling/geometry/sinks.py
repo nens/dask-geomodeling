@@ -142,8 +142,8 @@ class GeometryFileSink(BaseSingle):
         for col in fields.keys():
             series = features[col]
             if series.dtype == object or (
-                    str(series.dtype) == "category"
-                    and series.cat.categories.dtype == object
+                str(series.dtype) == "category"
+                and series.cat.categories.dtype == object
             ):
                 features[col] = series.map(_to_json)
 
@@ -155,9 +155,7 @@ class GeometryFileSink(BaseSingle):
 
         # GeoJSON needs reprojection to EPSG:4326
         if driver == "GeoJSON" and projection.upper() != "EPSG:4326":
-            features = utils.geodataframe_transform(
-                features, projection, "EPSG:4326"
-            )
+            features = utils.geodataframe_transform(features, projection, "EPSG:4326")
 
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)
@@ -179,7 +177,7 @@ class GeometryFileSink(BaseSingle):
             raise IOError("Target '{}' already exists".format(target))
 
         target_base, ext = os.path.splitext(target)
-        source_paths = glob.glob(os.path.join(path, '*' + ext))
+        source_paths = glob.glob(os.path.join(path, "*" + ext))
         if len(source_paths) == 0:
             raise IOError(
                 "No source files found with matching extension '{}'".format(ext)
@@ -189,10 +187,8 @@ class GeometryFileSink(BaseSingle):
             # files (e.g. shapefiles have multiple files)
             source_base = os.path.splitext(source_paths[0])[0]
             move_or_copy = shutil.move if remove_source else shutil.copy
-            for file_path in glob.glob(source_base + '.*'):
-                move_or_copy(
-                    file_path, target_base + os.path.splitext(file_path)[1]
-                )
+            for file_path in glob.glob(source_base + ".*"):
+                move_or_copy(file_path, target_base + os.path.splitext(file_path)[1])
             return
 
         with utils.fiona_env():
@@ -225,9 +221,7 @@ def DryRunTempDir(*args, **kwargs):
     yield "/tmp/dummy"
 
 
-def to_file(
-        source, url, fields=None, tile_size=None, dry_run=False, **request
-):
+def to_file(source, url, fields=None, tile_size=None, dry_run=False, **request):
     """Utility function to export data from a GeometryBlock to a file on disk.
 
     You need to specify the target file path as well as the extent geometry
@@ -270,9 +264,7 @@ def to_file(
 
     TmpDir = DryRunTempDir if dry_run else tempfile.TemporaryDirectory
     with TmpDir(dir=config.get("temporary_directory", None)) as tmpdir:
-        sink = GeometryFileSink(
-            source, tmpdir, extension=extension, fields=fields
-        )
+        sink = GeometryFileSink(source, tmpdir, extension=extension, fields=fields)
 
         # wrap the sink in a GeometryTiler
         if tile_size is not None:

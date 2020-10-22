@@ -88,9 +88,9 @@ def test_clip_unequal_timedelta(source, empty_source):
     # clip checks for matching timedeltas; test that here
     # NB: note that `source` is temporal and `empty_source` is not
     with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
-        clip = raster.Clip(source, empty_source)
+        raster.Clip(source, empty_source)
     with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
-        clip = raster.Clip(empty_source, source)
+        raster.Clip(empty_source, source)
 
 
 def test_clip_empty_source(source, empty_source, vals_request):
@@ -160,7 +160,7 @@ def test_clip_no_temporal_overlap(source, vals_request):
         time_delta=source.time_delta,
     )
     clip = raster.Clip(source, clipping_mask)
-    assert clip.period == None
+    assert clip.period is None
     assert clip.get_data(**vals_request) is None
 
 

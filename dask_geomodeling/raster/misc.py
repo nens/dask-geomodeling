@@ -32,7 +32,7 @@ __all__ = [
 class Clip(BaseSingle):
     """
     Clip one raster to the extent of another raster.
-    
+
     Takes two raster inputs, one raster ('store') whose values are returned in
     the output and one raster ('source') that is used as the extent. Cells of
     the 'store' raster are replaced with 'no data' if there is no data in the
@@ -215,11 +215,11 @@ class MaskBelow(BaseSingle):
 
     Raster cells with values greater than or equal to the supplied value are
     returned unchanged.
-    
+
     Args:
       store (RasterBlock): The raster whose values are to be masked.
       value (number): The constant value below which values are masked.
-    
+
     Returns:
       RasterBlock with cells below the input value converted to 'no data'.
     """
@@ -267,7 +267,7 @@ class Step(BaseSingle):
 
     Returns:
       RasterBlock containing three values; left, right and at.
-    
+
     """
 
     def __init__(self, store, left=0, right=1, value=0, at=None):
@@ -332,7 +332,7 @@ class Classify(BaseSingle):
       bins (list): An increasing list of bin edges
       right (boolean): Whether the intervals include the right or the left bin
         edge, defaults to False.
-    
+
     Returns:
       RasterBlock with classified values
 
@@ -400,7 +400,7 @@ class Reclassify(BaseSingle):
         int or float datatype
       select (boolean): Whether to set all non-reclassified cells to 'no data',
         defaults to False.
-    
+
     Returns:
       RasterBlock with reclassified values
     """
@@ -512,7 +512,7 @@ class Rasterize(RasterBlock):
 
     Note that to rasterize floating point values, it is necessary to pass
     ``dtype="float"``.
-    
+
     Args:
       source (GeometryBlock): The geometry source to be rasterized
       column_name (string): The name of the column whose values will be
@@ -520,8 +520,8 @@ class Rasterize(RasterBlock):
         raster will be generated indicating where there are geometries.
       dtype (string): A numpy datatype specification to return the array.
         Defaults to 'int32' if column_name is provided, or to 'bool' otherwise.
-    
-    Returns: 
+
+    Returns:
       RasterBlock with values from 'column_name' or a boolean raster.
 
     See also:

@@ -212,7 +212,7 @@ class ClassifyFromColumns(SeriesBlock):
         # Check in which bin every value is. because bins may be different for
         # each value, searchsorted is not an option. We assume that bins are
         # sorted in increasing order. Checking that would be costly.
-        with np.errstate(invalid='ignore'):  # comparison to NaN is OK here
+        with np.errstate(invalid="ignore"):  # comparison to NaN is OK here
             if right:
                 indices = np.sum(values[:, np.newaxis] > bins, axis=1)
             else:
@@ -249,13 +249,13 @@ class BaseFieldOperation(BaseSingleSeries):
 
 
 class Add(BaseFieldOperation):
-    """ 
+    """
     Element-wise addition of SeriesBlock or number to another SeriesBlock.
 
     Args:
       source (SeriesBlock): First addition term
       other (SeriesBlock or number): Second addition term
-    
+
     Returns:
       SeriesBlock
     """
@@ -298,7 +298,7 @@ class Multiply(BaseFieldOperation):
 
 
 class Divide(BaseFieldOperation):
-    """ 
+    """
     Element-wise division of SeriesBlock or number with another SeriesBlock.
 
     Note that if you want to divide a constant value by a SeriesBlock (like
@@ -348,6 +348,7 @@ class Power(BaseFieldOperation):
     Returns:
       SeriesBlock
     """
+
     def __init__(self, source, other):
         # the float(other) will raise a TypeError if necessary
         super().__init__(source, float(other))
@@ -395,7 +396,7 @@ class Equal(BaseFieldOperation):
 
 class NotEqual(BaseFieldOperation):
     """
-    Determine whether a SeriesBlock and a second SeriesBlock or a constant 
+    Determine whether a SeriesBlock and a second SeriesBlock or a constant
     value are not equal.
 
     Note that 'no data' does not equal 'no data'.
@@ -447,7 +448,7 @@ class Less(BaseFieldOperation):
     """
     Determine for each value in a SeriesBlock whether it is less than a
     comparison value from a SeriesBlock or constant.
-    
+
     Args:
       source (SeriesBlock): First comparison term
       other (SeriesBlock or number): Second comparison term
@@ -463,7 +464,7 @@ class LessEqual(BaseFieldOperation):
     """
     Determine for each value in a SeriesBlock whether it is less than or equal
     to a comparison value from a SeriesBlock or constant.
-    
+
     Args:
       source (SeriesBlock): First comparison term
       other (SeriesBlock or number): Second comparison term
@@ -494,7 +495,7 @@ class And(BaseLogicOperation):
     Args:
       source (SeriesBlock): First boolean term
       other (SeriesBlock): Second boolean term
-    
+
     Returns:
       SeriesBlock with boolean values
     """
@@ -544,7 +545,7 @@ class Invert(BaseSingleSeries):
 
     Args:
       source (SeriesBlock): SeriesBlock with boolean values.
-      
+
     Returns:
       SeriesBlock with boolean values
     """
@@ -570,7 +571,7 @@ class Where(BaseSingleSeries):
       other (SeriesBlock or constant): The value that should be used as a
         replacement for the source SeriesBlock where the conditional
         SeriesBlock is False.
-      
+
     Returns:
       SeriesBlock with updated values where condition is False.
     """
@@ -642,11 +643,11 @@ class Round(BaseSingleSeries):
       source (SeriesBlock): SeriesBlock with float data that is rounded to the
         provided number of decimals.
       decimals (int, optional): number of decimal places to round to
-        (default: 0). If decimals is negative, it specifies the number of 
+        (default: 0). If decimals is negative, it specifies the number of
         positions to the left of the decimal point.
 
     Returns:
-      SeriesBlock with rounded values. 
+      SeriesBlock with rounded values.
     """
 
     def __init__(self, source, decimals=0):

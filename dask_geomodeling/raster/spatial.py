@@ -490,9 +490,7 @@ class Place(BaseSingle):
                 )
             coordinates = coordinates.tolist()
         check_statistic(statistic)
-        super().__init__(
-            store, place_projection, anchor, coordinates, statistic
-        )
+        super().__init__(store, place_projection, anchor, coordinates, statistic)
 
     @property
     def place_projection(self):
@@ -740,7 +738,7 @@ class Place(BaseSingle):
         if len(stack) == 0:
             return {
                 "values": np.full(out_shape, out_no_data_value, out_dtype),
-                "no_data_value": out_no_data_value
+                "no_data_value": out_no_data_value,
             }
         else:
             return reduce_rasters(stack, process_kwargs["statistic"])
