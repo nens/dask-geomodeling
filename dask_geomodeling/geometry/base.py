@@ -202,17 +202,17 @@ class SeriesBlock(Block):
 class GetSeriesBlock(SeriesBlock):
     """
     Obtain a single feature property column from a GeometryBlock.
-    
-    Provide a GeometryBlock with one or more columns. One of these columns can 
+
+    Provide a GeometryBlock with one or more columns. One of these columns can
     be read from this source into a SeriesBlock. This SeriesBlock can be used
     to run for example classifications.
 
     Args:
-      source (GeometryBlock): GeometryBlock with the column you want to load 
+      source (GeometryBlock): GeometryBlock with the column you want to load
         into the SeriesBlock.
       name (str): Name of the column to load into the SeriesBlock.
 
-    Returns: 
+    Returns:
       SeriesBlock containing the single property column
 
     """
@@ -240,7 +240,7 @@ class GetSeriesBlock(SeriesBlock):
 class SetSeriesBlock(GeometryBlock):
     """
     Add one or multiple property columns (SeriesBlocks) to a GeometryBlock.
-    
+
     Provide the GeometryBlock that you want to add more properties to. Then
     provide the SeriesBlock(s) which you want to add to the GeometryBlock. The
     values of the SeriesBlock will be added to the features in the

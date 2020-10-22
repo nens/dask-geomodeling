@@ -18,13 +18,13 @@ class Area(SeriesBlock):
 
     Provide a GeometryBlock and a projection. Returns the area of each
     individual geometry in the input block, in that projection.
-    
+
     Args:
       source (GeometryBlock): Source GeometryBlock which contains the features.
       projection (str): Projection in which to compute the area
         (i.e. ``"epsg:28992"``).
-      
-    Returns: 
+
+    Returns:
       SeriesBlock with only the computed area
     """
 

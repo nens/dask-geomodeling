@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 import numpy as np
 import traitlets
-from ipyleaflet import Map, WMSLayer
+from ipyleaflet import WMSLayer
 from matplotlib import cm
 from matplotlib.colors import Normalize
 from notebook import notebookapp

@@ -41,6 +41,7 @@ if GEOPANDAS_GTE_0_7_0:
 
 GDAL3 = gdal.VersionInfo().startswith("3")
 
+
 def get_index(values, no_data_value):
     """ Return an index to access for data values in values. """
     equal = np.isclose if values.dtype.kind == "f" else np.equal
@@ -358,7 +359,7 @@ def get_sr(user_input):
     """ Return osr.SpatialReference for user input. """
     sr = osr.SpatialReference(osr.GetUserInputAsWKT(str(user_input)))
     # https://github.com/OSGeo/gdal/blob/release/3.0/gdal/MIGRATION_GUIDE.TXT
-    # 
+    #
     # GDAL takes into account official axis order.
     # Traditional GIS-friendly axis order can be restored with:
     if GDAL3:

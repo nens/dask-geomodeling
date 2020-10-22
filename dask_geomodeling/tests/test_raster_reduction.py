@@ -1,9 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
-from shapely.geometry import box, Point
 
-from dask_geomodeling import raster
 from dask_geomodeling.raster.reduction import reduce_rasters
 
 

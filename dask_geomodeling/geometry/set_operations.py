@@ -12,7 +12,7 @@ __all__ = ["Difference", "Intersection"]
 class Difference(BaseSingle):
     """
     Calculate the geometric difference of two GeometryBlocks.
-    
+
     All geometries in the source GeometryBlock will be adapted by geometries
     with the same index from the second GeometryBlock. The difference operation
     removes any overlap between the geometries from the first geometry.

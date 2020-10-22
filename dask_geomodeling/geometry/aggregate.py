@@ -4,7 +4,6 @@ Module containing raster blocks that aggregate rasters.
 from math import ceil, floor, log, sqrt
 from collections import defaultdict
 from functools import partial
-import warnings
 
 from scipy import ndimage
 import numpy as np
@@ -148,7 +147,7 @@ class AggregateRaster(GeometryBlock):
       auto_pixel_size (boolean): Determines whether the pixel size is adjusted
         automatically when ``"max_pixels"`` is exceeded. Default False.
 
-    Returns: 
+    Returns:
       GeometryBlock with aggregation results in an added column
 
     The global raster-limit setting can be adapted as follows:
