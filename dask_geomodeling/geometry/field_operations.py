@@ -212,7 +212,7 @@ class ClassifyFromColumns(SeriesBlock):
         # Check in which bin every value is. because bins may be different for
         # each value, searchsorted is not an option. We assume that bins are
         # sorted in increasing order. Checking that would be costly.
-        with np.errstate(invalid='ignore'):  # comparison to NaN is OK here
+        with np.errstate(invalid="ignore"):  # comparison to NaN is OK here
             if right:
                 indices = np.sum(values[:, np.newaxis] > bins, axis=1)
             else:
@@ -348,6 +348,7 @@ class Power(BaseFieldOperation):
     Returns:
       SeriesBlock
     """
+
     def __init__(self, source, other):
         # the float(other) will raise a TypeError if necessary
         super().__init__(source, float(other))

@@ -26,7 +26,9 @@ class RasterTiler(BaseSingle):
     def __init__(self, source, tile_size):
         if hasattr(tile_size, "__iter__"):
             if len(tile_size) != 2:
-                raise ValueError("'tile_size' should be a scalar or a list of length 2.")
+                raise ValueError(
+                    "'tile_size' should be a scalar or a list of length 2."
+                )
             tile_size = [int(x) for x in tile_size]
         else:
             tile_size = [int(tile_size), int(tile_size)]

@@ -736,7 +736,7 @@ class FillNoData(BaseElementwise):
                 data_list.append(data["values"])
                 no_data_values.append(data["no_data_value"])
 
-        dtype = process_kwargs['dtype']
+        dtype = process_kwargs["dtype"]
         fillvalue = get_dtype_max(dtype)
 
         if not data_list:
@@ -758,6 +758,7 @@ class BaseLogExp(BaseSingle):
     """
     Base Block for Exp, Log and Log10 Blocks.
     """
+
     def __init__(self, x):
         if x.dtype == np.dtype("bool"):
             raise TypeError("input block must not have boolean dtype")
@@ -790,6 +791,7 @@ class Exp(BaseLogExp):
     Returns:
       RasterBlock.
     """
+
     process = staticmethod(wrap_math_process_func(np.exp))
 
 
@@ -806,6 +808,7 @@ class Log(BaseLogExp):
     Returns:
       RasterBlock.
     """
+
     process = staticmethod(wrap_math_process_func(np.log))
 
 
@@ -822,4 +825,5 @@ class Log10(BaseLogExp):
     Returns:
       RasterBlock.
     """
+
     process = staticmethod(wrap_math_process_func(np.log10))

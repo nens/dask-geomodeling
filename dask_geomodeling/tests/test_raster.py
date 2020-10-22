@@ -297,11 +297,10 @@ class TestMath(unittest.TestCase):
             origin=Datetime(2000, 1, 1),
             timedelta=Timedelta(hours=1),
             bands=1,
-            value=np.array([
-                [-1, 0],
-                [np.e, 10],
-                [999, get_dtype_max('f8')],
-            ], dtype='f8'))
+            value=np.array(
+                [[-1, 0], [np.e, 10], [999, get_dtype_max("f8")]], dtype="f8"
+            ),
+        )
         self.vals_request = dict(
             mode="vals",
             start=Datetime(2000, 1, 1),
@@ -557,25 +556,19 @@ class TestMath(unittest.TestCase):
         view = raster.Exp(self.logexp_storage)
         n = view.fillvalue
         expected = [[1 / np.e, 1], [np.exp(np.e), np.exp(10)], [n, n]]
-        assert_allclose(
-            view.get_data(**self.vals_request)["values"][0], expected,
-        )
+        assert_allclose(view.get_data(**self.vals_request)["values"][0], expected)
 
     def test_log_e(self):
         view = raster.Log(self.logexp_storage)
         n = view.fillvalue
         expected = [[n, n], [1, np.log(10)], [np.log(999), n]]
-        assert_allclose(
-            view.get_data(**self.vals_request)["values"][0], expected,
-        )
+        assert_allclose(view.get_data(**self.vals_request)["values"][0], expected)
 
     def test_log_10(self):
         view = raster.Log10(self.logexp_storage)
         n = view.fillvalue
         expected = [[n, n], [np.log10(np.e), 1], [np.log10(999), n]]
-        assert_allclose(
-            view.get_data(**self.vals_request)["values"][0], expected,
-        )
+        assert_allclose(view.get_data(**self.vals_request)["values"][0], expected)
 
 
 class TestFillNoData(unittest.TestCase):

@@ -14,6 +14,7 @@ from dask_geomodeling.tests.factories import (
     setup_temp_root,
     teardown_temp_root,
 )
+
 try:
     from pandas.testing import assert_frame_equal
 except ImportError:
@@ -52,7 +53,7 @@ class TestGeometryFileSink(unittest.TestCase):
         self.request_tiled = {
             "mode": "centroid",
             "projection": "EPSG:3857",
-            "geometry": box(0, 0, 20, 20)
+            "geometry": box(0, 0, 20, 20),
         }
         self.path = os.path.join(self.root, self._testMethodName)
         self.polygons = [
@@ -221,20 +222,14 @@ class TestGeometryFileSink(unittest.TestCase):
 
     def test_categorical_column(self):
         with_categorical = self.source.set(
-            "categorical",
-            Classify(self.source["float"], bins=[6], labels=["A", "B"])
+            "categorical", Classify(self.source["float"], bins=[6], labels=["A", "B"])
         )
         block = self.klass(
-            with_categorical,
-            self.path,
-            "geojson",
-            fields={"label": "categorical"},
+            with_categorical, self.path, "geojson", fields={"label": "categorical"}
         )
         block.get_data(**self.request)
 
-        actual = gpd.read_file(
-            os.path.join(self.path, os.listdir(self.path)[0])
-        )
+        actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
         assert actual["label"].tolist() == ["A"]
 
     def test_to_file_geojson(self):
@@ -253,23 +248,17 @@ class TestGeometryFileSink(unittest.TestCase):
         assert_frame_equal(actual, self.expected, check_like=True)
 
     def test_to_file_with_tiling_geojson(self):
-        self.source.to_file(
-            self.path + ".geojson", tile_size=10, **self.request_tiled
-        )
+        self.source.to_file(self.path + ".geojson", tile_size=10, **self.request_tiled)
         actual = gpd.read_file(self.path + ".geojson")
         # because we lose the index in the saving process, just check the len
         assert len(actual) == 2
 
     def test_to_file_dry_run(self):
-        self.source.to_file(
-            self.path + ".geojson", dry_run=True, **self.request
-        )
+        self.source.to_file(self.path + ".geojson", dry_run=True, **self.request)
         assert not os.path.exists(self.path)
 
     def test_to_file_with_tiling_shapefile(self):
-        self.source.to_file(
-            self.path + ".shp", tile_size=10, **self.request_tiled
-        )
+        self.source.to_file(self.path + ".shp", tile_size=10, **self.request_tiled)
         actual = gpd.read_file(self.path + ".shp")
         # because we lose the index in the saving process, just check the len
         assert len(actual) == 2

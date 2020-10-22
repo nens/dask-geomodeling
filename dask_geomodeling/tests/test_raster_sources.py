@@ -66,9 +66,7 @@ class TstRasterSourceBase:
 
     def test_point_single_pixel_nodata(self):
         # data is defined at [136700, 136705) and (455795, 455800]
-        for dx, dy in (
-            (0, -5.0), (5.0, 0), (-5.0, 5.0), (-0.01, 0), (0, 0.01),
-        ):
+        for dx, dy in ((0, -5.0), (5.0, 0), (-5.0, 5.0), (-0.01, 0), (0, 0.01)):
             data = self.source.get_data(
                 mode="vals",
                 projection="EPSG:28992",
