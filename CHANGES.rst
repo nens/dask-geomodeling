@@ -4,7 +4,9 @@ Changelog of dask-geomodeling
 2.3.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Never return Categorical dtypes in the field_operations.Classify and
+  ClassifyFromColumns. This leads to pandas incompatibilities with later
+  operations (round, subtract, where, mask).
 
 
 2.3.0 (2020-10-09)

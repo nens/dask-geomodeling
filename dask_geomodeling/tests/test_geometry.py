@@ -1531,11 +1531,11 @@ class TestFieldOperations(unittest.TestCase):
         ).get_data(**self.request)
         self.assertNotEqual(expected.dtypes.name, "category")
 
-    def test_classify_astype_category_object(self):
+    def test_classify_not_categorical(self):
         expected = field_operations.Classify(
             self.source["col_source"], bins=[0, 0.5, 1.0], labels=["A", "B", "C", "D"]
         ).get_data(**self.request)
-        self.assertEqual(expected.dtypes.name, "category")
+        self.assertEqual(expected.dtypes.name, "object")
 
     def test_classify_from_columns_left(self):
         source_with_bins = self.source.set("bin_1", 0, "bin_2", 1.2, "bin_3", 5.0)
