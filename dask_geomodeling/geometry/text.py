@@ -87,16 +87,12 @@ class ParseTextColumn(BaseSingle):
             return data  # do nothing for non-feature requests
 
         f = data["features"].copy()
-        # Most of the code in this function revolves around the idea that we do
-        # not keep large strings multiple times in memory. We use the pandas
-        # categorical for that.
-
-        # Hopefully, this is already the case:
+        # We parse every unique string only a single time by transforming to
+        # categorical dtype:
         column = f[source_column].astype("category")
 
         if len(column.cat.categories) == 0:
             # no data to parse: add empty columns and return directly
-            f = f.copy()
             for col in key_mapping.values():
                 f[col] = np.nan
             return {"features": f, "projection": data["projection"]}
@@ -110,11 +106,6 @@ class ParseTextColumn(BaseSingle):
             [parser(x) for x in column.cat.categories], columns=key_mapping.values()
         )
 
-        # Convert strings to categoricals before aligning
-        for name, dtype in zip(extra_columns.columns, extra_columns.dtypes):
-            if dtype == object:
-                extra_columns[name] = extra_columns[name].astype("category")
-
         # Align the generated dataframe with the original. Pandas versions
         # later than 0.19 have a pd.align that could be used also.
         try:
@@ -125,6 +116,9 @@ class ParseTextColumn(BaseSingle):
 
         # Assign the extra columns one by one. This preserves categoricals.
         for name in extra_columns_aligned.columns:
-            f[name] = extra_columns_aligned[name]
+            if extra_columns_aligned[name].isnull().all():
+                f[name] = np.nan
+            else:
+                f[name] = extra_columns_aligned[name]
 
         return {"features": f, "projection": data["projection"]}
