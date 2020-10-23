@@ -571,8 +571,9 @@ class Where(BaseSingleSeries):
 
     Args:
       source (SeriesBlock): Source SeriesBlock that is going to be updated
-      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
-        whether features in the source SeriesBlock will be updated.
+      cond (SeriesBlock): Conditional SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated. Non-
+        boolean data will be converted using data -> True, nodata -> False.
       other (SeriesBlock or constant): The value that should be used as a
         replacement for the source SeriesBlock where the conditional
         SeriesBlock is False.
@@ -596,6 +597,8 @@ class Where(BaseSingleSeries):
 
     @staticmethod
     def process(source, cond, other):
+        if cond.dtype != bool:
+            cond = ~pd.isnull(cond)
         return source.where(cond, other)
 
 
@@ -613,7 +616,8 @@ class Mask(BaseSingleSeries):
     Args:
       source (SeriesBlock): Source SeriesBlock that is going to be updated
       cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
-        whether features in the source SeriesBlock will be updated.
+        whether features in the source SeriesBlock will be updated. Non-
+        boolean data will be converted using data -> True, nodata -> False.
       other (SeriesBlock or constant): The value that should be used as a
         replacement for the source SeriesBlock where the conditional
         SeriesBlock is True.
@@ -637,6 +641,8 @@ class Mask(BaseSingleSeries):
 
     @staticmethod
     def process(source, cond, other):
+        if cond.dtype != bool:
+            cond = ~pd.isnull(cond)
         return source.mask(cond, other)
 
 
