@@ -572,8 +572,9 @@ class Where(BaseSingleSeries):
     Args:
       source (SeriesBlock): Source SeriesBlock that is going to be updated
       cond (SeriesBlock): Conditional SeriesBlock that determines
-        whether features in the source SeriesBlock will be updated. Non-
-        boolean data will be converted using data -> True, nodata -> False.
+        whether features in the source SeriesBlock will be updated. If this
+        is not boolean (True/False), then all data values (including 0) are
+        interpreted as True. Missing values are always interpeted as False.
       other (SeriesBlock or constant): The value that should be used as a
         replacement for the source SeriesBlock where the conditional
         SeriesBlock is False.
@@ -615,9 +616,10 @@ class Mask(BaseSingleSeries):
 
     Args:
       source (SeriesBlock): Source SeriesBlock that is going to be updated
-      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
-        whether features in the source SeriesBlock will be updated. Non-
-        boolean data will be converted using data -> True, nodata -> False.
+      cond (SeriesBlock): Conditional SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated. If this
+        is not boolean (True/False), then all data values (including 0) are
+        interpreted as True. Missing values are always interpeted as False.
       other (SeriesBlock or constant): The value that should be used as a
         replacement for the source SeriesBlock where the conditional
         SeriesBlock is True.
