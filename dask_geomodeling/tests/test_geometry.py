@@ -1217,7 +1217,17 @@ class TestWhere(unittest.TestCase):
         view = self.source.set("result", series)
 
         result = view.get_data(**self.request)
-        expected = self.prop_df["col_1"].where(self.prop_df["bool_filter"], "Hola!")
+        expected = pd.Series(["Hola!", "Hola!", 1.2, 5, float("inf"), "Hola!"])
+        self.assertTrue(result["features"]["result"].equals(expected))
+
+    def test_where_with_float_filter(self):
+        series = field_operations.Where(
+            self.source["col_1"], cond=self.source["col_1"], other="Hola!"
+        )
+        view = self.source.set("result", series)
+
+        result = view.get_data(**self.request)
+        expected = pd.Series([-float("inf"), -2, 1.2, 5, float("inf"), "Hola!"])
         self.assertTrue(result["features"]["result"].equals(expected))
 
     def test_where_with_other_column(self):
@@ -1232,6 +1242,7 @@ class TestWhere(unittest.TestCase):
         expected = self.prop_df["col_1"].where(
             self.prop_df["bool_filter"], self.prop_df["extra"]
         )
+        expected = pd.Series([-float("inf"), -20, 1.2, 5, float("inf"), float("nan")])
         self.assertTrue(result["features"]["result"].equals(expected))
 
     def test_mask(self):
@@ -1241,7 +1252,17 @@ class TestWhere(unittest.TestCase):
         view = self.source.set("result", series)
 
         result = view.get_data(**self.request)
-        expected = self.prop_df["col_1"].mask(self.prop_df["bool_filter"], "Hola!")
+        expected = pd.Series([-float("inf"), -2, "Hola!", "Hola!", "Hola!", float("nan")])
+        self.assertTrue(result["features"]["result"].equals(expected))
+
+    def test_mask_with_float_filter(self):
+        series = field_operations.Mask(
+            self.source["col_1"], cond=self.source["col_1"], other="Hola!"
+        )
+        view = self.source.set("result", series)
+
+        result = view.get_data(**self.request)
+        expected = pd.Series(["Hola!", "Hola!", "Hola!", "Hola!", "Hola!", float("nan")])
         self.assertTrue(result["features"]["result"].equals(expected))
 
     def test_mask_with_other_column(self):
@@ -1253,9 +1274,7 @@ class TestWhere(unittest.TestCase):
         view = self.source.set("result", series)
 
         result = view.get_data(**self.request)
-        expected = self.prop_df["col_1"].mask(
-            self.prop_df["bool_filter"], self.prop_df["extra"]
-        )
+        expected = pd.Series([-float("inf"), -2, 12.0, 50, float("inf"), float("nan")])
         self.assertTrue(result["features"]["result"].equals(expected))
 
 
