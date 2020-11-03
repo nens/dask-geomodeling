@@ -8,8 +8,10 @@ Changelog of dask-geomodeling
   ClassifyFromColumns. This leads to pandas incompatibilities with later
   operations (round, subtract, where, mask).
 
+- Never return Categorical dtypes from ParseTextColumn. (#79)
+
 - field_operations.Where and field_operations.Mask now also allow non-boolean
-  conditionals. This was already the case for Where on pandas == 0.19.*.
+  conditionals. This was already the case for Where on pandas == 0.19.*. (#78)
 
 
 2.3.0 (2020-10-09)

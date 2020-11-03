@@ -1982,7 +1982,7 @@ class TestText(unittest.TestCase):
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
         data = view.get_data(**self.request)["features"]
-        self.assertEqual("category", str(data["model_name"].dtype))
+        self.assertEqual("object", str(data["model_name"].dtype))
         for col in self.expected:
             assert data.loc[1, col] == self.expected[col]
             assert data.loc[2, col] == self.expected[col]
@@ -2036,7 +2036,7 @@ class TestText(unittest.TestCase):
             self.source, "description", {"modelname": "description"}
         )
         data = view.get_data(**self.request)["features"]
-        self.assertEqual("category", str(data["description"].dtype))
+        self.assertEqual("object", str(data["description"].dtype))
         assert data.loc[1, "description"] == "rotterdam 01"
 
     def test_parser_into_same_column_non_existing(self):
