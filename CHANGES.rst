@@ -8,6 +8,8 @@ Changelog of dask-geomodeling
   ClassifyFromColumns. This leads to pandas incompatibilities with later
   operations (round, subtract, where, mask).
 
+- Never return Categorical dtypes from ParseTextColumn. (#79)
+
 
 2.3.0 (2020-10-09)
 ------------------
