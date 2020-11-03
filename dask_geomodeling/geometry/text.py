@@ -114,7 +114,7 @@ class ParseTextColumn(BaseSingle):
         except KeyError:
             extra_columns_aligned = pd.DataFrame([], columns=key_mapping.values())
 
-        # Assign the extra columns one by one. This preserves categoricals.
+        # Assign the extra columns to the original dataframe.
         for name in extra_columns_aligned.columns:
             if extra_columns_aligned[name].isnull().all():
                 f[name] = np.nan
