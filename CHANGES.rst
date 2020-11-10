@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.1 (unreleased)
+2.3.1 (2020-11-10)
 ------------------
 
 - Never return Categorical dtypes in the field_operations.Classify and
