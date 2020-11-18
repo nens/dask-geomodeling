@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.3.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Make Dilate arguments JSON serializable.
 
 
 2.3.1 (2020-11-10)
