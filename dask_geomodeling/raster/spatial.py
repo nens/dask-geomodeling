@@ -132,7 +132,7 @@ class Dilate(BaseSingle):
 
     def __init__(self, store, values):
         values = np.asarray(values, dtype=store.dtype)
-        super(Dilate, self).__init__(store, values)
+        super().__init__(store, values.tolist())
 
     @property
     def values(self):
@@ -151,7 +151,7 @@ class Dilate(BaseSingle):
             return data
         original = data["values"]
         dilated = original.copy()
-        for value in values:
+        for value in np.asarray(values, dtype=original.dtype):
             dilated[ndimage.binary_dilation(original == value)] = value
         dilated = dilated[:, 1:-1, 1:-1]
         return {"values": dilated, "no_data_value": data["no_data_value"]}

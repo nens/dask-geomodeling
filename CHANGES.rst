@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.3.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Make Dilate arguments JSON serializable. (#81)
 
 
 2.3.1 (2020-11-10)
@@ -621,4 +621,3 @@ Changelog of dask-geomodeling
 - Fixed issue with ciso8601 2.*
 
 - Bumped raster-store dependency to 4.0.0.
-
