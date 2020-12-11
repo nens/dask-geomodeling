@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.3 (unreleased)
+2.3.3 (2020-12-11)
 ------------------
 
 - Fix field_operations.Classify if used with int-typed labels. A NaN value in
