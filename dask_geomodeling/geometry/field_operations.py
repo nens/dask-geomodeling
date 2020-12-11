@@ -61,8 +61,7 @@ class Classify(BaseSingleSeries):
       labels (list): The classification returned if a value falls in a specific
         bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
         larger or one less than the length of the ``bins`` argument. Labels
-        should be unique. If labels are numeric, they are always
-        converted to float to be able to deal with NaN values.
+        should be unique.
       right (boolean, optional): Determines what side of the intervals are
         closed. Defaults to True (the right side of the bin is closed so a
         value assigned to the bin on the left if it is exactly on a bin edge).
@@ -113,11 +112,8 @@ class Classify(BaseSingleSeries):
         if series.dtype == object:
             series = series.fillna(value=np.nan)
         result = pd.cut(series, bins, right, labels)
-
-        # Transform from categorical to whatever suits the "labels". The
-        # dtype has to be able to accomodate NaN as well.
-        result = result.astype(pd.Series(labels + [np.nan]).dtype)
-
+        # transform from categorical to whatever suits the "labels"
+        result = pd.Series(result, dtype=pd.Series(labels).dtype)
         if open_bounds:
             # patch the result, we actually want to classify np.inf
             if right:
@@ -146,8 +142,7 @@ class ClassifyFromColumns(SeriesBlock):
       labels (list): The classification returned if a value falls in a specific
         bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
         larger or one less than the length of the ``bins`` argument. Labels
-        should be unique. If labels are numeric, they are always
-        converted to float to be able to deal with NaN values.
+        should be unique.
       right (boolean, optional): Determines what side of the intervals are
         closed. Defaults to True (the right side of the bin is closed so a
         value assigned to the bin on the left if it is exactly on a bin edge).
