@@ -4,7 +4,9 @@ Changelog of dask-geomodeling
 2.3.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix field_operations.Classify if used with int-typed labels. A NaN value in
+  the result resulted in a Categorical output dtype. To fix this, Classify
+  now returns floats also when input labels are integers. (#82)
 
 
 2.3.2 (2020-11-19)

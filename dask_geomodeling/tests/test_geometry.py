@@ -1544,17 +1544,17 @@ class TestFieldOperations(unittest.TestCase):
         ).get_data(**self.request)
         assert_series_equal(result, expected, check_names=False)
 
-    def test_classify_astype_category_int(self):
-        expected = field_operations.Classify(
-            self.source["col_source"], bins=[0, 0.5, 1.0], labels=[1, 2, 3, 4]
+    def test_classify_int_labels_as_float(self):
+        actual = field_operations.Classify(
+            self.source["col_source"], bins=[0, 1.0, 5.0], labels=[2, 3]
         ).get_data(**self.request)
-        self.assertNotEqual(expected.dtypes.name, "category")
+        self.assertEqual(actual.dtype, np.float)
 
     def test_classify_not_categorical(self):
-        expected = field_operations.Classify(
+        actual = field_operations.Classify(
             self.source["col_source"], bins=[0, 0.5, 1.0], labels=["A", "B", "C", "D"]
         ).get_data(**self.request)
-        self.assertEqual(expected.dtypes.name, "object")
+        self.assertEqual(actual.dtype.name, "object")
 
     def test_classify_from_columns_left(self):
         source_with_bins = self.source.set("bin_1", 0, "bin_2", 1.2, "bin_3", 5.0)
@@ -1596,6 +1596,18 @@ class TestFieldOperations(unittest.TestCase):
             self.source["col_1"], bins=[1.2, 5.0], labels=["A", "B", "C"], right=False
         ).get_data(**self.request)
         assert_series_equal(result, expected, check_names=False)
+
+    def test_classify_from_columns_int_labels_as_float(self):
+        source_with_bins = self.source.set("bin_1", 1, "bin_2", 2)
+        series = field_operations.ClassifyFromColumns(
+            source_with_bins,
+            "col_1",
+            ["bin_1", "bin_2"],
+            labels=[200],
+            right=False,
+        )
+        result = series.get_data(**self.request)
+        self.assertEqual(result.dtype, np.float)
 
     def test_add_fields(self):
         series_block = self.source["col_1"] + self.source["col_2"]
