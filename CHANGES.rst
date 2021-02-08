@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.3.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Added a default setting "raster-limit-timesteps".
 
 
 2.3.3 (2020-12-11)
