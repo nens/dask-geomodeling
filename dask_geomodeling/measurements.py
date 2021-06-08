@@ -106,7 +106,7 @@ def percentile(data, qval, labels=None, index=None):
         found = unique_labels[idxs] == index
     else:
         # labels are an integer type, and there aren't too many.
-        idxs = np.asanyarray(index, np.int).copy()
+        idxs = np.asanyarray(index, int).copy()
         found = (idxs >= 0) & (idxs <= labels.max())
 
     idxs[~found] = labels.max() + 1
@@ -117,9 +117,9 @@ def percentile(data, qval, labels=None, index=None):
     labels = labels.ravel()[order]
 
     locs = np.arange(len(labels))
-    lo = np.zeros(labels.max() + 2, np.int)
+    lo = np.zeros(labels.max() + 2, int)
     lo[labels[::-1]] = locs[::-1]
-    hi = np.zeros(labels.max() + 2, np.int)
+    hi = np.zeros(labels.max() + 2, int)
     hi[labels] = locs
     lo = lo[idxs]
     hi = hi[idxs]

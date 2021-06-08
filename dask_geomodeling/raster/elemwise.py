@@ -130,7 +130,7 @@ class BaseElementwise(RasterBlock):
     @property
     def dtype(self):
         dtype = np.result_type(*self.args)
-        if np.issubdtype(dtype, np.integer) or dtype == np.bool:
+        if np.issubdtype(dtype, np.integer) or dtype == bool:
             # use at least int32
             return np.result_type(dtype, np.int32)
         elif np.issubdtype(dtype, np.floating):
@@ -142,7 +142,7 @@ class BaseElementwise(RasterBlock):
     @property
     def fillvalue(self):
         dtype = self.dtype
-        if dtype == np.bool:
+        if dtype == bool:
             return
         else:
             return get_dtype_max(dtype)
