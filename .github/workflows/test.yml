@@ -1,0 +1,59 @@
+name: Linux
+
+# Run on PR requests. And on master itself.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  TestLinux:
+    name: Python ${{ matrix.python }} ${{ matrix.display_name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-18.04
+            python: 3.5
+            pins: "pygdal==2.2.3.* numpy==1.12.* scipy==0.19.* dask[delayed]==0.18.* pandas==0.19.* geopandas==0.4.1"
+          - os: ubuntu-18.04
+            python: 3.6
+            pins: "pygdal==2.2.3.* numpy==1.14.* scipy==1.1.* dask[delayed]==0.20.* pandas==0.23.* geopandas==0.5.*"
+          - os: ubuntu-18.04
+            python: 3.7
+            pins: "pygdal==2.2.3.* numpy==1.16.* scipy==1.3.* dask[delayed]==1.* pandas==0.25.* geopandas==0.6.*"
+          - os: ubuntu-20.04
+            python: 3.8
+            pins: "pygdal==3.0.4.* numpy==1.18.* scipy==1.4.* dask[delayed]==2.9.* pandas==1.0.* geopandas==0.8.*"
+          - os: ubuntu-20.04
+            python: 3.9
+            pins: "pygdal==3.0.4.* numpy==1.20.* scipy==1.6.* dask[delayed]==2020.* pandas==1.1.* geopandas==0.9.*"
+          - os: ubuntu-20.04
+            python: 3.9
+            display_name: "latest"
+            pins: "pygdal==3.0.4.*"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install GDAL
+        run: |
+          sudo apt-get install --yes --no-install-recommends libgdal-dev
+
+      - name: Install python dependencies
+        shell: bash
+        run: |
+          pip install --disable-pip-version-check --upgrade pip setuptools wheel
+          pip install -e .[test,cityhash] ${{ matrix.pins }}
+          pip list
+
+      - name: Run tests
+        shell: bash
+        run: |
+          pytest dask_geomodeling
