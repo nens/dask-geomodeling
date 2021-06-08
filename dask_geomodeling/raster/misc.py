@@ -407,7 +407,7 @@ class Reclassify(BaseSingle):
 
     def __init__(self, store, data, select=False):
         dtype = store.dtype
-        if dtype != np.bool and not np.issubdtype(dtype, np.integer):
+        if dtype != bool and not np.issubdtype(dtype, np.integer):
             raise TypeError("The store must be of boolean or integer datatype")
 
         # validate "data"
@@ -418,7 +418,7 @@ class Reclassify(BaseSingle):
         except ValueError:
             raise ValueError("Please supply a list of [from, to] values")
         # "from" can have bool or int dtype, "to" can also be float
-        if source.dtype != np.bool and not np.issubdtype(source.dtype, np.integer):
+        if source.dtype != bool and not np.issubdtype(source.dtype, np.integer):
             raise TypeError(
                 "Cannot reclassify from value with type '{}'".format(source.dtype)
             )
@@ -565,7 +565,7 @@ class Rasterize(RasterBlock):
 
     @property
     def fillvalue(self):
-        return None if self.dtype == np.bool else utils.get_dtype_max(self.dtype)
+        return None if self.dtype == bool else utils.get_dtype_max(self.dtype)
 
     @property
     def period(self):
@@ -794,7 +794,7 @@ class RasterizeWKT(RasterBlock):
         if not geometry.intersects(bbox_geom):
             return {
                 "values": np.full(
-                    (1, request["height"], request["width"]), False, dtype=np.bool
+                    (1, request["height"], request["width"]), False, dtype=bool
                 ),
                 "no_data_value": None,
             }

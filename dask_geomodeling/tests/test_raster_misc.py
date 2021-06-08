@@ -283,7 +283,7 @@ def test_rasterize_wkt_attrs():
     assert view.projection == "EPSG:28992"
     assert_almost_equal(view.geometry.GetEnvelope(), [135004, 135004.5, 455995, 455996])
     assert view.geometry.GetSpatialReference().IsSame(get_sr("EPSG:28992"))
-    assert view.dtype == np.bool
+    assert view.dtype == bool
     assert view.fillvalue is None
     assert_almost_equal(
         view.extent, shapely_transform(geom, "EPSG:28992", "EPSG:4326").bounds

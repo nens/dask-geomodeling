@@ -1180,7 +1180,7 @@ class TestSetGetSeries(unittest.TestCase):
     def test_set_series_bool(self):
         source = geometry.SetSeriesBlock(self.source1, "constant", True)
         data = source.get_data(**self.request)["features"]["constant"]
-        self.assertTrue(data.dtype == np.bool)
+        self.assertTrue(data.dtype == bool)
         self.assertTrue(data.all())
 
     def test_set_series_string(self):
@@ -1548,7 +1548,7 @@ class TestFieldOperations(unittest.TestCase):
         actual = field_operations.Classify(
             self.source["col_source"], bins=[0, 1.0, 5.0], labels=[2, 3]
         ).get_data(**self.request)
-        self.assertEqual(actual.dtype, np.float)
+        self.assertEqual(actual.dtype, float)
 
     def test_classify_not_categorical(self):
         actual = field_operations.Classify(
@@ -1607,7 +1607,7 @@ class TestFieldOperations(unittest.TestCase):
             right=False,
         )
         result = series.get_data(**self.request)
-        self.assertEqual(result.dtype, np.float)
+        self.assertEqual(result.dtype, float)
 
     def test_add_fields(self):
         series_block = self.source["col_1"] + self.source["col_2"]

@@ -137,7 +137,7 @@ class MockRaster(RasterBlock):
             )
             if result.shape != (height, width):
                 zoom = (height / result.shape[0], width / result.shape[1])
-                mask = ndimage.zoom((result == fillvalue).astype(np.float), zoom) > 0.5
+                mask = ndimage.zoom((result == fillvalue).astype(float), zoom) > 0.5
                 result[result == fillvalue] = 0
                 result = ndimage.zoom(result, zoom)
                 result[mask] = fillvalue

@@ -653,7 +653,7 @@ class Dataset(object):
 
 def _finalize_rasterize_result(array, no_data_value):
     if array.dtype == np.uint8:  # cast to bool
-        array = array.astype(np.bool)
+        array = array.astype(bool)
         no_data_value = None
     return {"values": array, "no_data_value": no_data_value}
 
@@ -678,7 +678,7 @@ def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None)
     geoseries is None or empty, an array full of nodata will be returned.
     """
     # determine the dtype based on `values`
-    if values is None or values.dtype == np.bool:
+    if values is None or values.dtype == bool:
         dtype = np.uint8  # we cast to bool later as GDAL does not know bools
         no_data_value = 0  # False
         ogr_dtype = None
@@ -851,7 +851,7 @@ def dtype_for_statistic(dtype, statistic):
         return dtype
     elif statistic == "sum":
         # same logic as Add block
-        if np.issubdtype(dtype, np.integer) or dtype == np.bool:
+        if np.issubdtype(dtype, np.integer) or dtype == bool:
             # use at least int32
             return np.result_type(dtype, np.int32)
         elif np.issubdtype(dtype, np.floating):
@@ -947,7 +947,7 @@ def zoom_raster(data, no_data_value, height, width):
 
     # first zoom the nodata mask
     src_mask = data == no_data_value
-    dst_mask = ndimage.zoom(src_mask.astype(np.float), factor) > 0.5
+    dst_mask = ndimage.zoom(src_mask.astype(float), factor) > 0.5
 
     # set nodata to 0 and zoom the data
     data = data.copy()
