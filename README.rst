@@ -4,8 +4,8 @@ dask-geomodeling
 .. image:: https://readthedocs.org/projects/dask-geomodeling/badge/?version=latest
      :target: https://dask-geomodeling.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://travis-ci.com/nens/dask-geomodeling.svg?branch=master
-    :target: https://travis-ci.com/nens/dask-geomodeling
+.. image:: https://github.com/nens/dask-geomodeling/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/nens/dask-geomodeling/actions/workflows/test.yml
 
 .. image:: https://ci.appveyor.com/api/projects/status/aopxohgl23llkeq8?svg=true
     :target: https://ci.appveyor.com/project/reinout/dask-geomodeling
