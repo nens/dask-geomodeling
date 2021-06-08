@@ -28,6 +28,14 @@ def compare_crs(actual, expected):
         assert actual["init"] == expected["init"]
 
 
+def assert_frame_equal_ignore_index(actual, expected, sort_col):
+    assert_frame_equal(
+        actual.set_index(sort_col).sort_index(),
+        expected.set_index(sort_col).sort_index(),
+        check_like=True,
+    )
+
+
 class TestGeometryFileSink(unittest.TestCase):
     klass = sinks.GeometryFileSink
 
@@ -111,7 +119,7 @@ class TestGeometryFileSink(unittest.TestCase):
         expected = self.expected_to_geojson(self.expected)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, expected, check_like=True)
+        assert_frame_equal_ignore_index(actual, expected, "int")
         # compare projections
         compare_crs(actual.crs, expected.crs)
 
@@ -127,7 +135,7 @@ class TestGeometryFileSink(unittest.TestCase):
         actual = gpd.read_file(os.path.join(self.path, filename))
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, self.expected, check_like=True)
+        assert_frame_equal_ignore_index(actual, self.expected, "int")
         # compare projections
         compare_crs(actual.crs, self.expected.crs)
 
@@ -139,7 +147,7 @@ class TestGeometryFileSink(unittest.TestCase):
         actual = gpd.read_file(os.path.join(self.path, filename))
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, self.expected, check_like=True)
+        assert_frame_equal_ignore_index(actual, self.expected, "int")
         # compare projections
         compare_crs(actual.crs, self.expected.crs)
 
@@ -158,7 +166,7 @@ class TestGeometryFileSink(unittest.TestCase):
         del actual["fid"]
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, self.expected, check_like=True)
+        assert_frame_equal_ignore_index(actual, self.expected, "int")
 
     def test_fields_non_available(self):
         with pytest.raises(ValueError):
@@ -189,7 +197,7 @@ class TestGeometryFileSink(unittest.TestCase):
         expected = self.expected_to_geojson(self.expected_combined)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, expected, check_like=True)
+        assert_frame_equal_ignore_index(actual, expected, "int")
         # compare projections
         compare_crs(actual.crs, expected.crs)
 
@@ -239,13 +247,13 @@ class TestGeometryFileSink(unittest.TestCase):
         expected = self.expected_to_geojson(self.expected)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, expected, check_like=True)
+        assert_frame_equal_ignore_index(actual, expected, "int")
 
     def test_to_file_shapefile(self):
         self.source.to_file(self.path + ".shp", **self.request)
         actual = gpd.read_file(self.path + ".shp")
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal(actual, self.expected, check_like=True)
+        assert_frame_equal_ignore_index(actual, self.expected, "int")
 
     def test_to_file_with_tiling_geojson(self):
         self.source.to_file(self.path + ".geojson", tile_size=10, **self.request_tiled)
