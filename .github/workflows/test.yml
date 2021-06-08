@@ -10,6 +10,7 @@ on:
 jobs:
   TestLinux:
     name: Python ${{ matrix.python }} ${{ matrix.display_name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
