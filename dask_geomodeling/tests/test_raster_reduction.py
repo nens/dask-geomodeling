@@ -3,6 +3,7 @@ from numpy.testing import assert_array_equal
 import pytest
 
 from dask_geomodeling.raster.reduction import reduce_rasters
+from dask_geomodeling import raster
 
 
 @pytest.fixture

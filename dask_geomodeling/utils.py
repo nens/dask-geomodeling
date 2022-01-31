@@ -964,3 +964,7 @@ def dt_to_ms(dt):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=pytz.UTC)
     return int(dt.timestamp() * 1000)
+
+
+def filter_none(lst):
+    return [x for x in lst if x is not None]

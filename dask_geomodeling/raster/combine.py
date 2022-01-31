@@ -5,15 +5,12 @@ import itertools
 from datetime import timedelta as Timedelta
 import numpy as np
 
-from dask_geomodeling.utils import get_dtype_max, get_index, GeoTransform
+from dask_geomodeling.utils import filter_none, get_dtype_max, get_index
+from dask_geomodeling.utils import GeoTransform
 
 from .base import RasterBlock
 
 __all__ = ["Group"]
-
-
-def filter_none(lst):
-    return [x for x in lst if x is not None]
 
 
 class BaseCombine(RasterBlock):

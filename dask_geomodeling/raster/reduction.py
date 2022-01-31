@@ -2,7 +2,8 @@
 Module containing reduction raster blocks.
 """
 import numpy as np
-from dask_geomodeling.utils import get_index, parse_percentile_statistic
+from dask_geomodeling.utils import filter_none, get_index
+from dask_geomodeling.utils import parse_percentile_statistic
 from .base import RasterBlock
 from .elemwise import BaseElementwise
 from functools import partial
@@ -170,8 +171,6 @@ def wrap_reduction_function(statistic):
             return
 
         # see BaseElementWise.get_sources_and_requests
-        no_data_value = process_kwargs["fillvalue"]
-        dtype = process_kwargs["dtype"]
         return reduce_rasters(
             stack,
             statistic,
@@ -190,7 +189,7 @@ class Max(BaseReduction):
 
     Returns:
       RasterBlock with the maximum values
-	"""
+    """
     process = staticmethod(wrap_reduction_function("max"))
 
     @property
