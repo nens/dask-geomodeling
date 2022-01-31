@@ -6,6 +6,8 @@ Changelog of dask-geomodeling
 
 - Added raster.Max block to select the maximum value from overlapping sources.
 
+- Made Elemwise blocks more strict regarding source periods.
+
 
 2.3.4 (2021-02-08)
 ------------------
