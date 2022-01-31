@@ -120,9 +120,7 @@ class GeometryFileSource(GeometryBlock):
             f = f[mask]
 
         # convert the data to the requested crs
-        utils.geodataframe_transform(
-            f, utils.crs_to_srs(f.crs), request["projection"]
-        )
+        utils.geodataframe_transform(f, utils.crs_to_srs(f.crs), request["projection"])
 
         # compute the bounds of each geometry and filter on min_size
         min_size = request.get("min_size")
@@ -134,7 +132,7 @@ class GeometryFileSource(GeometryBlock):
 
         # only return geometries that truly intersect the requested geometry
         if request["mode"] == "centroid":
-            with warnings.catch_warnings():    # geopandas warns if in WGS84
+            with warnings.catch_warnings():  # geopandas warns if in WGS84
                 warnings.simplefilter("ignore")
                 f = f[f["geometry"].centroid.within(filt_geom.iloc[0])]
         else:
@@ -217,8 +215,7 @@ class GeometryWKTSource(GeometryBlock):
             )
 
         f = gpd.GeoDataFrame(
-            geometry=[geometry],
-            crs=utils.get_crs(request["projection"]),
+            geometry=[geometry], crs=utils.get_crs(request["projection"])
         )
 
         # compute the bounds of each geometry and filter on min_size
@@ -228,19 +225,19 @@ class GeometryWKTSource(GeometryBlock):
             if (maxy - miny) < min_size or (maxx - minx) < min_size:
                 return {
                     "projection": request["projection"],
-                    "features": gpd.GeoDataFrame([])
+                    "features": gpd.GeoDataFrame([]),
                 }
 
-        if mode == 'intersects':
+        if mode == "intersects":
             if not geometry.intersects(request["geometry"]):
                 return {
                     "projection": request["projection"],
-                    "features": gpd.GeoDataFrame([])
+                    "features": gpd.GeoDataFrame([]),
                 }
-            return {"features": f, "projection": request['projection']}
+            return {"features": f, "projection": request["projection"]}
 
-        elif mode == 'centroid':
-            with warnings.catch_warnings():    # geopandas warns if in WGS84
+        elif mode == "centroid":
+            with warnings.catch_warnings():  # geopandas warns if in WGS84
                 warnings.simplefilter("ignore")
                 centroid = geometry.centroid
             if not centroid.intersects(request["geometry"]):
@@ -248,12 +245,12 @@ class GeometryWKTSource(GeometryBlock):
                     "projection": request["projection"],
                     "features": gpd.GeoDataFrame([]),
                 }
-            return {"features": f, "projection": request['projection']}
+            return {"features": f, "projection": request["projection"]}
 
-        elif mode == 'extent':
+        elif mode == "extent":
             if not geometry.intersects(request["geometry"]):
                 return {"projection": request["projection"], "extent": None}
             return {
                 "extent": tuple(geometry.bounds),
-                "projection": request['projection']
+                "projection": request["projection"],
             }

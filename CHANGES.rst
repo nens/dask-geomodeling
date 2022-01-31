@@ -1,7 +1,62 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.2.11 (unreleased)
+2.3.5 (unreleased)
+------------------
+
+- Nothing changed yet.
+
+
+2.3.4 (2021-02-08)
+------------------
+
+- Added a default setting "raster-limit-timesteps".
+
+
+2.3.3 (2020-12-11)
+------------------
+
+- Fix field_operations.Classify if used with int-typed labels. A NaN value in
+  the result resulted in a Categorical output dtype. To fix this, Classify
+  now returns floats also when input labels are integers. (#82)
+
+
+2.3.2 (2020-11-19)
+------------------
+
+- Make Dilate arguments JSON serializable. (#81)
+
+
+2.3.1 (2020-11-10)
+------------------
+
+- Never return Categorical dtypes in the field_operations.Classify and
+  ClassifyFromColumns. This leads to pandas incompatibilities with later
+  operations (round, subtract, where, mask).
+
+- Never return Categorical dtypes from ParseTextColumn. (#79)
+
+- field_operations.Where and field_operations.Mask now also allow non-boolean
+  conditionals. This was already the case for Where on pandas == 0.19.*. (#78)
+
+
+2.3.0 (2020-10-09)
+------------------
+
+- Added Exp, Log and Log10 RasterBlocks.
+
+- Added "std" and "var" statistics to TemporalAggregate.
+
+
+2.2.12 (2020-09-29)
+-------------------
+
+- Fixed point requests for RasterizeWKT.
+
+- Allow empty coordinate list in Place.
+
+
+2.2.11 (2020-09-01)
 -------------------
 
 - Make transformation exceptions more comprehensible.
@@ -586,4 +641,3 @@ Changelog of dask-geomodeling
 - Fixed issue with ciso8601 2.*
 
 - Bumped raster-store dependency to 4.0.0.
-

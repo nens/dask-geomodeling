@@ -4,7 +4,6 @@ Module containing raster blocks that aggregate rasters.
 from math import ceil, floor, log, sqrt
 from collections import defaultdict
 from functools import partial
-import warnings
 
 from scipy import ndimage
 import numpy as np
@@ -148,7 +147,7 @@ class AggregateRaster(GeometryBlock):
       auto_pixel_size (boolean): Determines whether the pixel size is adjusted
         automatically when ``"max_pixels"`` is exceeded. Default False.
 
-    Returns: 
+    Returns:
       GeometryBlock with aggregation results in an added column
 
     The global raster-limit setting can be adapted as follows:
@@ -361,7 +360,7 @@ class AggregateRaster(GeometryBlock):
         agg_srs = process_kwargs["agg_srs"]
 
         agg_geometries = utils.geoseries_transform(
-            features["geometry"], req_srs, agg_srs,
+            features["geometry"], req_srs, agg_srs
         )
 
         statistic = process_kwargs["statistic"]
@@ -381,7 +380,7 @@ class AggregateRaster(GeometryBlock):
         threshold_name = process_kwargs.get("threshold_name")
         if threshold_name:
             # get the threshold, appending NaN for unlabeled pixels
-            threshold_values = np.empty((len(features) + 1, ), dtype="f4")
+            threshold_values = np.empty((len(features) + 1,), dtype="f4")
             threshold_values[:-1] = features[threshold_name].values
             threshold_values[-1] = np.nan
         else:
@@ -437,9 +436,7 @@ class AggregateRaster(GeometryBlock):
                 # select features that actually have data
                 # (min, max, median, and percentile cannot handle it otherwise)
                 active_labels = labels[active]
-                select_and_active = list(
-                    set(np.unique(active_labels)) & set(select)
-                )
+                select_and_active = list(set(np.unique(active_labels)) & set(select))
 
                 if not select_and_active:
                     continue
@@ -486,6 +483,7 @@ class AggregateRasterAboveThreshold(AggregateRaster):
     Returns:
       GeometryBlock with aggregation results in an added column
     """
+
     def __init__(
         self,
         source,

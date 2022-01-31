@@ -81,9 +81,7 @@ def test_place_attrs(source, center):
 
 def test_place_invalid_statistic(source, center):
     with pytest.raises(ValueError):
-        raster.Place(
-            source, "EPSG:28992", center, [(50, 50)], statistic="nonexisting"
-        )
+        raster.Place(source, "EPSG:28992", center, [(50, 50)], statistic="nonexisting")
 
 
 def test_place_attrs_reproject(source, center_epsg3857):
@@ -110,6 +108,12 @@ def test_place_empty(empty, center, vals_request):
     assert place.geometry is None
     assert place.extent is None
     assert place.get_data(**vals_request) is None
+
+
+def test_place_no_coords(source, center, vals_request):
+    place = raster.Place(source, "EPSG:28992", center, [])
+    values = place.get_data(**vals_request)["values"]
+    assert (values[:, :10, :10] == source.fillvalue).all()
 
 
 def test_place_exact(source, center, vals_request):
@@ -207,17 +211,21 @@ def test_place_meta_request(source, center):
     assert source.get_data(mode="meta") == place.get_data(mode="meta")
 
 
-@pytest.mark.parametrize("point,expected", [
-    ((5, 15), 7),  # zone 1
-    ((15, 15), 255),  # zone 2
-    ((5, 5), 255),  # zone 3
-    ((15, 5), 7),  # zone 4
-    ((10, 15), 255),  # line 1-2
-    ((5, 10), 255),  # line 1-3
-    ((15, 10), 7),  # line 2-4
-    ((10, 5), 7),  # line 3-4
-    ((10, 10), 7),  # center
-])
+@pytest.mark.parametrize(
+    "point,expected",
+    [
+        ((5, 15), 7),  # zone 1
+        ((15, 15), 255),  # zone 2
+        ((5, 5), 255),  # zone 3
+        ((15, 5), 7),  # zone 4
+        ((10, 15), 255),  # line 1-2
+        ((5, 10), 255),  # line 1-3
+        ((15, 10), 7),  # line 2-4
+        ((10, 5), 7),  # line 3-4
+        ((10, 10), 7),  # center
+        ((1000, 1000), 255),  # outside
+    ],
+)
 def test_place_point_request(source, center, point, expected):
     # For point requests, edges are important. Let's do a drawing:
     # 20  _______
@@ -233,15 +241,9 @@ def test_place_point_request(source, center, point, expected):
     # - line between 2-4 and 3-4 are filled; line 1-2 and 1-3 are empty
     # - center point at (10, 10) is filled
     coordinates = [(60, -40), (-40, 60)]
-    place = raster.Place(
-        source, "EPSG:28992", anchor=center, coordinates=coordinates
-    )
+    place = raster.Place(source, "EPSG:28992", anchor=center, coordinates=coordinates)
     point_request = dict(
-        mode="vals",
-        bbox=point * 2,
-        projection="EPSG:28992",
-        width=1,
-        height=1,
+        mode="vals", bbox=point * 2, projection="EPSG:28992", width=1, height=1
     )
     values = place.get_data(**point_request)["values"]
     assert values.shape == (1, 1, 1)

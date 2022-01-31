@@ -173,6 +173,7 @@ class TestUtils(unittest.TestCase):
     def test_get_crs(self):
         if utils.GEOPANDAS_GTE_0_7_0:
             from pyproj import CRS
+
             expected_type = CRS
         else:
             expected_type = dict
@@ -298,7 +299,7 @@ class TestRasterize(unittest.TestCase):
     def test_rasterize(self):
         raster = utils.rasterize_geoseries(self.geoseries, **self.box)
         values = raster["values"]
-        self.assertEqual(np.bool, values.dtype)
+        self.assertEqual(bool, values.dtype)
         assert_array_equal(values[2:4, 2:4], True)
         assert_array_equal(values[6:8, 6:8], True)
         self.assertEqual(2 * 2 * 2, values.sum())
@@ -379,7 +380,7 @@ class TestRasterize(unittest.TestCase):
             self.geoseries, values=pd.Series([True, False]), **self.box
         )
         values = raster["values"]
-        self.assertEqual(np.bool, values.dtype)
+        self.assertEqual(bool, values.dtype)
         assert_array_equal(values[2:4, 2:4], True)
         assert_array_equal(values[6:8, 6:8], False)
         self.assertEqual(2 * 2, values.sum())
@@ -389,7 +390,7 @@ class TestRasterize(unittest.TestCase):
             self.geoseries, values=pd.Series([False, False]), **self.box
         )
         values = raster["values"]
-        self.assertEqual(np.bool, values.dtype)
+        self.assertEqual(bool, values.dtype)
         self.assertEqual(0, values.sum())
 
     def test_rasterize_categorical_int(self):

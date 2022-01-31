@@ -6,6 +6,7 @@ import numpy as np
 from geopandas import GeoSeries
 
 from shapely.geometry import box
+from shapely.geometry import Point
 from shapely.errors import WKTReadingError
 from shapely.wkt import loads as load_wkt
 
@@ -31,7 +32,7 @@ __all__ = [
 class Clip(BaseSingle):
     """
     Clip one raster to the extent of another raster.
-    
+
     Takes two raster inputs, one raster ('store') whose values are returned in
     the output and one raster ('source') that is used as the extent. Cells of
     the 'store' raster are replaced with 'no data' if there is no data in the
@@ -214,11 +215,11 @@ class MaskBelow(BaseSingle):
 
     Raster cells with values greater than or equal to the supplied value are
     returned unchanged.
-    
+
     Args:
       store (RasterBlock): The raster whose values are to be masked.
       value (number): The constant value below which values are masked.
-    
+
     Returns:
       RasterBlock with cells below the input value converted to 'no data'.
     """
@@ -266,7 +267,7 @@ class Step(BaseSingle):
 
     Returns:
       RasterBlock containing three values; left, right and at.
-    
+
     """
 
     def __init__(self, store, left=0, right=1, value=0, at=None):
@@ -331,7 +332,7 @@ class Classify(BaseSingle):
       bins (list): An increasing list of bin edges
       right (boolean): Whether the intervals include the right or the left bin
         edge, defaults to False.
-    
+
     Returns:
       RasterBlock with classified values
 
@@ -399,14 +400,14 @@ class Reclassify(BaseSingle):
         int or float datatype
       select (boolean): Whether to set all non-reclassified cells to 'no data',
         defaults to False.
-    
+
     Returns:
       RasterBlock with reclassified values
     """
 
     def __init__(self, store, data, select=False):
         dtype = store.dtype
-        if dtype != np.bool and not np.issubdtype(dtype, np.integer):
+        if dtype != bool and not np.issubdtype(dtype, np.integer):
             raise TypeError("The store must be of boolean or integer datatype")
 
         # validate "data"
@@ -417,7 +418,7 @@ class Reclassify(BaseSingle):
         except ValueError:
             raise ValueError("Please supply a list of [from, to] values")
         # "from" can have bool or int dtype, "to" can also be float
-        if source.dtype != np.bool and not np.issubdtype(source.dtype, np.integer):
+        if source.dtype != bool and not np.issubdtype(source.dtype, np.integer):
             raise TypeError(
                 "Cannot reclassify from value with type '{}'".format(source.dtype)
             )
@@ -511,7 +512,7 @@ class Rasterize(RasterBlock):
 
     Note that to rasterize floating point values, it is necessary to pass
     ``dtype="float"``.
-    
+
     Args:
       source (GeometryBlock): The geometry source to be rasterized
       column_name (string): The name of the column whose values will be
@@ -519,8 +520,8 @@ class Rasterize(RasterBlock):
         raster will be generated indicating where there are geometries.
       dtype (string): A numpy datatype specification to return the array.
         Defaults to 'int32' if column_name is provided, or to 'bool' otherwise.
-    
-    Returns: 
+
+    Returns:
       RasterBlock with values from 'column_name' or a boolean raster.
 
     See also:
@@ -564,7 +565,7 @@ class Rasterize(RasterBlock):
 
     @property
     def fillvalue(self):
-        return None if self.dtype == np.bool else utils.get_dtype_max(self.dtype)
+        return None if self.dtype == bool else utils.get_dtype_max(self.dtype)
 
     @property
     def period(self):
@@ -782,14 +783,22 @@ class RasterizeWKT(RasterBlock):
             geometry = utils.shapely_transform(
                 geometry, data["projection"], request["projection"]
             )
+
         # take a shortcut when the geometry does not intersect the bbox
-        if not geometry.intersects(box(*request["bbox"])):
+        x1, y1, x2, y2 = request["bbox"]
+        if (x1 == x2) and (y1 == y2):
+            # Don't do box(x1, y1, x2, y2), this gives an invalid geometry.
+            bbox_geom = Point(x1, y1)
+        else:
+            bbox_geom = box(x1, y1, x2, y2)
+        if not geometry.intersects(bbox_geom):
             return {
                 "values": np.full(
-                    (1, request["height"], request["width"]), False, dtype=np.bool
+                    (1, request["height"], request["width"]), False, dtype=bool
                 ),
                 "no_data_value": None,
             }
+
         return utils.rasterize_geoseries(
             geoseries=GeoSeries([geometry]) if not geometry.is_empty else None,
             bbox=request["bbox"],

@@ -132,7 +132,7 @@ class Dilate(BaseSingle):
 
     def __init__(self, store, values):
         values = np.asarray(values, dtype=store.dtype)
-        super(Dilate, self).__init__(store, values)
+        super().__init__(store, values.tolist())
 
     @property
     def values(self):
@@ -151,7 +151,7 @@ class Dilate(BaseSingle):
             return data
         original = data["values"]
         dilated = original.copy()
-        for value in values:
+        for value in np.asarray(values, dtype=original.dtype):
             dilated[ndimage.binary_dilation(original == value)] = value
         dilated = dilated[:, 1:-1, 1:-1]
         return {"values": dilated, "no_data_value": data["no_data_value"]}
@@ -315,7 +315,6 @@ class HillShade(BaseSingle):
 
     Args:
       store (RasterBlock): Raster to which the hillshade algorithm is applied.
-      size (number): Size of the effect in projected units.
       altitude (number): Light source altitude in degrees, defaults to 45.
       azimuth (number): Light source azimuth in degrees, defaults to 315.
       fill (number): Fill value to be used for 'no data' values.
@@ -480,16 +479,18 @@ class Place(BaseSingle):
         for x in anchor:
             if not isinstance(x, (int, float)):
                 raise TypeError("'{}' object is not allowed".format(type(x)))
-        coordinates = np.asarray(coordinates, dtype=float)
-        if coordinates.ndim != 2 or coordinates.shape[1] != 2:
-            raise ValueError(
-                "Expected a list of lists of 2 numbers in the 'coordinates' "
-                "parameter"
-            )
+        if coordinates is None or len(coordinates) == 0:
+            coordinates = []
+        else:
+            coordinates = np.asarray(coordinates, dtype=float)
+            if coordinates.ndim != 2 or coordinates.shape[1] != 2:
+                raise ValueError(
+                    "Expected a list of lists of 2 numbers in the "
+                    "'coordinates' parameter"
+                )
+            coordinates = coordinates.tolist()
         check_statistic(statistic)
-        super().__init__(
-            store, place_projection, anchor, coordinates.tolist(), statistic
-        )
+        super().__init__(store, place_projection, anchor, coordinates, statistic)
 
     @property
     def place_projection(self):
@@ -737,7 +738,7 @@ class Place(BaseSingle):
         if len(stack) == 0:
             return {
                 "values": np.full(out_shape, out_no_data_value, out_dtype),
-                "no_data_value": out_no_data_value
+                "no_data_value": out_no_data_value,
             }
         else:
             return reduce_rasters(stack, process_kwargs["statistic"])

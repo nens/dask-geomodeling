@@ -13,20 +13,20 @@ __all__ = ["Buffer", "Simplify"]
 class Buffer(BaseSingle):
     """
     Buffer ('expand') geometries with a given value.
-    
-    A GeometryBlock and a buffer distance are provided. Each feature in the 
-    GeometryBlock is buffered with the distance provided, resulting in updated 
-    geometries. 
+
+    A GeometryBlock and a buffer distance are provided. Each feature in the
+    GeometryBlock is buffered with the distance provided, resulting in updated
+    geometries.
 
     Args:
-      source (GeometryBlock): The source GeometryBlock whose geometry will be 
+      source (GeometryBlock): The source GeometryBlock whose geometry will be
         updated.
-      distance (float): The distance used to buffer all features. The distance 
+      distance (float): The distance used to buffer all features. The distance
         is measured in the unit of the given projection (e.g. m, °).
       projection (str): The projection used in the operation provided in the
         format: ``"EPSG:28992"``.
-      resolution (integer, optional): The resolution of the buffer provided as 
-        the number of points used to represent a quarter of a circle. The 
+      resolution (integer, optional): The resolution of the buffer provided as
+        the number of points used to represent a quarter of a circle. The
         default value is ``16``.
 
     Returns:
@@ -94,15 +94,15 @@ class Buffer(BaseSingle):
 class Simplify(BaseSingle):
     """
     Simplify geometries, mainly to make them computationally more efficient.
-    
-    Provide a GeometryBlock and a tolerance value to simplify the geometries. 
+
+    Provide a GeometryBlock and a tolerance value to simplify the geometries.
     As a result all features in the GeometryBlock are simplified.
 
     Args:
       source (GeometryBlock): Source of the geometries to be simplified.
-      tolerance (float): The tolerance used in the simplification. If no 
+      tolerance (float): The tolerance used in the simplification. If no
         tolerance is given the ``"min_size"`` request parameter is used.
-      preserve_topology (boolean, optional): Determines whether the topology 
+      preserve_topology (boolean, optional): Determines whether the topology
         should be preserved in the operation. Defaults to ``True``.
 
     Returns:

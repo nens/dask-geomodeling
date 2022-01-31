@@ -400,47 +400,44 @@ class TestGeometryWktSource(unittest.TestCase):
     def setUp(self):
         self.projection = "EPSG:28992"
         self.geometry = shapely_transform(
-            box(135000.5, 455998, 135001.5, 455999.5),
-            "EPSG:28992", self.projection
+            box(135000.5, 455998, 135001.5, 455999.5), "EPSG:28992", self.projection
         )
         self.request = dict(
-            mode='intersects',
+            mode="intersects",
             geometry=box(135000.5, 455998, 135001.5, 455999.5),
             projection=self.projection,
         )
 
     def test_geometry_wkt_source_vals_wrong_mode(self):
-        self.request['mode'] = 'jose'
+        self.request["mode"] = "jose"
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         with self.assertRaises(ValueError) as ctx:
             view.get_data(**self.request)
         self.assertEqual("Unknown mode 'jose'", str(ctx.exception))
 
     def test_geometry_wkt_source_vals(self):
-        self.request['mode'] = 'intersects'
+        self.request["mode"] = "intersects"
         assert self.geometry.intersects(self.request["geometry"])
         assert self.geometry.centroid.intersects(self.request["geometry"])
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
-        assert actual["features"]['geometry'][0].wkt == self.geometry.wkt
+        assert actual["features"]["geometry"][0].wkt == self.geometry.wkt
 
     def test_geometry_wkt_source_vals_intersects_not_centroid(self):
-        self.request['mode'] = 'intersects'
+        self.request["mode"] = "intersects"
         self.geometry = shapely_transform(
-            box(135001, 455998, 135002.5, 455999.5),
-            "EPSG:28992", self.projection
+            box(135001, 455998, 135002.5, 455999.5), "EPSG:28992", self.projection
         )
         assert self.geometry.intersects(self.request["geometry"])
         assert not self.geometry.centroid.intersects(self.request["geometry"])
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
-        assert actual["features"]['geometry'][0].wkt == self.geometry.wkt
+        assert actual["features"]["geometry"][0].wkt == self.geometry.wkt
 
     def test_geometry_wkt_source_vals_empty(self):
-        self.request['mode'] = 'intersects'
+        self.request["mode"] = "intersects"
         self.geometry = shapely_transform(
-            box(135100.5, 455998, 135101.5, 455999.5),
-            "EPSG:28992", self.projection
+            box(135100.5, 455998, 135101.5, 455999.5), "EPSG:28992", self.projection
         )
         assert not self.geometry.intersects(self.request["geometry"])
         assert not self.geometry.centroid.intersects(self.request["geometry"])
@@ -449,18 +446,17 @@ class TestGeometryWktSource(unittest.TestCase):
         assert actual["features"].empty
 
     def test_geometry_wkt_source_vals_mode_centroid(self):
-        self.request['mode'] = 'centroid'
+        self.request["mode"] = "centroid"
         assert self.geometry.intersects(self.request["geometry"])
         assert self.geometry.centroid.intersects(self.request["geometry"])
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
-        assert actual["features"]['geometry'][0].wkt == self.geometry.wkt
+        assert actual["features"]["geometry"][0].wkt == self.geometry.wkt
 
     def test_geometry_wkt_source_vals_intersects_centroid_empty(self):
-        self.request['mode'] = 'centroid'
+        self.request["mode"] = "centroid"
         self.geometry = shapely_transform(
-            box(135001, 455998, 135002.5, 455999.5),
-            "EPSG:28992", self.projection
+            box(135001, 455998, 135002.5, 455999.5), "EPSG:28992", self.projection
         )
         assert self.geometry.intersects(self.request["geometry"])
         assert not self.geometry.centroid.intersects(self.request["geometry"])
@@ -469,10 +465,9 @@ class TestGeometryWktSource(unittest.TestCase):
         assert actual["features"].empty
 
     def test_geometry_wkt_source_vals_centroid_empty(self):
-        self.request['mode'] = 'centroid'
+        self.request["mode"] = "centroid"
         self.geometry = shapely_transform(
-            box(135100.5, 455998, 135101.5, 455999.5),
-            "EPSG:28992", self.projection
+            box(135100.5, 455998, 135101.5, 455999.5), "EPSG:28992", self.projection
         )
         assert not self.geometry.intersects(self.request["geometry"])
         assert not self.geometry.centroid.intersects(self.request["geometry"])
@@ -481,27 +476,26 @@ class TestGeometryWktSource(unittest.TestCase):
         assert actual["features"].empty
 
     def test_geometry_wkt_source_vals_mode_extent(self):
-        self.request['mode'] = 'extent'
+        self.request["mode"] = "extent"
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
         assert actual == {
-            'extent': (135000.5, 455998.0, 135001.5, 455999.5),
-            'projection': 'EPSG:28992'
+            "extent": (135000.5, 455998.0, 135001.5, 455999.5),
+            "projection": "EPSG:28992",
         }
 
     def test_geometry_wkt_source_vals_extent_empty(self):
-        self.request['mode'] = 'extent'
+        self.request["mode"] = "extent"
         self.geometry = shapely_transform(
-            box(135100.5, 455998, 135101.5, 455999.5),
-            "EPSG:28992", self.projection
+            box(135100.5, 455998, 135101.5, 455999.5), "EPSG:28992", self.projection
         )
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
-        assert actual == {'projection': 'EPSG:28992', 'extent': None}
+        assert actual == {"projection": "EPSG:28992", "extent": None}
 
     def test_geometry_wkt_source_vals_min_size(self):
-        self.request['mode'] = 'intersects'
-        self.request['min_size'] = 2.0
+        self.request["mode"] = "intersects"
+        self.request["min_size"] = 2.0
         view = geometry.GeometryWKTSource(self.geometry.wkt, self.projection)
         actual = view.get_data(**self.request)
         assert actual["features"].empty
@@ -1034,9 +1028,7 @@ class TestAggregateRaster(unittest.TestCase):
                 ],
                 properties=[{"id": 1}, {"id": 2}],
             )
-            view = geometry.AggregateRaster(
-                source=source, raster=raster, statistic=agg
-            )
+            view = geometry.AggregateRaster(source=source, raster=raster, statistic=agg)
             result = view.get_data(**self.request)
             assert np.isnan(result["features"]["agg"].values[1])
 
@@ -1110,17 +1102,12 @@ class TestSetGetSeries(unittest.TestCase):
         self.N = 10
         properties = [{"id": i, "col_1": i * 2} for i in range(self.N)]
         polygons = [((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * self.N
-        self.source1 = MockGeometry(
-            polygons=polygons,
-            properties=properties,
-        )
+        self.source1 = MockGeometry(polygons=polygons, properties=properties)
         properties = [
-            {"id": i, "col_2": i * 3, "col_3": i * 4, "col_4": i if i % 2 else np.nan} for i in range(self.N)
+            {"id": i, "col_2": i * 3, "col_3": i * 4, "col_4": i if i % 2 else np.nan}
+            for i in range(self.N)
         ]
-        self.source2 = MockGeometry(
-            polygons=polygons,
-            properties=properties,
-        )
+        self.source2 = MockGeometry(polygons=polygons, properties=properties)
         self.request = dict(
             mode="intersects", projection="EPSG:3857", geometry=box(0, 0, 10, 10)
         )
@@ -1193,7 +1180,7 @@ class TestSetGetSeries(unittest.TestCase):
     def test_set_series_bool(self):
         source = geometry.SetSeriesBlock(self.source1, "constant", True)
         data = source.get_data(**self.request)["features"]["constant"]
-        self.assertTrue(data.dtype == np.bool)
+        self.assertTrue(data.dtype == bool)
         self.assertTrue(data.all())
 
     def test_set_series_string(self):
@@ -1230,7 +1217,17 @@ class TestWhere(unittest.TestCase):
         view = self.source.set("result", series)
 
         result = view.get_data(**self.request)
-        expected = self.prop_df["col_1"].where(self.prop_df["bool_filter"], "Hola!")
+        expected = pd.Series(["Hola!", "Hola!", 1.2, 5, float("inf"), "Hola!"])
+        self.assertTrue(result["features"]["result"].equals(expected))
+
+    def test_where_with_float_filter(self):
+        series = field_operations.Where(
+            self.source["col_1"], cond=self.source["col_1"], other="Hola!"
+        )
+        view = self.source.set("result", series)
+
+        result = view.get_data(**self.request)
+        expected = pd.Series([-float("inf"), -2, 1.2, 5, float("inf"), "Hola!"])
         self.assertTrue(result["features"]["result"].equals(expected))
 
     def test_where_with_other_column(self):
@@ -1245,6 +1242,7 @@ class TestWhere(unittest.TestCase):
         expected = self.prop_df["col_1"].where(
             self.prop_df["bool_filter"], self.prop_df["extra"]
         )
+        expected = pd.Series([-float("inf"), -20, 1.2, 5, float("inf"), float("nan")])
         self.assertTrue(result["features"]["result"].equals(expected))
 
     def test_mask(self):
@@ -1254,7 +1252,17 @@ class TestWhere(unittest.TestCase):
         view = self.source.set("result", series)
 
         result = view.get_data(**self.request)
-        expected = self.prop_df["col_1"].mask(self.prop_df["bool_filter"], "Hola!")
+        expected = pd.Series([-float("inf"), -2, "Hola!", "Hola!", "Hola!", float("nan")])
+        self.assertTrue(result["features"]["result"].equals(expected))
+
+    def test_mask_with_float_filter(self):
+        series = field_operations.Mask(
+            self.source["col_1"], cond=self.source["col_1"], other="Hola!"
+        )
+        view = self.source.set("result", series)
+
+        result = view.get_data(**self.request)
+        expected = pd.Series(["Hola!", "Hola!", "Hola!", "Hola!", "Hola!", float("nan")])
         self.assertTrue(result["features"]["result"].equals(expected))
 
     def test_mask_with_other_column(self):
@@ -1266,9 +1274,7 @@ class TestWhere(unittest.TestCase):
         view = self.source.set("result", series)
 
         result = view.get_data(**self.request)
-        expected = self.prop_df["col_1"].mask(
-            self.prop_df["bool_filter"], self.prop_df["extra"]
-        )
+        expected = pd.Series([-float("inf"), -2, 12.0, 50, float("inf"), float("nan")])
         self.assertTrue(result["features"]["result"].equals(expected))
 
 
@@ -1538,17 +1544,17 @@ class TestFieldOperations(unittest.TestCase):
         ).get_data(**self.request)
         assert_series_equal(result, expected, check_names=False)
 
-    def test_classify_astype_category_int(self):
-        expected = field_operations.Classify(
-            self.source["col_source"], bins=[0, 0.5, 1.0], labels=[1, 2, 3, 4]
+    def test_classify_int_labels_as_float(self):
+        actual = field_operations.Classify(
+            self.source["col_source"], bins=[0, 1.0, 5.0], labels=[2, 3]
         ).get_data(**self.request)
-        self.assertNotEqual(expected.dtypes.name, "category")
+        self.assertEqual(actual.dtype, float)
 
-    def test_classify_astype_category_object(self):
-        expected = field_operations.Classify(
+    def test_classify_not_categorical(self):
+        actual = field_operations.Classify(
             self.source["col_source"], bins=[0, 0.5, 1.0], labels=["A", "B", "C", "D"]
         ).get_data(**self.request)
-        self.assertEqual(expected.dtypes.name, "category")
+        self.assertEqual(actual.dtype.name, "object")
 
     def test_classify_from_columns_left(self):
         source_with_bins = self.source.set("bin_1", 0, "bin_2", 1.2, "bin_3", 5.0)
@@ -1590,6 +1596,18 @@ class TestFieldOperations(unittest.TestCase):
             self.source["col_1"], bins=[1.2, 5.0], labels=["A", "B", "C"], right=False
         ).get_data(**self.request)
         assert_series_equal(result, expected, check_names=False)
+
+    def test_classify_from_columns_int_labels_as_float(self):
+        source_with_bins = self.source.set("bin_1", 1, "bin_2", 2)
+        series = field_operations.ClassifyFromColumns(
+            source_with_bins,
+            "col_1",
+            ["bin_1", "bin_2"],
+            labels=[200],
+            right=False,
+        )
+        result = series.get_data(**self.request)
+        self.assertEqual(result.dtype, float)
 
     def test_add_fields(self):
         series_block = self.source["col_1"] + self.source["col_2"]
@@ -1976,7 +1994,7 @@ class TestText(unittest.TestCase):
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
         data = view.get_data(**self.request)["features"]
-        self.assertEqual("category", str(data["model_name"].dtype))
+        self.assertEqual("object", str(data["model_name"].dtype))
         for col in self.expected:
             assert data.loc[1, col] == self.expected[col]
             assert data.loc[2, col] == self.expected[col]
@@ -2030,7 +2048,7 @@ class TestText(unittest.TestCase):
             self.source, "description", {"modelname": "description"}
         )
         data = view.get_data(**self.request)["features"]
-        self.assertEqual("category", str(data["description"].dtype))
+        self.assertEqual("object", str(data["description"].dtype))
         assert data.loc[1, "description"] == "rotterdam 01"
 
     def test_parser_into_same_column_non_existing(self):
@@ -2043,9 +2061,7 @@ class TestText(unittest.TestCase):
     def test_parser_into_same_column_empty(self):
         source = MockGeometry(
             polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))] * 2,
-            properties=[
-                {"id": 1, "model_name": None},
-            ],
+            properties=[{"id": 1, "model_name": None}],
         )
         view = text.ParseTextColumn(source, "model_name", self.key_mapping)
         data = view.get_data(**self.request)["features"]

@@ -61,7 +61,8 @@ class Classify(BaseSingleSeries):
       labels (list): The classification returned if a value falls in a specific
         bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
         larger or one less than the length of the ``bins`` argument. Labels
-        should be unique.
+        should be unique. If labels are numeric, they are always
+        converted to float to be able to deal with NaN values.
       right (boolean, optional): Determines what side of the intervals are
         closed. Defaults to True (the right side of the bin is closed so a
         value assigned to the bin on the left if it is exactly on a bin edge).
@@ -112,9 +113,11 @@ class Classify(BaseSingleSeries):
         if series.dtype == object:
             series = series.fillna(value=np.nan)
         result = pd.cut(series, bins, right, labels)
-        labels_dtype = pd.Series(labels).dtype
-        if labels_dtype.name != "object":
-            result = pd.Series(result, dtype=labels_dtype)
+
+        # Transform from categorical to whatever suits the "labels". The
+        # dtype has to be able to accomodate NaN as well.
+        result = result.astype(pd.Series(labels + [np.nan]).dtype)
+
         if open_bounds:
             # patch the result, we actually want to classify np.inf
             if right:
@@ -143,7 +146,8 @@ class ClassifyFromColumns(SeriesBlock):
       labels (list): The classification returned if a value falls in a specific
         bin (i.e. ``["A", "B", "C"]``). The length of this list is either one
         larger or one less than the length of the ``bins`` argument. Labels
-        should be unique.
+        should be unique. If labels are numeric, they are always
+        converted to float to be able to deal with NaN values.
       right (boolean, optional): Determines what side of the intervals are
         closed. Defaults to True (the right side of the bin is closed so a
         value assigned to the bin on the left if it is exactly on a bin edge).
@@ -212,23 +216,29 @@ class ClassifyFromColumns(SeriesBlock):
         # Check in which bin every value is. because bins may be different for
         # each value, searchsorted is not an option. We assume that bins are
         # sorted in increasing order. Checking that would be costly.
-        with np.errstate(invalid='ignore'):  # comparison to NaN is OK here
+        with np.errstate(invalid="ignore"):  # comparison to NaN is OK here
             if right:
                 indices = np.sum(values[:, np.newaxis] > bins, axis=1)
             else:
                 indices = np.sum(values[:, np.newaxis] >= bins, axis=1)
 
-        # If we have e.g. 2 labels and 3 bins, the outside intervals are closed
-        # any index that is 0 or 3 should become -1 (unclassified).
-        if len(labels) == n_bins + 1:  # open bounds
-            indices[np.isnan(values)] = -1  # else NaN gets classified
-        else:  # closed bounds
-            indices[indices == n_bins] = 0
-            indices -= 1
+        # If values was NaN this is now assigned the value 0 (the first bin).
+        # Convert to the last label so that we can map it later to NaN
+        if len(labels) == n_bins + 1:
+            indices[np.isnan(values)] = len(labels)
+        else:
+            # If we have e.g. 2 labels and 3 bins, the outside intervals are
+            # closed. Therefore, indices 0 and 3 do not map to a bin. Index 0
+            # also covers the values = NaN situation.
+            indices -= 1  # indices become -1, 0, 1, 2
+            indices[indices == -1] = len(labels)  # -1 --> 2
 
-        # The output of pd.cut is a categorical Series.
-        labeled_data = pd.Categorical.from_codes(indices, labels, ordered=True)
-        return pd.Series(labeled_data, index=features.index)
+        # Convert indices to labels, append labels with with np.nan to cover
+        # unclassified data.
+        labeled_data = pd.Series(labels + [np.nan]).loc[indices]
+        # Set the index to the features index
+        labeled_data.index = features.index
+        return labeled_data
 
 
 class BaseFieldOperation(BaseSingleSeries):
@@ -249,13 +259,13 @@ class BaseFieldOperation(BaseSingleSeries):
 
 
 class Add(BaseFieldOperation):
-    """ 
+    """
     Element-wise addition of SeriesBlock or number to another SeriesBlock.
 
     Args:
       source (SeriesBlock): First addition term
       other (SeriesBlock or number): Second addition term
-    
+
     Returns:
       SeriesBlock
     """
@@ -298,7 +308,7 @@ class Multiply(BaseFieldOperation):
 
 
 class Divide(BaseFieldOperation):
-    """ 
+    """
     Element-wise division of SeriesBlock or number with another SeriesBlock.
 
     Note that if you want to divide a constant value by a SeriesBlock (like
@@ -348,6 +358,7 @@ class Power(BaseFieldOperation):
     Returns:
       SeriesBlock
     """
+
     def __init__(self, source, other):
         # the float(other) will raise a TypeError if necessary
         super().__init__(source, float(other))
@@ -395,7 +406,7 @@ class Equal(BaseFieldOperation):
 
 class NotEqual(BaseFieldOperation):
     """
-    Determine whether a SeriesBlock and a second SeriesBlock or a constant 
+    Determine whether a SeriesBlock and a second SeriesBlock or a constant
     value are not equal.
 
     Note that 'no data' does not equal 'no data'.
@@ -447,7 +458,7 @@ class Less(BaseFieldOperation):
     """
     Determine for each value in a SeriesBlock whether it is less than a
     comparison value from a SeriesBlock or constant.
-    
+
     Args:
       source (SeriesBlock): First comparison term
       other (SeriesBlock or number): Second comparison term
@@ -463,7 +474,7 @@ class LessEqual(BaseFieldOperation):
     """
     Determine for each value in a SeriesBlock whether it is less than or equal
     to a comparison value from a SeriesBlock or constant.
-    
+
     Args:
       source (SeriesBlock): First comparison term
       other (SeriesBlock or number): Second comparison term
@@ -494,7 +505,7 @@ class And(BaseLogicOperation):
     Args:
       source (SeriesBlock): First boolean term
       other (SeriesBlock): Second boolean term
-    
+
     Returns:
       SeriesBlock with boolean values
     """
@@ -544,7 +555,7 @@ class Invert(BaseSingleSeries):
 
     Args:
       source (SeriesBlock): SeriesBlock with boolean values.
-      
+
     Returns:
       SeriesBlock with boolean values
     """
@@ -565,12 +576,14 @@ class Where(BaseSingleSeries):
 
     Args:
       source (SeriesBlock): Source SeriesBlock that is going to be updated
-      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
-        whether features in the source SeriesBlock will be updated.
+      cond (SeriesBlock): Conditional SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated. If this
+        is not boolean (True/False), then all data values (including 0) are
+        interpreted as True. Missing values are always interpeted as False.
       other (SeriesBlock or constant): The value that should be used as a
         replacement for the source SeriesBlock where the conditional
         SeriesBlock is False.
-      
+
     Returns:
       SeriesBlock with updated values where condition is False.
     """
@@ -590,6 +603,8 @@ class Where(BaseSingleSeries):
 
     @staticmethod
     def process(source, cond, other):
+        if cond.dtype != bool:
+            cond = ~pd.isnull(cond)
         return source.where(cond, other)
 
 
@@ -606,8 +621,10 @@ class Mask(BaseSingleSeries):
 
     Args:
       source (SeriesBlock): Source SeriesBlock that is going to be updated
-      cond (SeriesBlock): Conditional (boolean) SeriesBlock that determines
-        whether features in the source SeriesBlock will be updated.
+      cond (SeriesBlock): Conditional SeriesBlock that determines
+        whether features in the source SeriesBlock will be updated. If this
+        is not boolean (True/False), then all data values (including 0) are
+        interpreted as True. Missing values are always interpeted as False.
       other (SeriesBlock or constant): The value that should be used as a
         replacement for the source SeriesBlock where the conditional
         SeriesBlock is True.
@@ -631,6 +648,8 @@ class Mask(BaseSingleSeries):
 
     @staticmethod
     def process(source, cond, other):
+        if cond.dtype != bool:
+            cond = ~pd.isnull(cond)
         return source.mask(cond, other)
 
 
@@ -642,11 +661,11 @@ class Round(BaseSingleSeries):
       source (SeriesBlock): SeriesBlock with float data that is rounded to the
         provided number of decimals.
       decimals (int, optional): number of decimal places to round to
-        (default: 0). If decimals is negative, it specifies the number of 
+        (default: 0). If decimals is negative, it specifies the number of
         positions to the left of the decimal point.
 
     Returns:
-      SeriesBlock with rounded values. 
+      SeriesBlock with rounded values.
     """
 
     def __init__(self, source, decimals=0):

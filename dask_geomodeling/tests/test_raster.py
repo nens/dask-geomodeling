@@ -7,7 +7,8 @@ from numpy.testing import assert_equal, assert_allclose
 from scipy import ndimage
 
 from dask_geomodeling import raster
-from dask_geomodeling.utils import EPSG4326, EPSG3857, Extent, get_epsg_or_wkt
+from dask_geomodeling.utils import EPSG4326, EPSG3857
+from dask_geomodeling.utils import Extent, get_dtype_max, get_epsg_or_wkt
 from dask_geomodeling.raster import RasterBlock
 from dask_geomodeling.tests.factories import MockRaster, MockGeometry
 
@@ -292,6 +293,14 @@ class TestMath(unittest.TestCase):
             bands=1,
             value=[[1, 1], [7, 7], [255, 255]],  # 2x3 shape. 255 is nodata
         )
+        self.logexp_storage = MockRaster(
+            origin=Datetime(2000, 1, 1),
+            timedelta=Timedelta(hours=1),
+            bands=1,
+            value=np.array(
+                [[-1, 0], [np.e, 10], [999, get_dtype_max("f8")]], dtype="f8"
+            ),
+        )
         self.vals_request = dict(
             mode="vals",
             start=Datetime(2000, 1, 1),
@@ -537,6 +546,29 @@ class TestMath(unittest.TestCase):
             view = raster.Divide(*args)
             result = view.get_data(**self.vals_request)
             assert_equal(result["values"], result["no_data_value"])
+
+    def test_base_log_exp_init(self):
+        # cannot take Exp from boolean storage
+        arg = self.logexp_storage == 7
+        self.assertRaises(TypeError, raster.elemwise.BaseLogExp, arg)
+
+    def test_exp(self):
+        view = raster.Exp(self.logexp_storage)
+        n = view.fillvalue
+        expected = [[1 / np.e, 1], [np.exp(np.e), np.exp(10)], [n, n]]
+        assert_allclose(view.get_data(**self.vals_request)["values"][0], expected)
+
+    def test_log_e(self):
+        view = raster.Log(self.logexp_storage)
+        n = view.fillvalue
+        expected = [[n, n], [1, np.log(10)], [np.log(999), n]]
+        assert_allclose(view.get_data(**self.vals_request)["values"][0], expected)
+
+    def test_log_10(self):
+        view = raster.Log10(self.logexp_storage)
+        n = view.fillvalue
+        expected = [[n, n], [np.log10(np.e), 1], [np.log10(999), n]]
+        assert_allclose(view.get_data(**self.vals_request)["values"][0], expected)
 
 
 class TestFillNoData(unittest.TestCase):
@@ -1358,6 +1390,16 @@ class TestTemporalAggregate(unittest.TestCase):
         view = self.klass(self.raster, "M", statistic="median")
         result = view.get_data(**self.request_all)
         assert_equal(result["values"], [[[1.0, 0.0, result["no_data_value"]]]])
+
+    def test_get_data_std(self):
+        view = self.klass(self.raster, "M", statistic="std")
+        result = view.get_data(**self.request_all)
+        assert_equal(result["values"], [[[0.0, 0.0, result["no_data_value"]]]])
+
+    def test_get_data_var(self):
+        view = self.klass(self.raster, "M", statistic="var")
+        result = view.get_data(**self.request_all)
+        assert_equal(result["values"], [[[0.0, 0.0, result["no_data_value"]]]])
 
     def test_get_data_percentile(self):
         view = self.klass(self.raster, "M", statistic="p95")
