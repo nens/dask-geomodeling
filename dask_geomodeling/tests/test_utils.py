@@ -12,6 +12,7 @@ from numpy.testing import assert_almost_equal, assert_array_equal
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+from pyproj import CRS
 
 from dask_geomodeling import utils
 
@@ -171,17 +172,10 @@ class TestUtils(unittest.TestCase):
                     f("..\\", "C:\\tmp")
 
     def test_get_crs(self):
-        if utils.GEOPANDAS_GTE_0_7_0:
-            from pyproj import CRS
-
-            expected_type = CRS
-        else:
-            expected_type = dict
-
         # from EPSG
         epsg = "EPSG:28992"
         crs = utils.get_crs(epsg)
-        self.assertIsInstance(crs, expected_type)
+        self.assertIsInstance(crs, CRS)
 
         # from proj4
         proj4 = """
@@ -191,7 +185,7 @@ class TestUtils(unittest.TestCase):
             +units=m +no_defs
         """
         crs = utils.get_crs(proj4)
-        self.assertIsInstance(crs, expected_type)
+        self.assertIsInstance(crs, CRS)
 
     def test_shapely_transform(self):
         src_srs = "EPSG:28992"

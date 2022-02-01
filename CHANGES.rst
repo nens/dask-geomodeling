@@ -4,7 +4,8 @@ Changelog of dask-geomodeling
 2.3.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix deprecation warning with distutils and bump minimum geopandas version to
+  0.7.
 
 
 2.3.4 (2021-02-08)
