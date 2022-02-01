@@ -3,7 +3,6 @@ import math
 import pytz
 import os
 import warnings
-from distutils.version import LooseVersion
 from functools import lru_cache
 from itertools import repeat
 
@@ -17,11 +16,10 @@ from dask import config
 from osgeo import gdal, ogr, osr, gdal_array
 from shapely.geometry import box, Point
 from shapely import wkb as shapely_wkb
+from pyproj import CRS
 
 import fiona
 import fiona.crs
-import geopandas
-
 
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
 
@@ -29,14 +27,6 @@ try:
     from fiona import Env as fiona_env  # NOQA
 except ImportError:
     from fiona import drivers as fiona_env  # NOQA
-
-try:
-    GEOPANDAS_GTE_0_7_0 = LooseVersion(geopandas.__version__) >= LooseVersion("0.7.0")
-except AttributeError:  # for doctests geopandas is mocked
-    GEOPANDAS_GTE_0_7_0 = True
-
-if GEOPANDAS_GTE_0_7_0:
-    from pyproj import CRS
 
 
 GDAL3 = gdal.VersionInfo().startswith("3")
@@ -374,22 +364,9 @@ def get_crs(user_input):
       user_input (str): a WKT, PROJ4, or EPSG:xxxx crs representation
 
     Returns:
-      for geopandas >= 0.7: pyproj.CRS
-      for geopandas < 0.7: dict
+      pyproj.CRS
     """
-    if GEOPANDAS_GTE_0_7_0:
-        return CRS(user_input)
-    wkt = osr.GetUserInputAsWKT(str(user_input))
-    sr = osr.SpatialReference(wkt)
-    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
-    name = sr.GetAuthorityName(key)
-    if name == "EPSG":
-        # we can specify CRS in EPSG code which is more compatible with output
-        # file types
-        return fiona.crs.from_epsg(int(sr.GetAuthorityCode(key)))
-    else:
-        # we have to go through Proj4
-        return fiona.crs.from_string(sr.ExportToProj4())
+    return CRS(user_input)
 
 
 def crs_to_srs(crs):
