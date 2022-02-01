@@ -4,7 +4,9 @@ Changelog of dask-geomodeling
 2.3.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Drop python 3.5 support and move on other version requirements.
+
+- Fix deprecation warning with distutils.
 
 
 2.3.4 (2021-02-08)

@@ -21,13 +21,6 @@ except ImportError:
     from pandas.util.testing import assert_frame_equal
 
 
-def compare_crs(actual, expected):
-    if utils.GEOPANDAS_GTE_0_7_0:
-        assert actual == expected
-    else:
-        assert actual["init"] == expected["init"]
-
-
 def assert_frame_equal_ignore_index(actual, expected, sort_col):
     assert_frame_equal(
         actual.set_index(sort_col).sort_index(),
@@ -121,7 +114,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, expected, "int")
         # compare projections
-        compare_crs(actual.crs, expected.crs)
+        assert actual.crs == expected.crs
 
     @pytest.mark.skipif(
         "gpkg" not in sinks.GeometryFileSink.supported_extensions,
@@ -137,7 +130,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, self.expected, "int")
         # compare projections
-        compare_crs(actual.crs, self.expected.crs)
+        assert actual.crs == self.expected.crs
 
     def test_shapefile(self):
         block = self.klass(self.source, self.path, "shp")
@@ -149,7 +142,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, self.expected, "int")
         # compare projections
-        compare_crs(actual.crs, self.expected.crs)
+        assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
         "gml" not in sinks.GeometryFileSink.supported_extensions,
@@ -199,7 +192,7 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, expected, "int")
         # compare projections
-        compare_crs(actual.crs, expected.crs)
+        assert actual.crs == expected.crs
 
     def test_merge_files_cleanup(self):
         block = self.klass(self.source, self.path, "geojson")
