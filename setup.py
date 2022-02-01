@@ -7,12 +7,12 @@ long_description = "\n\n".join([open("README.rst").read(), open("CHANGES.rst").r
 
 install_requires = (
     [
-        "dask[delayed]>=0.18",
-        "pandas>=0.19",
+        "dask[delayed]>=0.20",
+        "pandas>=0.23",
         "geopandas>=0.7",
         "pytz",
-        "numpy>=1.12",
-        "scipy>=0.19",
+        "numpy>=1.14",
+        "scipy>=1.1",
     ],
 )
 
@@ -52,7 +52,7 @@ setup(
     zip_safe=False,
     install_requires=install_requires,
     tests_require=tests_require,
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     extras_require={"test": tests_require, "cityhash": ["cityhash"]},
     entry_points={"console_scripts": []},
 )
