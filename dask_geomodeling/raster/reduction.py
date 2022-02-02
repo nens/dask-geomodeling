@@ -2,9 +2,13 @@
 Module containing reduction raster blocks.
 """
 import numpy as np
-from dask_geomodeling.utils import get_index, parse_percentile_statistic
-
+from dask_geomodeling.utils import filter_none, get_index
+from dask_geomodeling.utils import parse_percentile_statistic
+from .base import RasterBlock
+from .elemwise import BaseElementwise
 from functools import partial
+
+__all__ = ["Max"]
 
 STATISTICS = {
     "first": None,
@@ -115,3 +119,80 @@ def reduce_rasters(stack, statistic, no_data_value=None, dtype=None):
         out[not_all_nan] = func(stack_array[:, not_all_nan], axis=0)
 
     return {"values": out, "no_data_value": no_data_value}
+
+
+class BaseReduction(BaseElementwise):
+    def __init__(self, *args):
+        for arg in args:
+            if not isinstance(arg, RasterBlock):
+                raise TypeError("'{}' object is not allowed".format(type(arg)))
+        super().__init__(*args)
+
+    @property
+    def extent(self):
+        """ Boundingbox of combined contents in WGS84 projection. """
+        extents = filter_none([x.extent for x in self.args])
+        if len(extents) == 0:
+            return None
+        elif len(extents) == 1:
+            return extents[0]
+
+        # multiple extents: return the joined box
+        x1 = min([e[0] for e in extents])
+        y1 = min([e[1] for e in extents])
+        x2 = max([e[2] for e in extents])
+        y2 = max([e[3] for e in extents])
+        return x1, y1, x2, y2
+
+    @property
+    def geometry(self):
+        """Combined geometry in the projection of the first store geometry. """
+        geometries = filter_none([x.geometry for x in self.args])
+        if len(geometries) == 0:
+            return
+        elif len(geometries) == 1:
+            return geometries[0]
+        result = geometries[0]
+        sr = result.GetSpatialReference()
+        for geometry in geometries[1:]:
+            if not geometry.GetSpatialReference().IsSame(sr):
+                geometry = geometry.Clone()
+                geometry.TransformTo(sr)
+            result = result.Union(geometry)
+        return result
+
+
+def wrap_reduction_function(statistic):
+    def reduction_function(process_kwargs, *args):
+        # remove None values
+        stack = [x for x in args if x is not None]
+        # return None if all source data is None
+        if len(stack) == 0:
+            return
+
+        # see BaseElementWise.get_sources_and_requests
+        return reduce_rasters(
+            stack,
+            statistic,
+            process_kwargs["fillvalue"],
+            process_kwargs["dtype"],
+        )
+    return reduction_function
+
+
+class Max(BaseReduction):
+    """
+    Take the maximum value of two or more rasters, ignoring no data.
+
+    Args:
+      *args (list of RasterBlocks): list of rasters to be combined.
+
+    Returns:
+      RasterBlock with the maximum values
+    """
+    process = staticmethod(wrap_reduction_function("max"))
+
+    @property
+    def dtype(self):
+        # skip the default behaviour where we use at least int32 / float32
+        return np.result_type(*self.args)

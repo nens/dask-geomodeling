@@ -6,3 +6,4 @@ from .temporal import *  # NOQA
 from .misc import *  # NOQA
 from .sources import *  # NOQA
 from .parallelize import *  # NOQA
+from .reduction import *  # NOQA

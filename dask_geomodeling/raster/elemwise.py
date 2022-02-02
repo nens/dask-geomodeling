@@ -55,17 +55,26 @@ class BaseElementwise(RasterBlock):
         return [arg for arg in self.args if isinstance(arg, RasterBlock)]
 
     def get_sources_and_requests(self, **request):
+
+        period = self.period
+        process_kwargs = {
+            "dtype": self.dtype.name, "fillvalue": self.fillvalue,
+        }
+        if period is None:
+            return [(process_kwargs, None)]
+
+        # limit request to self.period so that resulting data is aligned
         start = request.get("start", None)
         stop = request.get("stop", None)
-
-        if start is not None and stop is not None:
-            # limit request to self.period so that resulting data is aligned
-            period = self.period
-            if period is not None:
+        if start is not None:
+            if stop is not None:
                 request["start"] = max(start, period[0])
                 request["stop"] = min(stop, period[1])
+            else:  # stop is None but start isn't
+                request["start"] = min(max(start, period[0]), period[1])
+        else:  # start and stop are both None
+            request["start"] = period[1]
 
-        process_kwargs = {"dtype": self.dtype.name, "fillvalue": self.fillvalue}
         sources_and_requests = [(source, request) for source in self.args]
 
         return [(process_kwargs, None)] + sources_and_requests
@@ -241,6 +250,9 @@ def wrap_math_process_func(func):
 
     @wraps(func)  # propagates the name and docstring
     def math_process_func(process_kwargs, *args):
+        if not args:
+            return None
+
         compute_args = []  # the args for the math operation
         # perform the nodata masking manually, as numpy maskedarrays are slow
         nodata_mask = None
