@@ -3,6 +3,7 @@ from numpy.testing import assert_array_equal
 import pytest
 
 from dask_geomodeling.raster.reduction import reduce_rasters
+from dask_geomodeling import raster
 
 
 @pytest.fixture
@@ -113,4 +114,4 @@ def test_max_with_nodata(source, nodata_source, vals_request):
 def test_max_with_empty(source, empty_source, vals_request):
     block = raster.Max(source, empty_source)
     data = block.get_data(**vals_request)
-    assert data["values"][:, 0, 0].tolist() == [1, 7, data["no_data_value"]]
+    assert data is None
