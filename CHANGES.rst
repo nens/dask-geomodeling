@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.5 (unreleased)
+2.3.5 (2022-02-02)
 ------------------
 
 - Added raster.Max block to select the maximum value from overlapping sources.
