@@ -128,6 +128,36 @@ class BaseReduction(BaseElementwise):
                 raise TypeError("'{}' object is not allowed".format(type(arg)))
         super().__init__(*args)
 
+    def get_sources_and_requests(self, **request):
+        """
+        This method is more strict than the one from BaseElementWise, it is not
+        possible to get data from this block when its period is None, meaning
+        that either the sources have no common period, or one of the sources'
+        periods is None.
+        """
+        period = self.period
+        process_kwargs = {
+            "dtype": self.dtype.name, "fillvalue": self.fillvalue,
+        }
+        if period is None:
+            return [(process_kwargs, None)]
+
+        # limit request to self.period so that resulting data is aligned
+        start = request.get("start", None)
+        stop = request.get("stop", None)
+        if start is not None:
+            if stop is not None:
+                request["start"] = max(start, period[0])
+                request["stop"] = min(stop, period[1])
+            else:  # stop is None but start isn't
+                request["start"] = min(max(start, period[0]), period[1])
+        else:  # start and stop are both None
+            request["start"] = period[1]
+
+        sources_and_requests = [(source, request) for source in self.args]
+
+        return [(process_kwargs, None)] + sources_and_requests
+
     @property
     def extent(self):
         """ Boundingbox of combined contents in WGS84 projection. """

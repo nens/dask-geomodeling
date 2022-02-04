@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.3.6 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Reverted changes to elemwise.
 
 
 2.3.5 (2022-02-02)
