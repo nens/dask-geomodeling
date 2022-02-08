@@ -155,8 +155,11 @@ class TestGeometryFileSink(unittest.TestCase):
         filename = [x for x in os.listdir(self.path) if x.endswith(".gml")][0]
         actual = gpd.read_file(os.path.join(self.path, filename))
 
-        # GML writer adds an 'fid' column
-        del actual["fid"]
+        # GML writer adds an 'fid' column sometimes
+        try:
+            del actual["fid"]
+        except KeyError:
+            pass
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, self.expected, "int")
