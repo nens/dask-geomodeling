@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.3.7 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fixed raster.Max not handling "time" and "meta" modes.
 
 
 2.3.6 (2022-02-04)
