@@ -115,3 +115,13 @@ def test_max_with_empty(source, empty_source, vals_request):
     block = raster.Max(source, empty_source)
     data = block.get_data(**vals_request)
     assert data is None
+
+
+def test_max_time_request(source):
+    block = raster.Max(source, source - 2)
+    time_request = {
+        "mode": "time",
+        "start": block.period[0],
+    }
+    data = block.get_data(**time_request)
+    assert data == {"time": [block.period[0]]}

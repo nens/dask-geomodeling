@@ -194,8 +194,16 @@ class BaseReduction(BaseElementwise):
 
 def wrap_reduction_function(statistic):
     def reduction_function(process_kwargs, *args):
-        # remove None values
-        stack = [x for x in args if x is not None]
+        stack = []
+        for arg in args:
+            if "time" in arg or "meta" in arg:
+                # return the time / meta right away. assumes there are no
+                # mixed requests and that time is aligned
+                return arg
+            if arg is None:
+                continue
+            stack.append(arg)
+
         # return None if all source data is None
         if len(stack) == 0:
             return
