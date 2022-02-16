@@ -1158,6 +1158,11 @@ class TestTemporalAggregate(unittest.TestCase):
             **self.request,
         }
 
+    def test_request(self):
+        view = self.klass(self.raster, frequency="D", statistic="sum")
+        (req, _), _, _ = view.get_sources_and_requests(**self.request_all)
+        self.assertEqual(req["frequency"], "D")
+
     def test_period_day_agg(self):
         self.assertEqual(
             (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
