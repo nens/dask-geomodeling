@@ -117,3 +117,16 @@ Install dask-geomodeling::
 Run the tests::
 
     (.venv) $ pytest
+
+Advanced: Running tests in VSCode for WSL2 (Ubuntu)
+-----------------------------------
+
+It is possible to run the tests (that reside in WSL2) but perform debugging in VSCode (Windows)
+
+1 Install the Python extension in VSCode.
+
+2 Open the ``Test Explorer View`` (beaker icon)
+
+3 Press the ``Configure Tests`` button. Select ``pytest`` as test framework, and base the configuration on the existing ``setup.cfg``
+
+4 The tests should now be discovered, and by pressing the ``Debug Tests`` button, it is now possible to place breakpoints and step through the tests. 
