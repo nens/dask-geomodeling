@@ -131,5 +131,7 @@ It is possible to run the tests (that reside in WSL2) but perform debugging in V
 
 4 The tests should now be discovered, and by pressing the ``Debug Tests`` button, it is now possible to place breakpoints and step through the tests.
 
+See the `VSCode manual for python testing <https://code.visualstudio.com/docs/python/testing>`_ for explanation regarding running the tests.
+
 A known `issue <https://stackoverflow.com/questions/58799879/vscode-on-discover-tests-error-spawn-python-enoent>`_ can be found on StackOverflow.
 
