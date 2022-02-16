@@ -320,6 +320,7 @@ class AggregateRaster(GeometryBlock):
             "bbox": (x1, y1, x2, y2),
             "width": width,
             "height": height,
+            "time_resolution": request.get("time_resolution"),
         }
 
         process_kwargs = {
