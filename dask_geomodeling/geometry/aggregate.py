@@ -324,7 +324,7 @@ class AggregateRaster(GeometryBlock):
 
         # only propagate if provided
         if "time_resolution" in request:
-            raster_request["time_resolution"] = request.get("time_resolution")
+            raster_request["time_resolution"] = request["time_resolution"]
 
         process_kwargs = {
             "mode": request.get("mode", "intersects"),
