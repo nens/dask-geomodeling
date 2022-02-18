@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.8 (unreleased)
+2.3.8 (2022-02-18)
 ------------------
 
 - Fixed proper propagation of time resolution through AggregateRaster
