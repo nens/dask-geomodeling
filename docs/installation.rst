@@ -119,7 +119,7 @@ Run the tests::
     (.venv) $ pytest
 
 Advanced: Running tests in VSCode for WSL2 (Ubuntu)
------------------------------------
+-------------------------------------------------------
 
 It is possible to run the tests (that reside in WSL2) but perform debugging in VSCode (Windows)
 
