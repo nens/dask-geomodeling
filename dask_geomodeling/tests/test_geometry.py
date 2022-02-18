@@ -817,6 +817,35 @@ class TestAggregateRaster(unittest.TestCase):
             self.assertEqual(6, request["width"])
             self.assertEqual(6, request["height"])
 
+    def test_raster_time_resolution(self):
+        req = self.request
+        req["time_resolution"] = 3600000
+        req["geometry"] = box(0, 0, 10, 10)
+        
+        # temp_group = GroupTemporal([
+        #     MockRaster(timedelta=Timedelta(hours=1)),
+        #     MockRaster(timedelta=Timedelta(minutes=1)), 
+        #     MockRaster(timedelta=Timedelta(seconds=1))
+        # ])
+
+        temp_raster = MockRaster(
+            origin=Datetime(2018, 1, 1),
+            timedelta=Timedelta(hours=1),
+            bands=1
+        )
+
+        geom_source = MockGeometry(
+            polygons=[((2.0, 2.0), (8.0, 2.0), (8.0, 8.0), (2.0, 8.0))],
+            properties=[{"id": 1}],
+        )
+        view = geometry.AggregateRaster(
+            source=geom_source, raster=temp_raster, statistic="sum"
+        )
+
+        _, (source, request), _ = view.get_sources_and_requests(**req)
+
+        self.assertEqual(3600000, request["time_resolution"])
+
     def test_pixel_size(self):
         # larger
         self.view = geometry.AggregateRaster(

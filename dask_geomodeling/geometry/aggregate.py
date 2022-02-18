@@ -319,8 +319,12 @@ class AggregateRaster(GeometryBlock):
             "aggregation": None,  # TODO
             "bbox": (x1, y1, x2, y2),
             "width": width,
-            "height": height,
+            "height": height
         }
+
+        # only propagate if provided
+        if "time_resolution" in request:
+            raster_request["time_resolution"] = request["time_resolution"]
 
         process_kwargs = {
             "mode": request.get("mode", "intersects"),
