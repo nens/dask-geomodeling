@@ -558,6 +558,12 @@ class TemporalAggregate(BaseSingle):
             "start": request["start"],
             "stop": request["stop"],
         }
+
+        # In case the data request dictates a temporal resolution,
+        # also set this in temporal request
+        if "time_resolution" in request:
+            time_request["time_resolution"] = request["time_resolution"]
+
         return [(kwargs, None), (self.source, time_request), (self.source, request)]
 
     @staticmethod
