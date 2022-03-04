@@ -6,6 +6,7 @@ Changelog of dask-geomodeling
 
 - TemporalAggregate now correctly incorporates time resolution in retrieval of timekeys.
 
+
 2.3.8 (2022-02-18)
 ------------------
 
