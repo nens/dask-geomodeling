@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.10 (unreleased)
+2.3.10 (2022-08-22)
 -------------------
 
 - Fixed compatibility with GDAL 3.4.
