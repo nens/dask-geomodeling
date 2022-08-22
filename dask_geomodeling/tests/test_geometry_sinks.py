@@ -63,7 +63,7 @@ class TestGeometryFileSink(unittest.TestCase):
         ]
         self.properties = [
             {"int": 5, "float": 3.2, "str": "bla", "lst": [1], "dct": {"a": "b"}},
-            {"int": 7, "float": 5.2, "str": "bla2", "lst": [], "dct": {}},
+            {"int": 7, "float": 5.2, "str": "bla2", "lst": [2], "dct": {}},
         ]
         self.source = MockGeometry(
             self.polygons, projection="EPSG:3857", properties=self.properties
