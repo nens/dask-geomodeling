@@ -4,7 +4,9 @@ Changelog of dask-geomodeling
 2.3.10 (unreleased)
 -------------------
 
-- Fixed incompatibility with GDAL 3.4.
+- Fixed compatibility with GDAL 3.4.
+
+- Fixed compatibility with shapely 2 (PyGEOS merge).
 
 
 2.3.9 (2022-03-07)
