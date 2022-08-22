@@ -7,9 +7,6 @@ dask-geomodeling
 .. image:: https://github.com/nens/dask-geomodeling/actions/workflows/test.yml/badge.svg
     :target: https://github.com/nens/dask-geomodeling/actions/workflows/test.yml
 
-.. image:: https://ci.appveyor.com/api/projects/status/aopxohgl23llkeq8?svg=true
-    :target: https://ci.appveyor.com/project/reinout/dask-geomodeling
-
 .. image:: https://badge.fury.io/py/dask-geomodeling.svg
     :target: https://badge.fury.io/py/dask-geomodeling
 
