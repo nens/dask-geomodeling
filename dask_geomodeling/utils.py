@@ -15,7 +15,15 @@ from dask import config
 
 from osgeo import gdal, ogr, osr, gdal_array
 from shapely.geometry import box, Point
-from shapely import wkb as shapely_wkb
+
+try:  # shapely 2.*
+    from shapely import from_wkt, from_wkb, GEOSException
+except ImportError:  # shapely 1.*
+    from shapely.errors import ShapelyError as GEOSException
+    from shapely.wkt import loads as from_wkt
+    from shapely.wkb import loads as from_wkb
+    
+
 from pyproj import CRS
 
 import fiona
@@ -437,8 +445,19 @@ def shapely_transform(geometry, src_srs, dst_srs):
                 wkt, src_srs, dst_srs
             )
         )
-    return shapely_wkb.loads(output_wkb)
+    return from_wkb(output_wkb)
 
+
+def shapely_from_wkt(wkt):
+    """Return a shapely geometry from a WKT representation."""
+    try:
+        return from_wkt(wkt)
+    except GEOSException as e:
+        raise WKTReadingError(str(e))
+
+
+class WKTReadingError(Exception):
+    pass
 
 def geoseries_transform(df, src_srs, dst_srs):
     """
