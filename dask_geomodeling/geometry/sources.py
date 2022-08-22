@@ -172,7 +172,7 @@ class GeometryWKTSource(GeometryBlock):
         if not isinstance(projection, str):
             raise TypeError("'{}' object is not allowed".format(type(projection)))
         try:
-            utils.from_wkt(wkt)
+            utils.shapely_from_wkt(wkt)
         except utils.WKTReadingError:
             raise ValueError("The provided geometry is not a valid WKT")
         try:
@@ -205,7 +205,7 @@ class GeometryWKTSource(GeometryBlock):
             raise ValueError("Unknown mode '{}'".format(mode))
 
         # load the geometry and transform it into the requested projection
-        geometry = utils.from_wkt(data["wkt"])
+        geometry = utils.shapely_from_wkt(data["wkt"])
         if data["projection"] != request["projection"]:
             geometry = utils.shapely_transform(
                 geometry, data["projection"], request["projection"]

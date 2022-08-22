@@ -706,7 +706,7 @@ class RasterizeWKT(RasterBlock):
         if not isinstance(projection, str):
             raise TypeError("'{}' object is not allowed".format(type(projection)))
         try:
-            utils.from_wkt(wkt)
+            utils.shapely_from_wkt(wkt)
         except utils.WKTReadingError:
             raise ValueError("The provided geometry is not a valid WKT")
         try:
@@ -739,7 +739,7 @@ class RasterizeWKT(RasterBlock):
     def extent(self):
         return tuple(
             utils.shapely_transform(
-                utils.from_wkt(self.wkt), self.projection, "EPSG:4326"
+                utils.shapely_from_wkt(self.wkt), self.projection, "EPSG:4326"
             ).bounds
         )
 
@@ -776,7 +776,7 @@ class RasterizeWKT(RasterBlock):
         elif mode == "meta":
             return {"meta": [None]}
         # load the geometry and transform it into the requested projection
-        geometry = utils.from_wkt(data["wkt"])
+        geometry = utils.shapely_from_wkt(data["wkt"])
         if data["projection"] != request["projection"]:
             geometry = utils.shapely_transform(
                 geometry, data["projection"], request["projection"]
