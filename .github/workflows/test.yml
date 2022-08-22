@@ -1,4 +1,4 @@
-name: Linux
+name: PyPI
 
 # Run on PR requests. And on master itself.
 on:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   TestLinux:
-    name: PyPI - Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
+    name: Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

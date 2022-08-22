@@ -1,10 +1,15 @@
 name: Conda
 
-on: [push, pull_request]
+# Run on PR requests. And on master itself.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
   TestConda:
-    name: Conda - Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
+    name: Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

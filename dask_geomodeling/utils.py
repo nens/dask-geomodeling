@@ -405,7 +405,8 @@ def wkb_transform(wkb, src_sr, dst_sr):
     """
     result = ogr.CreateGeometryFromWkb(wkb, src_sr)
     result.TransformTo(dst_sr)
-    return result.ExportToWkb()
+    wkb = result.ExportToWkb()
+    return bytes(wkb) if not isinstance(wkb, bytes) else wkb
 
 
 def shapely_transform(geometry, src_srs, dst_srs):
