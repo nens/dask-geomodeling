@@ -1,4 +1,4 @@
-name: Linux
+name: PyPI
 
 # Run on PR requests. And on master itself.
 on:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   TestLinux:
-    name: Python ${{ matrix.python }} ${{ matrix.display_name }}
+    name: Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -35,10 +35,14 @@ jobs:
             python: 3.9
             numpy: "==1.21.*"
             pins: "pygdal==3.0.4.* scipy==1.7.* dask[delayed]==2021.* pandas==1.3.* geopandas==0.10.*"
-          - os: ubuntu-20.04
-            python: 3.9
+          - os: ubuntu-22.04
+            python: "3.10"
+            numpy: "==1.23.*"
+            pins: "pygdal==3.4.1.* scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.11.*"
+          - os: ubuntu-22.04
+            python: "3.10"
             display_name: "latest"
-            pins: "pygdal==3.0.4.*"
+            pins: "pygdal==3.4.1.*"
 
     steps:
       - uses: actions/checkout@v2
