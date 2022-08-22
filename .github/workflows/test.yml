@@ -43,10 +43,6 @@ jobs:
             python: "3.10"
             display_name: "latest"
             pins: "pygdal==3.4.1.*"
-          - os: ubuntu-22.04
-            python: "3.10"
-            display_name: "pre-releases"
-            pins: "--pre pygdal==3.4.1.*"
 
     steps:
       - uses: actions/checkout@v2
