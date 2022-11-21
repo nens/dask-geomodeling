@@ -4,7 +4,10 @@ Changelog of dask-geomodeling
 2.3.11 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Perform geometry transformations via pyproj instead of GDAL SWIG bindings to circumvent
+  a performance degradation in GDAL >=3 (PROJ >=6).
+
+- Drop support for Python 3.6 and GDAL 2.
 
 
 2.3.10 (2022-08-22)

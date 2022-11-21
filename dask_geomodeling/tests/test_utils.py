@@ -16,6 +16,8 @@ from pyproj import CRS
 
 from dask_geomodeling import utils
 
+from osgeo import ogr
+
 
 class TestUtils(unittest.TestCase):
     def test_get_index(self):
@@ -190,14 +192,21 @@ class TestUtils(unittest.TestCase):
     def test_shapely_transform(self):
         src_srs = "EPSG:28992"
         dst_srs = "EPSG:4326"
-        box28992 = geometry.box(100000, 400000, 200000, 500000)
+        box28992 = geometry.box(100000, 400000, 101000, 401000)
         box4326 = utils.shapely_transform(box28992, src_srs=src_srs, dst_srs=dst_srs)
-        assert_almost_equal((5.4, 52.0), list(box4326.centroid.coords)[0], decimal=1)
+        assert_almost_equal((4.608024, 51.586315), box4326.exterior.coords[0], decimal=6)
 
     def test_shapely_transform_invalid(self):
         src_srs = "EPSG:4326"
         dst_srs = "EPSG:28992"
-        box4326 = geometry.box(100000, 400000, 200000, 500000)
+        box4326 = geometry.box(100000, 400000, 101000, 401000)
+        with pytest.raises(utils.TransformException):
+            utils.shapely_transform(box4326, src_srs=src_srs, dst_srs=dst_srs)
+
+    def test_shapely_transform_srs(self):
+        src_srs = "EPSG:0"
+        dst_srs = "EPSG:28992"
+        box4326 = geometry.box(100000, 400000, 101000, 401000)
         with pytest.raises(utils.TransformException):
             utils.shapely_transform(box4326, src_srs=src_srs, dst_srs=dst_srs)
 

@@ -3,7 +3,7 @@ import math
 import pytz
 import os
 import warnings
-from functools import lru_cache
+from functools import lru_cache, partial
 from itertools import repeat
 
 from math import floor, log10
@@ -15,6 +15,7 @@ from dask import config
 
 from osgeo import gdal, ogr, osr, gdal_array
 from shapely.geometry import box, Point
+from shapely.ops import transform as _shapely_transform
 
 try:  # shapely 2.*
     from shapely import from_wkt, from_wkb, GEOSException
@@ -24,7 +25,8 @@ except ImportError:  # shapely 1.*
     from shapely.wkb import loads as from_wkb
     
 
-from pyproj import CRS
+from pyproj import CRS, Transformer
+from pyproj.exceptions import ProjError
 
 import fiona
 import fiona.crs
@@ -403,18 +405,12 @@ class TransformException(Exception):
     pass
 
 
-def wkb_transform(wkb, src_sr, dst_sr):
-    """
-    Return a shapely geometry transformed from src_sr to dst_sr.
-
-    :param wkb: wkb bytes
-    :param src_sr: source osr SpatialReference
-    :param dst_sr: destination osr SpatialReference
-    """
-    result = ogr.CreateGeometryFromWkb(wkb, src_sr)
-    result.TransformTo(dst_sr)
-    wkb = result.ExportToWkb()
-    return bytes(wkb) if not isinstance(wkb, bytes) else wkb
+@lru_cache(maxsize=100)
+def get_transform_func(src_srs: str, dst_srs: str):
+    transformer = Transformer.from_crs(
+        CRS(src_srs), CRS(dst_srs), always_xy=True
+    )
+    return partial(transformer.transform, errcheck=True)
 
 
 def shapely_transform(geometry, src_srs, dst_srs):
@@ -425,27 +421,18 @@ def shapely_transform(geometry, src_srs, dst_srs):
     :param src_srs: source projection string
     :param dst_srs: destination projection string
 
-    Note that we do not use geopandas for the transformation, because this is
-    much slower than OGR.
+    Note that we separately construct (and cache) the Transformer instance,
+    because of large overhead in constructing the instance since PROJ v6. 
     """
-    transform_kwargs = {
-        "wkb": geometry.wkb,
-        "src_sr": get_sr(src_srs),
-        "dst_sr": get_sr(dst_srs),
-    }
     try:
-        output_wkb = wkb_transform(**transform_kwargs)
-    except RuntimeError:
-        # include the geometry in the error message, truncated to 64 chars
-        wkt = geometry.wkt
-        if len(wkt) > 64:
-            wkt = wkt[:61] + "..."
+        func = get_transform_func(src_srs, dst_srs)
+        return _shapely_transform(func, geometry)
+    except ProjError:
         raise TransformException(
             "An error occured while transforming {} from {} to {}.".format(
-                wkt, src_srs, dst_srs
+                geometry.wkt, src_srs, dst_srs
             )
         )
-    return from_wkb(output_wkb)
 
 
 def shapely_from_wkt(wkt):

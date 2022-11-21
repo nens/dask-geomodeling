@@ -52,7 +52,7 @@ setup(
     zip_safe=False,
     install_requires=install_requires,
     tests_require=tests_require,
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     extras_require={"test": tests_require, "cityhash": ["cityhash"]},
     entry_points={"console_scripts": []},
 )
