@@ -420,6 +420,9 @@ def shapely_transform(geometry, src_srs, dst_srs):
     :param geometry: shapely geometry
     :param src_srs: source projection string
     :param dst_srs: destination projection string
+
+    Note that we separately construct (and cache) the Transformer instance,
+    because of large overhead in constructing the instance since PROJ v6. 
     """
     try:
         func = get_transform_func(src_srs, dst_srs)
@@ -430,17 +433,6 @@ def shapely_transform(geometry, src_srs, dst_srs):
                 geometry.wkt, src_srs, dst_srs
             )
         )
-
-def ogr_transform(geometry: ogr.Geometry, src_srs, dst_srs):
-    """
-    Return a OGR geometry transformed from src_srs to dst_srs.
-
-    :param geometry: OGR geometry
-    :param src_srs: source projection string
-    :param dst_srs: destination projection string
-    """
-    shapely_geom = from_wkb(bytes(geometry.ExportToWkb()))
-    return ogr.CreateGeometryFromWkb(shapely_transform(shapely_geom, src_srs, dst_srs).wkb)
 
 
 def shapely_from_wkt(wkt):

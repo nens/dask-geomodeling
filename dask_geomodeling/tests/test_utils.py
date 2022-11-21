@@ -210,13 +210,6 @@ class TestUtils(unittest.TestCase):
         with pytest.raises(utils.TransformException):
             utils.shapely_transform(box4326, src_srs=src_srs, dst_srs=dst_srs)
 
-    def test_ogr_transform(self):
-        src_srs = "EPSG:28992"
-        dst_srs = "EPSG:4326"
-        box28992 = ogr.CreateGeometryFromWkb(geometry.box(100000, 400000, 101000, 401000).wkb)
-        box4326 = utils.ogr_transform(box28992, src_srs=src_srs, dst_srs=dst_srs)
-        assert_almost_equal((4.608024, 51.586315), box4326.GetGeometryRef(0).GetPoint(0)[:2], decimal=1)
-
     @mock.patch("dask_geomodeling.utils.shapely_transform")
     def test_min_size_transform(self, shapely_transform):
         min_size = 100
