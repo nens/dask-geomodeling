@@ -281,7 +281,7 @@ class AggregateRaster(GeometryBlock):
             ]
 
         # transform the extent into the projection in which we aggregate
-        x1, y1, x2, y2 = utils.transform_extent(extent, req_srs, agg_srs)
+        x1, y1, x2, y2 = utils.Extent(extent, req_srs).transformed(agg_srs).bbox
 
         # estimate the amount of required pixels
         required_pixels = int(((x2 - x1) * (y2 - y1)) / (self.pixel_size ** 2))

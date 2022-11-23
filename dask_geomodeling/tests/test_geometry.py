@@ -152,8 +152,8 @@ class TestGeometryFileSource(unittest.TestCase):
         self.assertEqual(0, len(result["features"]))
 
     def test_reproject(self):
-        extent = Extent(self.bbox, get_sr(self.projection))
-        bbox3857 = extent.transformed(get_sr("EPSG:3857")).bbox
+        extent = Extent(self.bbox, self.projection)
+        bbox3857 = extent.transformed("EPSG:3857").bbox
         result = self.source.get_data(geometry=box(*bbox3857), projection="EPSG:3857")
         self.assertEqual("EPSG:3857", result["projection"])
         actual = result["features"].crs

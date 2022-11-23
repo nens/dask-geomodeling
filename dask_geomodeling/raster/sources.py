@@ -146,14 +146,14 @@ class MemorySource(RasterBlock):
         if not self.data.size:
             return
         bbox = self.geo_transform.get_bbox((0, 0), self.data.shape[1:])
-        return utils.Extent(bbox, utils.get_sr(self.projection))
+        return utils.Extent(bbox, self.projection)
 
     @property
     def extent(self):
         extent = self._get_extent()
         if extent is None:
             return
-        return extent.transformed(utils.EPSG4326).bbox
+        return extent.transformed("EPSG:4326").bbox
 
     @property
     def geometry(self):
@@ -370,11 +370,11 @@ class RasterFileSource(RasterBlock):
         bbox = self.geo_transform.get_bbox(
             (0, 0), (self.gdal_dataset.RasterYSize, self.gdal_dataset.RasterXSize)
         )
-        return utils.Extent(bbox, utils.get_sr(self.projection))
+        return utils.Extent(bbox, self.projection)
 
     @property
     def extent(self):
-        extent_epsg4326 = self._get_extent().transformed(utils.EPSG4326)
+        extent_epsg4326 = self._get_extent().transformed("EPSG:4326")
         return extent_epsg4326.bbox
 
     @property

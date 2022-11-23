@@ -31,10 +31,27 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(str(geometry), "POLYGON ((0 0,1 0,1 1,0 1,0 0))")
         self.assertEqual(str(geometry.GetSpatialReference()), str(sr))
 
+    def test_extent_from_srs(self):
+        srs = "EPSG:4326"
+        extent = utils.Extent(sr=srs, bbox=(0, 0, 1, 1))
+        geometry = extent.as_geometry()
+        self.assertEqual(str(geometry), "POLYGON ((0 0,1 0,1 1,0 1,0 0))")
+        self.assertEqual(utils.get_projection(geometry.GetSpatialReference()), srs)
+
     def test_extent_has_repr(self):
-        sr = utils.get_sr("EPSG:4326")
+        sr = "EPSG:4326"
         extent = utils.Extent(sr=sr, bbox=(0, 0, 1, 1))
         self.assertTrue(repr(extent))
+
+    @mock.patch("dask_geomodeling.utils.shapely_transform")
+    def test_extent_transformed(self, shapely_transform):
+        shapely_transform.return_value = box(0, 0, 1, 2)
+        extent = utils.Extent(sr="EPSG:4326", bbox=(0, 0, 1, 1))
+        geometry = extent.transformed("EPSG:3857").as_geometry()
+
+        shapely_transform.assert_called_with(box(0, 0, 1, 1), "EPSG:4326", "EPSG:3857")
+        self.assertEqual(str(geometry), "POLYGON ((0 0,1 0,1 2,0 2,0 0))")
+        self.assertEqual(utils.get_projection(geometry.GetSpatialReference()), "EPSG:3857")
 
     def test_get_dtype_max(self):
         self.assertIsInstance(utils.get_dtype_max("f4"), float)
@@ -224,19 +241,6 @@ class TestUtils(unittest.TestCase):
             box.centroid.buffer(min_size / 2), src_srs=src_srs, dst_srs=dst_srs
         )
         self.assertEqual(200, result)
-
-    @mock.patch("dask_geomodeling.utils.shapely_transform")
-    def test_transform_extent(self, shapely_transform):
-        src_srs = "some_fiona_crs"
-        dst_srs = "another_fiona_crs"
-        extent = 0, 0, 1, 1
-        expected = 2, 2, 3, 3
-        shapely_transform.return_value = geometry.box(*expected)
-        result = utils.transform_extent(extent, src_srs=src_srs, dst_srs=dst_srs)
-        shapely_transform.assert_called_with(
-            geometry.box(*extent), src_srs=src_srs, dst_srs=dst_srs
-        )
-        self.assertEqual(expected, result)
 
 
 class TestGeoTransform(unittest.TestCase):

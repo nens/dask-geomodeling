@@ -114,12 +114,16 @@ class Extent(object):
 
     def __init__(self, bbox, sr):
         self.bbox = bbox
-        self.sr = sr
+        self.srs = get_projection(sr)
+
+    @property
+    def sr(self):
+        return get_sr(self.srs)
 
     def __repr__(self):
         return "<{}: {} / {}>".format(
             self.__class__.__name__,
-            get_projection(self.sr),
+            self.srs,
             get_rounded_repr(self.bbox),
         )
 
@@ -153,7 +157,10 @@ class Extent(object):
         polygon.AddGeometry(ring)
         polygon.AssignSpatialReference(self.sr)
         return polygon
-
+    
+    def as_shapely_geometry(self):
+        return box(*self.bbox)
+ 
     def buffered(self, size):
         """ Return Extent instance. """
         x1, y1, x2, y2 = self.bbox
@@ -161,9 +168,9 @@ class Extent(object):
         return self.__class__(bbox=buffered_bbox, sr=self.sr)
 
     def transformed(self, sr):
-        geometry = self.as_geometry()
-        geometry.TransformTo(sr)
-        return Extent.from_geometry(geometry)
+        srs = get_projection(sr)
+        geometry = shapely_transform(self.as_shapely_geometry(), self.srs, srs)
+        return Extent(bbox=geometry.bounds, sr=srs)
 
 
 class GeoTransform(tuple):
@@ -499,29 +506,20 @@ def transform_min_size(min_size, geometry, src_srs, dst_srs):
     return max(x2 - x1, y2 - y1)
 
 
-def transform_extent(extent, src_srs, dst_srs):
-    """
-    Return extent tuple transformed from src_srs to dst_srs.
-
-    :param extent: xmin, ymin, xmax, ymax
-    :param src_srs: source projection string
-    :param dst_srs: destination projection string
-    """
-    source = box(*extent)
-    target = shapely_transform(source, src_srs=src_srs, dst_srs=dst_srs)
-    return target.bounds
-
-
 EPSG3857 = get_sr("EPSG:3857")
 EPSG4326 = get_sr("EPSG:4326")
 
 
 def get_projection(sr):
     """ Return simple userinput string for spatial reference, if any. """
+    if isinstance(sr, str):
+        return sr
     key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
-    return "{name}:{code}".format(
-        name=sr.GetAuthorityName(key), code=sr.GetAuthorityCode(key)
-    )
+    name = sr.GetAuthorityName(key)
+    if name is None:
+        return sr.ExportToWkt()
+    code = sr.GetAuthorityCode(key)
+    return "{name}:{code}".format(name=name, code=code)
 
 
 def get_epsg_or_wkt(text):

@@ -66,8 +66,8 @@ def expand_request_meters(request, radius_m=1):
     # suffixed by _m, in pixels by _px
     if sr.IsGeographic():
         # expand geographic bbox in EPSG3857
-        extent_geom = Extent(bbox, sr)
-        bbox = extent_geom.transformed(EPSG3857).bbox
+        extent_geom = Extent(bbox, request["projection"])
+        bbox = extent_geom.transformed("EPSG:3857").bbox
     else:
         # most Projected projections are in meters, but to be sure:
         radius_m /= sr.GetLinearUnits()
@@ -102,8 +102,8 @@ def expand_request_meters(request, radius_m=1):
     )
     if sr.IsGeographic():
         # transform back to original projection
-        extent_proj = Extent(new_request["bbox"], EPSG3857)
-        new_request["bbox"] = extent_proj.transformed(sr).bbox
+        extent_proj = Extent(new_request["bbox"], "EPSG:3857")
+        new_request["bbox"] = extent_proj.transformed(request["projection"]).bbox
     new_request["height"] += 2 * margins_px[0]
     new_request["width"] += 2 * margins_px[1]
 
@@ -533,11 +533,7 @@ class Place(BaseSingle):
         geometry = self.geometry
         if geometry is None:
             return
-        if not geometry.GetSpatialReference().IsSame(EPSG4326):
-            geometry = geometry.Clone()
-            geometry.TransformTo(EPSG4326)
-        x1, x2, y1, y2 = geometry.GetEnvelope()
-        return x1, y1, x2, y2
+        return Extent.from_geometry(geometry).transformed("EPSG:4326").bbox
 
     @property
     def geometry(self):

@@ -1919,8 +1919,8 @@ class TestBase(unittest.TestCase):
         ):  # partial
             request["height"] = bbox[3] - bbox[1]
             request["width"] = bbox[2] - bbox[0]
-            extent = Extent(bbox, EPSG3857)
-            request["bbox"] = extent.transformed(EPSG4326).bbox
+            extent = Extent(bbox, "EPSG:3857")
+            request["bbox"] = extent.transformed("EPSG:4326").bbox
             data = view.get_data(**request)
             _expected = expected[bbox[1] : bbox[3], bbox[0] : bbox[2]]
             assert_allclose(data["values"][0], _expected, atol=peak * 0.0001)
