@@ -541,16 +541,13 @@ class Place(BaseSingle):
         store_geometry = self.store.geometry
         if store_geometry is None:
             return
-        sr = get_sr(self.place_projection)
-        if not store_geometry.GetSpatialReference().IsSame(sr):
-            store_geometry = store_geometry.Clone()
-            store_geometry.TransformTo(sr)
-        _x1, _x2, _y1, _y2 = store_geometry.GetEnvelope()
+        extent = Extent.from_geometry(store_geometry).transformed(self.place_projection)
+        _x1, _y1, _x2, _y2 = extent.bbox
         p, q = self.anchor
         P, Q = zip(*self.coordinates)
         x1, x2 = _x1 + min(P) - p, _x2 + max(P) - p
         y1, y2 = _y1 + min(Q) - q, _y2 + max(Q) - q
-        return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), sr)
+        return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), extent.sr)
 
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
@@ -572,11 +569,7 @@ class Place(BaseSingle):
         if extent_geometry is None:
             # no geometry means: no data
             return (({"mode": "null"}, None),)
-        sr = get_sr(request["projection"])
-        if not extent_geometry.GetSpatialReference().IsSame(sr):
-            extent_geometry = extent_geometry.Clone()
-            extent_geometry.TransformTo(sr)
-        xmin, xmax, ymin, ymax = extent_geometry.GetEnvelope()
+        xmin, xmax, ymin, ymax = Extent.from_geometry(extent_geometry).transformed(request["projection"]).bbox
 
         # compute the requested cellsize
         x1, y1, x2, y2 = request["bbox"]
