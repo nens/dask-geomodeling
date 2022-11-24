@@ -53,6 +53,35 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(str(geometry), "POLYGON ((0 0,1 0,1 2,0 2,0 0))")
         self.assertEqual(utils.get_projection(geometry.GetSpatialReference()), "EPSG:3857")
 
+    def test_extent_union(self):
+        extent = utils.Extent((0, 0, 10, 10), "EPSG:3857")
+        other = utils.Extent((5, 5, 10, 20), "EPSG:3857")
+        assert extent.union(other).bbox == (0, 0, 10, 20)
+
+    def test_extent_union_reproject(self):
+        extent = utils.Extent((0, 0, 1, 1), "EPSG:3857")
+        other = utils.Extent((0, 0, 1, 1), "EPSG:4326")
+        actual = extent.union(other)
+        assert_almost_equal(actual.bbox, (0, 0, 111319., 111325.), decimal=0)
+        assert actual.srs == "EPSG:3857"
+
+    def test_extent_intersection(self):
+        extent = utils.Extent((0, 0, 10, 10), "EPSG:3857")
+        other = utils.Extent((5, 5, 10, 20), "EPSG:3857")
+        assert extent.intersection(other).bbox == (5, 5, 10, 10)
+
+    def test_extent_intersection_no_area(self):
+        extent = utils.Extent((0, 0, 10, 10), "EPSG:3857")
+        other = utils.Extent((0, 10, 10, 20), "EPSG:3857")
+        assert extent.intersection(other) is None
+
+    def test_extent_intersection_reproject(self):
+        extent = utils.Extent((0, 0, 100, 100), "EPSG:3857")
+        other = utils.Extent((0.0001, 0.0001, 1, 1), "EPSG:4326")
+        actual = extent.intersection(other)
+        assert_almost_equal(actual.bbox, (11., 11., 100., 100.), decimal=0)
+        assert actual.srs == "EPSG:3857"
+
     def test_get_dtype_max(self):
         self.assertIsInstance(utils.get_dtype_max("f4"), float)
         self.assertIsInstance(utils.get_dtype_max("u4"), int)

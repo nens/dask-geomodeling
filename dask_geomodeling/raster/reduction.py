@@ -2,7 +2,7 @@
 Module containing reduction raster blocks.
 """
 import numpy as np
-from dask_geomodeling.utils import filter_none, get_index
+from dask_geomodeling.utils import filter_none, get_index, Extent
 from dask_geomodeling.utils import parse_percentile_statistic
 from .base import RasterBlock
 from .elemwise import BaseElementwise
@@ -182,14 +182,10 @@ class BaseReduction(BaseElementwise):
             return
         elif len(geometries) == 1:
             return geometries[0]
-        result = geometries[0]
-        sr = result.GetSpatialReference()
+        extent = Extent.from_geometry(geometries[0])
         for geometry in geometries[1:]:
-            if not geometry.GetSpatialReference().IsSame(sr):
-                geometry = geometry.Clone()
-                geometry.TransformTo(sr)
-            result = result.Union(geometry)
-        return result
+            extent = extent.union(Extent.from_geometry(geometry))
+        return extent.as_geometry()
 
 
 def wrap_reduction_function(statistic):

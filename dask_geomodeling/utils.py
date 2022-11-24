@@ -158,9 +158,6 @@ class Extent(object):
         polygon.AssignSpatialReference(self.sr)
         return polygon
     
-    def as_shapely_geometry(self):
-        return box(*self.bbox)
- 
     def buffered(self, size):
         """ Return Extent instance. """
         x1, y1, x2, y2 = self.bbox
@@ -169,8 +166,31 @@ class Extent(object):
 
     def transformed(self, sr):
         srs = get_projection(sr)
-        geometry = shapely_transform(self.as_shapely_geometry(), self.srs, srs)
+        geometry = shapely_transform(box(*self.bbox), self.srs, srs)
         return Extent(bbox=geometry.bounds, sr=srs)
+    
+    def union(self, other):
+        """Return the union of self and other, in the SRS of self"""
+        a = self.bbox
+        b = other.transformed(self.srs).bbox
+        return Extent(bbox=(min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])), sr=self.srs)
+    
+    def intersection(self, other):
+        """Return the intersection of self and other, in the SRS of self
+        
+        Returns None if the intersection has no area.
+        """
+        a = self.bbox
+        b = other.transformed(self.srs).bbox
+        result = Extent(bbox=(max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])), sr=self.srs)
+        if result.width > 0 and result.height > 0:
+            return result
+        
+    def __or__(self, other):
+        return self.union(other)
+    
+    def __and__(self, other):
+        return self.intersection(other)
 
 
 class GeoTransform(tuple):
