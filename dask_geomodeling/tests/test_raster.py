@@ -7,7 +7,6 @@ from numpy.testing import assert_equal, assert_allclose
 from scipy import ndimage
 
 from dask_geomodeling import raster
-from dask_geomodeling.utils import EPSG4326, EPSG3857
 from dask_geomodeling.utils import Extent, get_dtype_max, get_epsg_or_wkt
 from dask_geomodeling.raster import RasterBlock
 from dask_geomodeling.tests.factories import MockRaster, MockGeometry

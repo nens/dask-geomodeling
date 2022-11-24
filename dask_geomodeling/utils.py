@@ -18,12 +18,11 @@ from shapely.geometry import box, Point
 from shapely.ops import transform as _shapely_transform
 
 try:  # shapely 2.*
-    from shapely import from_wkt, from_wkb, GEOSException
+    from shapely import from_wkt, GEOSException
 except ImportError:  # shapely 1.*
     from shapely.errors import ShapelyError as GEOSException
     from shapely.wkt import loads as from_wkt
-    from shapely.wkb import loads as from_wkb
-    
+
 
 from pyproj import CRS, Transformer
 from pyproj.exceptions import ProjError
@@ -157,7 +156,7 @@ class Extent(object):
         polygon.AddGeometry(ring)
         polygon.AssignSpatialReference(self.sr)
         return polygon
-    
+
     def buffered(self, size):
         """ Return Extent instance. """
         x1, y1, x2, y2 = self.bbox
@@ -168,16 +167,16 @@ class Extent(object):
         srs = get_projection(sr)
         geometry = shapely_transform(box(*self.bbox), self.srs, srs)
         return Extent(bbox=geometry.bounds, sr=srs)
-    
+
     def union(self, other):
         """Return the union of self and other, in the SRS of self"""
         a = self.bbox
         b = other.transformed(self.srs).bbox
         return Extent(bbox=(min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])), sr=self.srs)
-    
+
     def intersection(self, other):
         """Return the intersection of self and other, in the SRS of self
-        
+
         Returns None if the intersection has no area.
         """
         a = self.bbox
@@ -185,6 +184,7 @@ class Extent(object):
         result = Extent(bbox=(max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])), sr=self.srs)
         if result.width > 0 and result.height > 0:
             return result
+
 
 class GeoTransform(tuple):
     """
@@ -442,7 +442,7 @@ def shapely_transform(geometry, src_srs, dst_srs):
     :param dst_srs: destination projection string
 
     Note that we separately construct (and cache) the Transformer instance,
-    because of large overhead in constructing the instance since PROJ v6. 
+    because of large overhead in constructing the instance since PROJ v6.
     """
     try:
         func = get_transform_func(src_srs, dst_srs)
@@ -465,6 +465,7 @@ def shapely_from_wkt(wkt):
 
 class WKTReadingError(Exception):
     pass
+
 
 def geoseries_transform(df, src_srs, dst_srs):
     """
@@ -517,10 +518,6 @@ def transform_min_size(min_size, geometry, src_srs, dst_srs):
     target = shapely_transform(source, src_srs=src_srs, dst_srs=dst_srs)
     x1, y1, x2, y2 = target.bounds
     return max(x2 - x1, y2 - y1)
-
-
-EPSG3857 = get_sr("EPSG:3857")
-EPSG4326 = get_sr("EPSG:4326")
 
 
 def get_projection(sr):

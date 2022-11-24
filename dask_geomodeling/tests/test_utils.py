@@ -16,8 +16,6 @@ from pyproj import CRS
 
 from dask_geomodeling import utils
 
-from osgeo import ogr
-
 
 class TestUtils(unittest.TestCase):
     def test_get_index(self):

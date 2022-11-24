@@ -821,10 +821,10 @@ class TestAggregateRaster(unittest.TestCase):
         req = self.request
         req["time_resolution"] = 3600000
         req["geometry"] = box(0, 0, 10, 10)
-        
+
         # temp_group = GroupTemporal([
         #     MockRaster(timedelta=Timedelta(hours=1)),
-        #     MockRaster(timedelta=Timedelta(minutes=1)), 
+        #     MockRaster(timedelta=Timedelta(minutes=1)),
         #     MockRaster(timedelta=Timedelta(seconds=1))
         # ])
 

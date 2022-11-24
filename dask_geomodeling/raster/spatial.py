@@ -8,8 +8,6 @@ import numpy as np
 from osgeo import ogr
 
 from dask_geomodeling.utils import (
-    EPSG3857,
-    EPSG4326,
     POLYGON,
     get_sr,
     Extent,

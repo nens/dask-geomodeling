@@ -130,7 +130,7 @@ class Clip(BaseSingle):
         if extent is None:
             return None
         return extent.as_geometry()
-    
+
     @property
     def period(self):
         """ Return period datetime tuple. """

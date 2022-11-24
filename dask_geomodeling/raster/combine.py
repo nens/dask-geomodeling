@@ -4,7 +4,6 @@ Module containing raster blocks that combine rasters.
 import itertools
 from datetime import timedelta as Timedelta
 import numpy as np
-from functools import reduce
 
 from dask_geomodeling.utils import filter_none, get_dtype_max, get_index
 from dask_geomodeling.utils import GeoTransform, Extent
