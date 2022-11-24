@@ -185,13 +185,6 @@ class Extent(object):
         result = Extent(bbox=(max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])), sr=self.srs)
         if result.width > 0 and result.height > 0:
             return result
-        
-    def __or__(self, other):
-        return self.union(other)
-    
-    def __and__(self, other):
-        return self.intersection(other)
-
 
 class GeoTransform(tuple):
     """

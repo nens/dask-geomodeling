@@ -4,7 +4,10 @@ Changelog of dask-geomodeling
 2.3.12 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Perform more geometry transformations via pyproj (see 2.3.11 notes).
+
+- The .geometry property of elementwise, reduction and combine RasterBlocks is
+  now computed through the extents of the arguments (and will always be a box). 
 
 
 2.3.11 (2022-11-22)
