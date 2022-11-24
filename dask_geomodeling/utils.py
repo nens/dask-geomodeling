@@ -165,6 +165,8 @@ class Extent(object):
 
     def transformed(self, sr):
         srs = get_projection(sr)
+        if self.srs.upper() == srs.upper():
+            return self  # avoids shapely geometry construction
         geometry = shapely_transform(box(*self.bbox), self.srs, srs)
         return Extent(bbox=geometry.bounds, sr=srs)
 
@@ -444,6 +446,8 @@ def shapely_transform(geometry, src_srs, dst_srs):
     Note that we separately construct (and cache) the Transformer instance,
     because of large overhead in constructing the instance since PROJ v6.
     """
+    if src_srs.upper() == dst_srs.upper():
+        return geometry
     try:
         func = get_transform_func(src_srs, dst_srs)
         return _shapely_transform(func, geometry)

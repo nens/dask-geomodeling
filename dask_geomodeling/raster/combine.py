@@ -109,7 +109,7 @@ class BaseCombine(RasterBlock):
             return geometries[0]
         extent = Extent.from_geometry(geometries[0])
         for geometry in geometries[1:]:
-            extent |= Extent.from_geometry(geometry)
+            extent = extent.union(Extent.from_geometry(geometry))
         return extent.as_geometry()
 
     @property

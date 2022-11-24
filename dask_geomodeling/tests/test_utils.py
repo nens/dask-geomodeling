@@ -51,6 +51,14 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(str(geometry), "POLYGON ((0 0,1 0,1 2,0 2,0 0))")
         self.assertEqual(utils.get_projection(geometry.GetSpatialReference()), "EPSG:3857")
 
+    @mock.patch("dask_geomodeling.utils.shapely_transform")
+    def test_extent_transformed_same_srs(self, shapely_transform):
+        extent = utils.Extent(sr="EPSG:4326", bbox=(0, 0, 1, 1))
+        actual = extent.transformed("epsg:4326")
+
+        assert actual is extent
+        assert not shapely_transform.called
+
     def test_extent_union(self):
         extent = utils.Extent((0, 0, 10, 10), "EPSG:3857")
         other = utils.Extent((5, 5, 10, 20), "EPSG:3857")
@@ -253,6 +261,13 @@ class TestUtils(unittest.TestCase):
         box4326 = geometry.box(100000, 400000, 101000, 401000)
         with pytest.raises(utils.TransformException):
             utils.shapely_transform(box4326, src_srs=src_srs, dst_srs=dst_srs)
+
+    def test_shapely_transform_same_srs(self):
+        src_srs = "EPSG:28992"
+        dst_srs = "epsg:28992"
+        geometry = box(100000, 400000, 101000, 401000)
+        actual = utils.shapely_transform(geometry, src_srs=src_srs, dst_srs=dst_srs)
+        assert actual is geometry
 
     @mock.patch("dask_geomodeling.utils.shapely_transform")
     def test_min_size_transform(self, shapely_transform):
