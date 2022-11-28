@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.12 (unreleased)
+2.3.12 (2022-11-28)
 -------------------
 
 - Perform more geometry transformations via pyproj (see 2.3.11 notes).
