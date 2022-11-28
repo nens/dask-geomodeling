@@ -18,12 +18,11 @@ from shapely.geometry import box, Point
 from shapely.ops import transform as _shapely_transform
 
 try:  # shapely 2.*
-    from shapely import from_wkt, from_wkb, GEOSException
+    from shapely import from_wkt, GEOSException
 except ImportError:  # shapely 1.*
     from shapely.errors import ShapelyError as GEOSException
     from shapely.wkt import loads as from_wkt
-    from shapely.wkb import loads as from_wkb
-    
+
 
 from pyproj import CRS, Transformer
 from pyproj.exceptions import ProjError
@@ -114,12 +113,16 @@ class Extent(object):
 
     def __init__(self, bbox, sr):
         self.bbox = bbox
-        self.sr = sr
+        self.srs = get_projection(sr)
+
+    @property
+    def sr(self):
+        return get_sr(self.srs)
 
     def __repr__(self):
         return "<{}: {} / {}>".format(
             self.__class__.__name__,
-            get_projection(self.sr),
+            self.srs,
             get_rounded_repr(self.bbox),
         )
 
@@ -161,9 +164,28 @@ class Extent(object):
         return self.__class__(bbox=buffered_bbox, sr=self.sr)
 
     def transformed(self, sr):
-        geometry = self.as_geometry()
-        geometry.TransformTo(sr)
-        return Extent.from_geometry(geometry)
+        srs = get_projection(sr)
+        if self.srs.upper() == srs.upper():
+            return self  # avoids shapely geometry construction
+        geometry = shapely_transform(box(*self.bbox), self.srs, srs)
+        return Extent(bbox=geometry.bounds, sr=srs)
+
+    def union(self, other):
+        """Return the union of self and other, in the SRS of self"""
+        a = self.bbox
+        b = other.transformed(self.srs).bbox
+        return Extent(bbox=(min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])), sr=self.srs)
+
+    def intersection(self, other):
+        """Return the intersection of self and other, in the SRS of self
+
+        Returns None if the intersection has no area.
+        """
+        a = self.bbox
+        b = other.transformed(self.srs).bbox
+        result = Extent(bbox=(max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])), sr=self.srs)
+        if result.width > 0 and result.height > 0:
+            return result
 
 
 class GeoTransform(tuple):
@@ -422,8 +444,10 @@ def shapely_transform(geometry, src_srs, dst_srs):
     :param dst_srs: destination projection string
 
     Note that we separately construct (and cache) the Transformer instance,
-    because of large overhead in constructing the instance since PROJ v6. 
+    because of large overhead in constructing the instance since PROJ v6.
     """
+    if src_srs.upper() == dst_srs.upper():
+        return geometry
     try:
         func = get_transform_func(src_srs, dst_srs)
         return _shapely_transform(func, geometry)
@@ -445,6 +469,7 @@ def shapely_from_wkt(wkt):
 
 class WKTReadingError(Exception):
     pass
+
 
 def geoseries_transform(df, src_srs, dst_srs):
     """
@@ -499,29 +524,16 @@ def transform_min_size(min_size, geometry, src_srs, dst_srs):
     return max(x2 - x1, y2 - y1)
 
 
-def transform_extent(extent, src_srs, dst_srs):
-    """
-    Return extent tuple transformed from src_srs to dst_srs.
-
-    :param extent: xmin, ymin, xmax, ymax
-    :param src_srs: source projection string
-    :param dst_srs: destination projection string
-    """
-    source = box(*extent)
-    target = shapely_transform(source, src_srs=src_srs, dst_srs=dst_srs)
-    return target.bounds
-
-
-EPSG3857 = get_sr("EPSG:3857")
-EPSG4326 = get_sr("EPSG:4326")
-
-
 def get_projection(sr):
     """ Return simple userinput string for spatial reference, if any. """
+    if isinstance(sr, str):
+        return sr
     key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
-    return "{name}:{code}".format(
-        name=sr.GetAuthorityName(key), code=sr.GetAuthorityCode(key)
-    )
+    name = sr.GetAuthorityName(key)
+    if name is None:
+        return sr.ExportToWkt()
+    code = sr.GetAuthorityCode(key)
+    return "{name}:{code}".format(name=name, code=code)
 
 
 def get_epsg_or_wkt(text):

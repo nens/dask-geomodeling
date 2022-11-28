@@ -8,8 +8,6 @@ import numpy as np
 from osgeo import ogr
 
 from dask_geomodeling.utils import (
-    EPSG3857,
-    EPSG4326,
     POLYGON,
     get_sr,
     Extent,
@@ -66,8 +64,8 @@ def expand_request_meters(request, radius_m=1):
     # suffixed by _m, in pixels by _px
     if sr.IsGeographic():
         # expand geographic bbox in EPSG3857
-        extent_geom = Extent(bbox, sr)
-        bbox = extent_geom.transformed(EPSG3857).bbox
+        extent_geom = Extent(bbox, request["projection"])
+        bbox = extent_geom.transformed("EPSG:3857").bbox
     else:
         # most Projected projections are in meters, but to be sure:
         radius_m /= sr.GetLinearUnits()
@@ -102,8 +100,8 @@ def expand_request_meters(request, radius_m=1):
     )
     if sr.IsGeographic():
         # transform back to original projection
-        extent_proj = Extent(new_request["bbox"], EPSG3857)
-        new_request["bbox"] = extent_proj.transformed(sr).bbox
+        extent_proj = Extent(new_request["bbox"], "EPSG:3857")
+        new_request["bbox"] = extent_proj.transformed(request["projection"]).bbox
     new_request["height"] += 2 * margins_px[0]
     new_request["width"] += 2 * margins_px[1]
 
@@ -533,11 +531,7 @@ class Place(BaseSingle):
         geometry = self.geometry
         if geometry is None:
             return
-        if not geometry.GetSpatialReference().IsSame(EPSG4326):
-            geometry = geometry.Clone()
-            geometry.TransformTo(EPSG4326)
-        x1, x2, y1, y2 = geometry.GetEnvelope()
-        return x1, y1, x2, y2
+        return Extent.from_geometry(geometry).transformed("EPSG:4326").bbox
 
     @property
     def geometry(self):
@@ -545,16 +539,13 @@ class Place(BaseSingle):
         store_geometry = self.store.geometry
         if store_geometry is None:
             return
-        sr = get_sr(self.place_projection)
-        if not store_geometry.GetSpatialReference().IsSame(sr):
-            store_geometry = store_geometry.Clone()
-            store_geometry.TransformTo(sr)
-        _x1, _x2, _y1, _y2 = store_geometry.GetEnvelope()
+        extent = Extent.from_geometry(store_geometry).transformed(self.place_projection)
+        _x1, _y1, _x2, _y2 = extent.bbox
         p, q = self.anchor
         P, Q = zip(*self.coordinates)
         x1, x2 = _x1 + min(P) - p, _x2 + max(P) - p
         y1, y2 = _y1 + min(Q) - q, _y2 + max(Q) - q
-        return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), sr)
+        return ogr.CreateGeometryFromWkt(POLYGON.format(x1, y1, x2, y2), extent.sr)
 
     def get_sources_and_requests(self, **request):
         if request["mode"] != "vals":
@@ -576,11 +567,7 @@ class Place(BaseSingle):
         if extent_geometry is None:
             # no geometry means: no data
             return (({"mode": "null"}, None),)
-        sr = get_sr(request["projection"])
-        if not extent_geometry.GetSpatialReference().IsSame(sr):
-            extent_geometry = extent_geometry.Clone()
-            extent_geometry.TransformTo(sr)
-        xmin, xmax, ymin, ymax = extent_geometry.GetEnvelope()
+        xmin, xmax, ymin, ymax = Extent.from_geometry(extent_geometry).transformed(request["projection"]).bbox
 
         # compute the requested cellsize
         x1, y1, x2, y2 = request["bbox"]

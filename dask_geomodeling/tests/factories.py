@@ -16,7 +16,6 @@ from dask_geomodeling.utils import (
     get_dtype_max,
     Extent,
     get_crs,
-    get_sr,
     get_epsg_or_wkt,
     shapely_transform,
     Dataset,
@@ -114,8 +113,8 @@ class MockRaster(RasterBlock):
         bbox = request.get("bbox", (0, 0, width, height))
         projection = request.get("projection", "EPSG:3857")
         if projection != src_projection:
-            extent = Extent(bbox, get_sr(projection))
-            bbox = extent.transformed(get_sr(src_projection)).bbox
+            extent = Extent(bbox, projection)
+            bbox = extent.transformed(src_projection).bbox
         x1, y1, x2, y2 = [int(round(x)) for x in bbox]
 
         if x1 == x2 or y1 == y2:  # point request
@@ -180,7 +179,7 @@ class MockRaster(RasterBlock):
     def geometry(self):
         if self.extent is None:
             return
-        return Extent(self.extent, get_sr(self.projection)).as_geometry()
+        return Extent(self.extent, self.projection).as_geometry()
 
 
 class MockGeometry(GeometryBlock):

@@ -152,8 +152,8 @@ class TestGeometryFileSource(unittest.TestCase):
         self.assertEqual(0, len(result["features"]))
 
     def test_reproject(self):
-        extent = Extent(self.bbox, get_sr(self.projection))
-        bbox3857 = extent.transformed(get_sr("EPSG:3857")).bbox
+        extent = Extent(self.bbox, self.projection)
+        bbox3857 = extent.transformed("EPSG:3857").bbox
         result = self.source.get_data(geometry=box(*bbox3857), projection="EPSG:3857")
         self.assertEqual("EPSG:3857", result["projection"])
         actual = result["features"].crs
@@ -821,10 +821,10 @@ class TestAggregateRaster(unittest.TestCase):
         req = self.request
         req["time_resolution"] = 3600000
         req["geometry"] = box(0, 0, 10, 10)
-        
+
         # temp_group = GroupTemporal([
         #     MockRaster(timedelta=Timedelta(hours=1)),
-        #     MockRaster(timedelta=Timedelta(minutes=1)), 
+        #     MockRaster(timedelta=Timedelta(minutes=1)),
         #     MockRaster(timedelta=Timedelta(seconds=1))
         # ])
 

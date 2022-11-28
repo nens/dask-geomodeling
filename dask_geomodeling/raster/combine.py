@@ -6,7 +6,7 @@ from datetime import timedelta as Timedelta
 import numpy as np
 
 from dask_geomodeling.utils import filter_none, get_dtype_max, get_index
-from dask_geomodeling.utils import GeoTransform
+from dask_geomodeling.utils import GeoTransform, Extent
 
 from .base import RasterBlock
 
@@ -107,14 +107,10 @@ class BaseCombine(RasterBlock):
             return
         elif len(geometries) == 1:
             return geometries[0]
-        result = geometries[0]
-        sr = result.GetSpatialReference()
+        extent = Extent.from_geometry(geometries[0])
         for geometry in geometries[1:]:
-            if not geometry.GetSpatialReference().IsSame(sr):
-                geometry = geometry.Clone()
-                geometry.TransformTo(sr)
-            result = result.Union(geometry)
-        return result
+            extent = extent.union(Extent.from_geometry(geometry))
+        return extent.as_geometry()
 
     @property
     def projection(self):

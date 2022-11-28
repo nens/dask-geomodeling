@@ -3,7 +3,7 @@ Module containing geometry block constructive operations
 """
 import numbers
 
-from dask_geomodeling.utils import Extent, shapely_transform, transform_extent
+from dask_geomodeling.utils import Extent, shapely_transform
 
 from .base import BaseSingle
 
@@ -83,10 +83,8 @@ class Buffer(BaseSingle):
             req_srs = data["projection"]
             buf_srs = kwargs["buf_srs"]
             distance = kwargs["distance"]
-            extent = transform_extent(data["extent"], req_srs, buf_srs)
-            extent = Extent(extent, buf_srs).buffered(distance).bbox
-            extent = transform_extent(extent, buf_srs, req_srs)
-            return {"extent": extent, "projection": req_srs}
+            extent = Extent(data["extent"], req_srs).transformed(buf_srs).buffered(distance).transformed(req_srs)
+            return {"extent": extent.bbox, "projection": req_srs}
         else:
             raise NotImplementedError("Dunno this mode!")
 
