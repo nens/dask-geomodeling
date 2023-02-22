@@ -59,7 +59,11 @@ def calculate_level_and_cells(bbox):
     previous level.
     """
     x1, y1, x2, y2 = bbox
-    level = -ceil(log(max(x2 - x1, y2 - y1), 2))
+
+    try:
+        level = -ceil(log(max(x2 - x1, y2 - y1), 2))
+    except ValueError:
+        level = 0  # arbitrary level for a point
 
     width = 0.5 ** level
     height = 0.5 ** level

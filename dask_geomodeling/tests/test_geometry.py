@@ -1126,6 +1126,26 @@ class TestBucketize(unittest.TestCase):
         self.assertEqual(expected, sorted(buckets))
 
 
+def test_bucketize_points():
+    # two points in same bucket
+    bboxes = [
+        (0, 0, 0, 0),  # a point
+        (1, 1, 1, 1),  # another point
+    ]
+    expected = [[0, 1]]
+    buckets = aggregate.bucketize(bboxes)
+    assert buckets == expected
+
+    # two points in two buckets
+    bboxes = [
+        (0.2, 0.2, 0.2, 0.2),  # a point
+        (0.5, 0.5, 0.5, 0.5),  # another point
+    ]
+    expected = [[0], [1]]
+    buckets = aggregate.bucketize(bboxes)
+    assert buckets == expected
+
+
 class TestSetGetSeries(unittest.TestCase):
     def setUp(self):
         self.N = 10
