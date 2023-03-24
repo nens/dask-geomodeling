@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.3.13 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Improved AggregateRaster for small source geometries.
 
 
 2.3.12 (2022-11-28)

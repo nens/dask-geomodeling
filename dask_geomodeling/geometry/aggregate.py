@@ -301,11 +301,10 @@ class AggregateRaster(GeometryBlock):
                 "the maximum ({} > {})".format(required_pixels, max_pixels)
             )
 
-        # snap the extent to (0, 0) to prevent subpixel shifts
-        x1 = floor(x1 / pixel_size) * pixel_size
-        y1 = floor(y1 / pixel_size) * pixel_size
-        x2 = ceil(x2 / pixel_size) * pixel_size
-        y2 = ceil(y2 / pixel_size) * pixel_size
+        # consider (x1, y2) as the origin of a grid of size pixel_size.
+        # snap x2 and y1 to the grid. the new bbox contains the old.
+        x2 = x1 + ceil((x2 - x1) / pixel_size) * pixel_size
+        y1 = y2 - ceil((y2 - y1) / pixel_size) * pixel_size
 
         # compute the width and height
         width = max(int((x2 - x1) / pixel_size), 1)
