@@ -307,8 +307,8 @@ class AggregateRaster(GeometryBlock):
         y1 = y2 - ceil((y2 - y1) / pixel_size) * pixel_size
 
         # compute the width and height
-        width = max(int((x2 - x1) / pixel_size), 1)
-        height = max(int((y2 - y1) / pixel_size), 1)
+        width = max(round((x2 - x1) / pixel_size), 1)
+        height = max(round((y2 - y1) / pixel_size), 1)
 
         raster_request = {
             "mode": "vals",
