@@ -1111,6 +1111,25 @@ class TestAggregateRaster(unittest.TestCase):
                 check_names=False,
             )
 
+    def test_aggregate_no_interaction(self):
+        for dx in [0.0, 0.1, 0.4999, 0.50001, 0.9, 0.99999]:
+            raster = MockRaster(
+                origin=Datetime(2018, 1, 1),
+                timedelta=Timedelta(hours=1),
+                bands=1,
+                value=np.indices((10, 10))[1],
+            )
+            source = MockGeometry(
+                polygons=[
+                    ((2.0 + dx, 2.0), (4.0 + dx, 2.0), (4.0 + dx, 4.0), (2.0 + dx, 4.0)),
+                    ((3.0, 6.0), (5, 6.0), (5, 8.0), (3, 8.0)),  # exactly contains 3, 4
+                ],
+                properties=[{"id": 1}, {"id": 2}],
+            )
+            view = geometry.AggregateRaster(source=source, raster=raster, statistic="min")
+            result = view.get_data(**self.request)
+            assert result["features"]["agg"][2] == 3
+
 
 class TestBucketize(unittest.TestCase):
     def test_bucketize(self):
