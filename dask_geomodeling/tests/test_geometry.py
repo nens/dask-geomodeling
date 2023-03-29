@@ -1132,17 +1132,24 @@ class TestAggregateRaster(unittest.TestCase):
     def test_small_geometry(self):
         # Rasterize only takes pixels into account whose center is
         # inside the polygon. 
+        raster = MockRaster(
+            origin=Datetime(2018, 1, 1),
+            timedelta=Timedelta(hours=1),
+            bands=1,
+            value=np.indices((10, 10))[1],  # increasing in x only
+        )
         source = MockGeometry(
             polygons=[
-                ((2.0, 2.0), (2.1, 2.0), (2.1, 2.1), (2.0, 2.1)),
+                ((2.0, 2.0), (2.1, 2.0), (2.1, 3.0), (2.0, 3.0)),
+                ((4.9, 1.0), (5.0, 1.0), (5.0, 2.0), (4.9, 2.0)),
             ],
-            properties=[{"id": 1}],
+            properties=[{"id": 1}, {"id": 2}],
         )
         view = geometry.AggregateRaster(
-            source=source, raster=self.raster, statistic="max"
+            source=source, raster=raster, statistic="max"
         )
         result = view.get_data(**self.request)
-        assert result["features"]["agg"].tolist() == [1.0]
+        assert result["features"]["agg"].tolist() == [2., 4.]
 
 
 class TestBucketize(unittest.TestCase):

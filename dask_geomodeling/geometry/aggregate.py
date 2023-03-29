@@ -118,12 +118,16 @@ def aggregate_polygons(
     agg_srs,
     height,
     width,
-    threshold_name,
     threshold_values,
     agg_func,
     statistic,
 ):
     """gdal_rasterize the polygons in groups of disjoint subsets"""
+    if threshold_values is not None:
+        threshold_values = np.concatenate(
+            [threshold_values, np.array([np.nan], dtype=threshold_values.dtype)]
+        )
+
     agg = np.full((values.shape[0], len(geometries)), np.nan, dtype="f4")
     for select in bucketize(geometries.bounds.values):
         rasterize_result = utils.rasterize_geoseries(
@@ -137,7 +141,7 @@ def aggregate_polygons(
         labels = rasterize_result["values"][0]
 
         # if there is a threshold, generate a raster with thresholds
-        if threshold_name:
+        if threshold_values is not None:
             # mode="clip" ensures that unlabeled cells use the appended NaN
             thresholds = np.take(threshold_values, labels, mode="clip")
         else:
@@ -147,7 +151,7 @@ def aggregate_polygons(
             # limit statistics to active pixels
             active = frame != no_data_value
             # if there is a threshold, mask the frame
-            if threshold_name:
+            if threshold_values is not None:
                 valid = ~np.isnan(thresholds)  # to suppress warnings
                 active[~valid] = False  # no threshold -> no aggregation
                 active[valid] &= frame[valid] >= thresholds[valid]
@@ -169,6 +173,36 @@ def aggregate_polygons(
                 labels=active_labels,
                 index=select_and_active,
             )
+    return agg
+
+
+def aggregate_points(
+    geometries,
+    values,
+    no_data_value,
+    agg_bbox,
+    height,
+    width,
+    threshold_values,
+    statistic,
+):
+    # Transform the points to indices
+    gt = utils.GeoTransform.from_bbox(agg_bbox, height, width)
+    i_y, i_x = gt.get_indices(np.array([geometries.x.values, geometries.y.values]).T)
+    point_values = values[:, i_y, i_x]
+
+    # if there is a threshold, mask the point values
+    active = point_values != no_data_value
+    if threshold_values is not None:
+        valid = ~np.isnan(threshold_values)  # to suppress warnings
+        active[~valid] = False  # no threshold -> no aggregation
+        active[valid] &= point_values[valid] >= threshold_values[valid]
+
+    agg = point_values.astype("f4")
+    agg[~active] = np.nan
+    if statistic == "count":
+        agg[active] = 1.0
+
     return agg
 
 
@@ -445,10 +479,7 @@ class AggregateRaster(GeometryBlock):
         # this is only there for the AggregateRasterAboveThreshold
         threshold_name = process_kwargs.get("threshold_name")
         if threshold_name:
-            # get the threshold, appending NaN for unlabeled pixels
-            threshold_values = np.empty((len(features) + 1,), dtype="f4")
-            threshold_values[:-1] = features[threshold_name].values
-            threshold_values[-1] = np.nan
+            threshold_values = features[threshold_name].values.astype("f4")
         else:
             threshold_values = None
 
@@ -482,9 +513,18 @@ class AggregateRaster(GeometryBlock):
             agg_srs,
             height,
             width,
-            threshold_name,
-            threshold_values,
+            None if threshold_values is None else threshold_values[~is_point_like],
             agg_func,
+            statistic,
+        )
+        agg[:, is_point_like] = aggregate_points(
+            agg_geometries[is_point_like].centroid,
+            values,
+            no_data_value,
+            agg_bbox,
+            height,
+            width,
+            None if threshold_values is None else threshold_values[is_point_like],
             statistic,
         )
 
