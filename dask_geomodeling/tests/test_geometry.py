@@ -664,7 +664,6 @@ class TestAggregateRaster(unittest.TestCase):
             mode="intersects",
             projection="EPSG:3857",
             geometry=box(0, 0, 10, 10),
-            min_size=1.0,
         )
         self.default_raster_limit = config.get("geomodeling.raster-limit")
 
@@ -1129,6 +1128,21 @@ class TestAggregateRaster(unittest.TestCase):
             view = geometry.AggregateRaster(source=source, raster=raster, statistic="min")
             result = view.get_data(**self.request)
             assert result["features"]["agg"][2] == 3
+
+    def test_small_geometry(self):
+        # Rasterize only takes pixels into account whose center is
+        # inside the polygon. 
+        source = MockGeometry(
+            polygons=[
+                ((2.0, 2.0), (2.1, 2.0), (2.1, 2.1), (2.0, 2.1)),
+            ],
+            properties=[{"id": 1}],
+        )
+        view = geometry.AggregateRaster(
+            source=source, raster=self.raster, statistic="max"
+        )
+        result = view.get_data(**self.request)
+        assert result["features"]["agg"].tolist() == [1.0]
 
 
 class TestBucketize(unittest.TestCase):
