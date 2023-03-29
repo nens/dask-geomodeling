@@ -61,8 +61,8 @@ def calculate_level_and_cells(bbox):
     x1, y1, x2, y2 = bbox
     level = -ceil(log(max(x2 - x1, y2 - y1), 2))
 
-    width = 0.5 ** level
-    height = 0.5 ** level
+    width = 0.5**level
+    height = 0.5**level
 
     j1 = floor(x1 / width)
     j2 = floor(x2 / width)
@@ -108,6 +108,68 @@ def bucketize(bboxes):
     return [
         bucket.indices for bucket_list in bucket_dict.values() for bucket in bucket_list
     ]
+
+
+def aggregate_polygons(
+    geometries,
+    values,
+    no_data_value,
+    agg_bbox,
+    agg_srs,
+    height,
+    width,
+    threshold_name,
+    threshold_values,
+    agg_func,
+    statistic,
+):
+    """gdal_rasterize the polygons in groups of disjoint subsets"""
+    agg = np.full((values.shape[0], len(geometries)), np.nan, dtype="f4")
+    for select in bucketize(geometries.bounds.values):
+        rasterize_result = utils.rasterize_geoseries(
+            geometries.iloc[select],
+            agg_bbox,
+            agg_srs,
+            height,
+            width,
+            values=np.asarray(select, dtype=np.int32),  # GDAL needs int32
+        )
+        labels = rasterize_result["values"][0]
+
+        # if there is a threshold, generate a raster with thresholds
+        if threshold_name:
+            # mode="clip" ensures that unlabeled cells use the appended NaN
+            thresholds = np.take(threshold_values, labels, mode="clip")
+        else:
+            thresholds = None
+
+        for frame_no, frame in enumerate(values):
+            # limit statistics to active pixels
+            active = frame != no_data_value
+            # if there is a threshold, mask the frame
+            if threshold_name:
+                valid = ~np.isnan(thresholds)  # to suppress warnings
+                active[~valid] = False  # no threshold -> no aggregation
+                active[valid] &= frame[valid] >= thresholds[valid]
+
+            # if there is no single active value: do not aggregate
+            if not active.any():
+                continue
+
+            # select features that actually have data
+            # (min, max, median, and percentile cannot handle it otherwise)
+            active_labels = labels[active]
+            select_and_active = list(set(np.unique(active_labels)) & set(select))
+
+            if not select_and_active:
+                continue
+
+            agg[frame_no][select_and_active] = agg_func(
+                1 if statistic == "count" else frame[active],
+                labels=active_labels,
+                index=select_and_active,
+            )
+    return agg
 
 
 class AggregateRaster(GeometryBlock):
@@ -284,7 +346,7 @@ class AggregateRaster(GeometryBlock):
         x1, y1, x2, y2 = utils.Extent(extent, req_srs).transformed(agg_srs).bbox
 
         # estimate the amount of required pixels
-        required_pixels = int(((x2 - x1) * (y2 - y1)) / (self.pixel_size ** 2))
+        required_pixels = int(((x2 - x1) * (y2 - y1)) / (self.pixel_size**2))
 
         # in case this request is too large, we adapt pixel size
         max_pixels = self.max_pixels
@@ -319,7 +381,7 @@ class AggregateRaster(GeometryBlock):
             "aggregation": None,  # TODO
             "bbox": (x1, y1, x2, y2),
             "width": width,
-            "height": height
+            "height": height,
         }
 
         # only propagate if provided
@@ -391,6 +453,7 @@ class AggregateRaster(GeometryBlock):
             threshold_values = None
 
         # investigate the raster data
+        agg_bbox = process_kwargs["agg_bbox"]
         if raster_data is None:
             values = no_data_value = None
         else:
@@ -404,52 +467,26 @@ class AggregateRaster(GeometryBlock):
         pixel_size = process_kwargs["pixel_size"]
         actual_pixel_size = process_kwargs["actual_pixel_size"]
 
-        # process in groups of disjoint subsets of the features
         agg = np.full((depth, len(features)), np.nan, dtype="f4")
-        for select in bucketize(features.bounds.values):
-            rasterize_result = utils.rasterize_geoseries(
-                agg_geometries.iloc[select],
-                process_kwargs["agg_bbox"],
-                agg_srs,
-                height,
-                width,
-                values=np.asarray(select, dtype=np.int32),  # GDAL needs int32
-            )
-            labels = rasterize_result["values"][0]
 
-            # if there is a threshold, generate a raster with thresholds
-            if threshold_name:
-                # mode="clip" ensures that unlabeled cells use the appended NaN
-                thresholds = np.take(threshold_values, labels, mode="clip")
-            else:
-                thresholds = None
+        # split off 'point-like' features, treat them differently
+        x1, y1, x2, y2 = agg_geometries.bounds.values.T
+        is_point_like = ((y2 - y1) < pixel_size) | ((x2 - x1) < pixel_size)
 
-            for frame_no, frame in enumerate(values):
-                # limit statistics to active pixels
-                active = frame != no_data_value
-                # if there is a threshold, mask the frame
-                if threshold_name:
-                    valid = ~np.isnan(thresholds)  # to suppress warnings
-                    active[~valid] = False  # no threshold -> no aggregation
-                    active[valid] &= frame[valid] >= thresholds[valid]
-
-                # if there is no single active value: do not aggregate
-                if not active.any():
-                    continue
-
-                # select features that actually have data
-                # (min, max, median, and percentile cannot handle it otherwise)
-                active_labels = labels[active]
-                select_and_active = list(set(np.unique(active_labels)) & set(select))
-
-                if not select_and_active:
-                    continue
-
-                agg[frame_no][select_and_active] = agg_func(
-                    1 if statistic == "count" else frame[active],
-                    labels=active_labels,
-                    index=select_and_active,
-                )
+        agg = np.full((depth, len(features)), np.nan, dtype="f4")
+        agg[:, ~is_point_like] = aggregate_polygons(
+            agg_geometries[~is_point_like],
+            values,
+            no_data_value,
+            agg_bbox,
+            agg_srs,
+            height,
+            width,
+            threshold_name,
+            threshold_values,
+            agg_func,
+            statistic,
+        )
 
         if extensive:  # sum and count
             agg[~np.isfinite(agg)] = 0
