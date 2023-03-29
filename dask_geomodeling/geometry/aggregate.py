@@ -400,7 +400,6 @@ class AggregateRaster(GeometryBlock):
             result[result_column] = 0 if extensive else np.nan
             return {"features": result, "projection": req_srs}
         depth, height, width = values.shape
-        print(values[0, 0, :])
 
         pixel_size = process_kwargs["pixel_size"]
         actual_pixel_size = process_kwargs["actual_pixel_size"]
