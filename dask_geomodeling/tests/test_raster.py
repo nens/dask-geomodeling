@@ -2091,7 +2091,7 @@ class TestRasterize(unittest.TestCase):
         self.assertEqual(values.dtype, np.uint8)
         self.assertEqual(data["no_data_value"], 255)
         self.assertEqual(values[1, 0], np.uint8(51))
-        self.assertEqual(values[2, 1], np.uint8(512))
+        self.assertEqual(values[2, 1], np.array(512).astype(np.uint8))
         self.assertEqual(np.sum(values == data["no_data_value"]), 4)
 
     def test_rasterize_value(self):

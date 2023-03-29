@@ -676,7 +676,8 @@ class Rasterize(RasterBlock):
         values = result["values"]
 
         # cast to the expected dtype if necessary
-        cast_values = values.astype(process_kwargs["dtype"])
+        with np.errstate(over="ignore", under="ignore"):
+            cast_values = values.astype(process_kwargs["dtype"])
 
         # replace the nodata value if necessary
         if result["no_data_value"] != no_data_value:

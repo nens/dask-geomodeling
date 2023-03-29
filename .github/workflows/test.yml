@@ -50,7 +50,7 @@ jobs:
 
       - name: Install GDAL
         run: |
-          sudo apt-get install --yes --no-install-recommends libgdal-dev
+          sudo apt-get update && sudo apt-get install --yes --no-install-recommends libgdal-dev
 
       - name: Install python dependencies
         shell: bash
