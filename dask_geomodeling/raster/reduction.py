@@ -30,7 +30,7 @@ STATISTICS = {
 
 def check_statistic(statistic):
     if statistic not in STATISTICS:
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic)
         if percentile is None:
             raise ValueError('Unknown statistic "{}"'.format(statistic))
 
@@ -59,11 +59,9 @@ def reduce_rasters(stack, statistic, no_data_value=None, dtype=None):
       dict with "values" and "no_data_value"
     """
     if statistic not in STATISTICS:
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic)
         if percentile is None:
             raise KeyError('Unknown statistic "{}"'.format(statistic))
-        else:
-            statistic = "percentile"
 
     if len(stack) == 0:
         raise ValueError("Cannot reduce a zero-length stack")
