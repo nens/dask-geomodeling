@@ -121,29 +121,27 @@ def aggregate_polygons(
     percentile,
 ):
     """Compute aggregates for given geometries.
+
+    Geometries are rasterized using gdal_rasterize (without the ALL_TOUCHED option).
     
     Args:
-      geometries (GeoSeries): The geometries (polygons) to aggregate the raster in
-      values (ndarray): A three-dimensional array (t, y, x) of values to aggregate
-      no_data_value (number): The value in 'values' that denotes missing data
-      agg_bbox (tuple of 4 numbers): The bbox of 'values'
-      agg_srs (str): The SRS (projection) of 'values'
-      threshold_values (ndarray, optional): A threshold value per geometry
-      statistic (str): A valid statistic (a key in AggregateRaster.STATISTICS)
-      percentile (float, optional)
+      geometries (GeoSeries): The geometries to aggregate the raster in.
+      values (ndarray): A three-dimensional raster ``(t, y, x)`` to aggregate.
+      no_data_value (number): The value in ``values`` that denotes missing data.
+      agg_bbox (tuple of 4 numbers): The bbox of ``values``.
+      agg_srs (str): The projection of ``values``.
+      threshold_values (ndarray, optional): A threshold value per geometry.
+      statistic (str): A key in ``AggregateRaster.STATISTICS``.
+      percentile (float, optional): Required if ``statistic == "percentile"``
 
     Returns:
-      - ndarray of dtype float32 and with shape (t, n_geometries)    
+      - ndarray of dtype float32 and with shape ``(t, len(geometries))``
       - list of geometry indexes that didn't cover any cell
     """
-    # Select the aggregation function:
-    if percentile:
-        statistic = "percentile"
-        agg_func = partial(
-            AggregateRaster.STATISTICS[statistic]["func"], qval=percentile
-        )
-    else:
-        agg_func = AggregateRaster.STATISTICS[statistic]["func"]
+    # Select the aggregation function
+    agg_func = AggregateRaster.STATISTICS[statistic]["func"]
+    if statistic == "percentile":
+        agg_func = partial(agg_func, qval=percentile)
 
     # Append NaN to the threshold values for later usage
     if threshold_values is not None:
@@ -206,7 +204,7 @@ def aggregate_polygons(
 
 
 def aggregate_points(
-    geometries,
+    points,
     values,
     no_data_value,
     agg_bbox,
@@ -214,22 +212,24 @@ def aggregate_points(
     statistic,
 ):
     """Compute aggregates for given point geometries.
+
+    The values of the raster is taken at the point coordinates.
     
     Args:
-      geometries (GeoSeries): The geometries (point) to aggregate the raster in
-      values (ndarray): A three-dimensional array (t, y, x) of values to aggregate
-      no_data_value (number): The value in 'values' that denotes missing data
-      agg_bbox (tuple of 4 numbers): The bbox of 'values'
-      threshold_values (ndarray): A threshold value per geometry
-      statistic (str): A valid AggregateRaster statistic
+      points (GeoSeries): The geometries (points) to aggregate the raster in.
+      values (ndarray): A three-dimensional raster ``(t, y, x)`` to aggregate.
+      no_data_value (number): The value in ``values`` that denotes missing data.
+      agg_bbox (tuple of 4 numbers): The bbox of ``values``.
+      threshold_values (ndarray): A threshold value per geometry.
+      statistic (str): A key in ``AggregateRaster.STATISTICS``.
 
     Returns:
-      ndarray of dtype float32 and with shape (t, n_geometries)    
+      ndarray of dtype float32 and with shape ``(t, len(n_geometries))``
     """
     # Transform the points to indices
     _, height, width = values.shape
     gt = utils.GeoTransform.from_bbox(agg_bbox, height, width)
-    i_y, i_x = gt.get_indices(np.array([geometries.x.values, geometries.y.values]).T)
+    i_y, i_x = gt.get_indices(np.array([points.x.values, points.y.values]).T)
     point_values = values[:, np.clip(i_y, 0, height - 1), np.clip(i_x, 0, width - 1)]
 
     # if there is a threshold, mask the point values
@@ -240,8 +240,12 @@ def aggregate_points(
         active[~valid] = False  # no threshold -> no aggregation
         active[valid] &= point_values[valid] >= threshold_values[valid]
 
+    # Convert nodata to NaN
     agg = point_values.astype("f4")
     agg[~active] = np.nan
+
+    # For all statistics the aggregated equals the pixel size (if there is
+    # only one pixel), with the exception of "count":
     if statistic == "count":
         agg[active] = 1.0
 
