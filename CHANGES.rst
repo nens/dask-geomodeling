@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.13 (unreleased)
+2.3.13 (2023-04-04)
 -------------------
 
 - Expand AggregateRaster for usage on points (and other geometries that are
