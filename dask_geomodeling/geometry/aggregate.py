@@ -244,8 +244,8 @@ def aggregate_points(
     agg = point_values.astype("f4")
     agg[~active] = np.nan
 
-    # For all statistics the aggregated equals the pixel size (if there is
-    # only one pixel), with the exception of "count":
+    # For all statistics the aggregated value equals the pixel value
+    # (if there is only one pixel), with the exception of "count":
     if statistic == "count":
         agg[active] = 1.0
 
