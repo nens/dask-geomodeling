@@ -407,7 +407,7 @@ class TemporalAggregate(BaseSingle):
         if not isinstance(statistic, str):
             raise TypeError("'{}' object is not allowed.".format(type(statistic)))
         # interpret percentile statistic
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic.lower())
         if percentile:
             statistic = "p{0}".format(percentile)
         elif statistic not in self.STATISTICS:
@@ -620,8 +620,7 @@ class TemporalAggregate(BaseSingle):
         values = data["values"]
         if values.shape[0] != len(times):
             raise RuntimeError("Shape of raster does not match number of timestamps")
-        statistic = process_kwargs["statistic"]
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(process_kwargs["statistic"])
         if percentile:
             extensive = False
             agg_func = partial(np.nanpercentile, q=percentile)
@@ -706,7 +705,7 @@ class Cumulative(BaseSingle):
         if not isinstance(statistic, str):
             raise TypeError("'{}' object is not allowed.".format(type(statistic)))
         # interpret percentile statistic
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic.lower())
         if percentile:
             statistic = "p{0}".format(percentile)
         elif statistic not in self.STATISTICS:
@@ -860,8 +859,7 @@ class Cumulative(BaseSingle):
         values = data["values"]
         if values.shape[0] != len(times):
             raise RuntimeError("Shape of raster does not match number of timestamps")
-        statistic = process_kwargs["statistic"]
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(process_kwargs["statistic"])
         if percentile:
             extensive = False
             agg_func = partial(np.nanpercentile, q=percentile)

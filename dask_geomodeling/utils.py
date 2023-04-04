@@ -837,7 +837,9 @@ def parse_percentile_statistic(statistic):
         percentile = float(percentile_match[0])
         if not 0 <= percentile <= 100:
             raise ValueError("Percentiles must be in the range [0, 100]")
-        return percentile
+        return "percentile", percentile
+    else:
+        return statistic, None
 
 
 def dtype_for_statistic(dtype, statistic):
