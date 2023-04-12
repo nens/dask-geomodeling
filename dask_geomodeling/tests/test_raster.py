@@ -1795,7 +1795,7 @@ class TestBase(unittest.TestCase):
         self.assertEqual(view.dtype, np.uint16)
 
     def test_dilate(self):
-        values = np.array([[0, 2], [0, 0], [0, 0]])
+        values = np.array([[0, 2], [0, 0], [0, 0]], dtype=float)
         store = MockRaster(
             origin=Datetime(2000, 1, 1),
             value=values,
@@ -1834,7 +1834,7 @@ class TestBase(unittest.TestCase):
         self.assertEqual(view.get_data(**self.time_request)["time"], self.expected_time)
 
     def test_moving_max(self):
-        values = np.array([[0, 2], [0, 0], [0, 0]])
+        values = np.array([[0, 2], [0, 0], [0, 0]], dtype=float)
         store = MockRaster(
             origin=Datetime(2000, 1, 1),
             value=values,

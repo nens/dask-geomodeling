@@ -107,43 +107,43 @@ class MockRaster(RasterBlock):
             fillvalue = 255
             result = np.full(shape, value, dtype=np.uint8)
             return {"values": result, "no_data_value": fillvalue}
-
-        # there is an actual data array
+        
+        # there is an actual data array       
         fillvalue = get_dtype_max(value.dtype)
-        bbox = request.get("bbox", (0, 0, width, height))
-        projection = request.get("projection", "EPSG:3857")
-        if projection != src_projection:
-            extent = Extent(bbox, projection)
-            bbox = extent.transformed(src_projection).bbox
-        x1, y1, x2, y2 = [int(round(x)) for x in bbox]
-
+        x1, y1, x2, y2 = request.get("bbox", (0, 0, width, height))
+        dst_projection = request.get("projection", "EPSG:3857")
         if x1 == x2 or y1 == y2:  # point request
+            assert src_projection == dst_projection
             if x1 < 0 or x1 >= value.shape[1] or y1 < 0 or y1 >= value.shape[0]:
-                result = np.array([[255]], dtype=np.uint8)
+                result = np.array([[[255]]], dtype=np.uint8)
             else:
-                result = value[y1 : y1 + 1, x1 : x1 + 1]
+                result = value[np.newaxis, y1 : y1 + 1, x1 : x1 + 1]
         else:
-            _x1 = max(x1, 0)
-            _y1 = max(y1, 0)
-            _x2 = min(x2, value.shape[1])
-            _y2 = min(y2, value.shape[0])
-            result = value[_y1:_y2, _x1:_x2]
-            result = np.pad(
-                result,
-                ((_y1 - y1, y2 - _y2), (_x1 - x1, x2 - _x2)),
-                mode=str("constant"),
-                constant_values=fillvalue,
-            )
-            if result.shape != (height, width):
-                zoom = (height / result.shape[0], width / result.shape[1])
-                mask = ndimage.zoom((result == fillvalue).astype(float), zoom) > 0.5
-                result[result == fillvalue] = 0
-                result = ndimage.zoom(result, zoom)
-                result[mask] = fillvalue
-        result = np.repeat(result[np.newaxis], depth, axis=0)
+            src_dataset_kwargs = {
+                "no_data_value": fillvalue,
+                "projection": src_projection,
+                "geo_transform": (0, 1, 0, value.shape[0], 0, -1),
+            }
+            dst_dataset_kwargs = {
+                "no_data_value": fillvalue,
+                "projection": dst_projection,
+                "geo_transform": (x1, (x2 - x1) / width, 0, y2, 0, (y1 - y2) / height)
+            }
 
-        # fill nan values
-        result[~np.isfinite(result)] = fillvalue
+            result = np.full((1, height, width), fill_value=fillvalue, dtype=value.dtype)
+            with Dataset(value[np.newaxis, ::-1, :], **src_dataset_kwargs) as src:
+                with Dataset(result, **dst_dataset_kwargs) as dst:
+                    gdal.ReprojectImage(
+                        src,
+                        dst,
+                        src_projection,
+                        dst_projection,
+                        gdal.GRA_NearestNeighbour,
+                        0.0,
+                        0.125,
+                    )
+
+        result = np.repeat(result, depth, axis=0)
         return {"values": result, "no_data_value": fillvalue}
 
     @property

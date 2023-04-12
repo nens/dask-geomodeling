@@ -728,7 +728,7 @@ class TestAggregateRaster(unittest.TestCase):
             origin=Datetime(2018, 1, 1),
             timedelta=Timedelta(hours=1),
             bands=1,
-            value=np.indices((10, 10))[0],
+            value=np.indices((10, 10))[0].astype(float),
         )
         self.request["start"] = Datetime(2018, 1, 1)
         self.request["stop"] = Datetime(2018, 1, 1, 3)
@@ -1073,17 +1073,17 @@ class TestAggregateRaster(unittest.TestCase):
             origin=Datetime(2018, 1, 1),
             timedelta=Timedelta(hours=1),
             bands=1,
-            value=np.indices((10, 10))[0],
+            value=np.indices((10, 10))[0].astype(float),
         )
         source = MockGeometry(
             polygons=[
-                ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),  # contains 7, 8
-                ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),  # contains 7, 8
+                ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),  # contains 6, 7
+                ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),  # contains 6, 7
                 ((7.0, 7.0), (9.0, 7.0), (9.0, 9.0), (7.0, 9.0)),  # contains 2, 3
                 ((6.0, 6.0), (8.0, 6.0), (8.0, 8.0), (6.0, 8.0)),  # contains 3, 4
             ],
             properties=[
-                {"id": 1, "threshold": 8.0},  # threshold halfway
+                {"id": 1, "threshold": 7.0},  # threshold halfway
                 {"id": 3, "threshold": 3.0},  # threshold below
                 {"id": 2000000, "threshold": 4.0},  # threshold above
                 {"id": 9},
@@ -1093,9 +1093,9 @@ class TestAggregateRaster(unittest.TestCase):
         self.request["stop"] = Datetime(2018, 1, 1, 3)
 
         for statistic, expected in [
-            ("sum", [16.0, 30.0, 0.0, 0.0]),
+            ("sum", [14.0, 26.0, 0.0, 0.0]),
             ("count", [2, 4, 0, 0]),
-            ("mean", [8.0, 7.5, np.nan, np.nan]),
+            ("mean", [7.0, 6.5, np.nan, np.nan]),
         ]:
             view = geometry.AggregateRasterAboveThreshold(
                 source=source,
@@ -1116,7 +1116,7 @@ class TestAggregateRaster(unittest.TestCase):
                 origin=Datetime(2018, 1, 1),
                 timedelta=Timedelta(hours=1),
                 bands=1,
-                value=np.indices((10, 10))[1],
+                value=np.indices((10, 10))[1].astype(float),
             )
             source = MockGeometry(
                 polygons=[
@@ -1136,12 +1136,12 @@ class TestAggregateRaster(unittest.TestCase):
             origin=Datetime(2018, 1, 1),
             timedelta=Timedelta(hours=1),
             bands=1,
-            value=np.indices((10, 10))[1],  # increasing in x only
+            value=np.indices((10, 10))[0].astype(float),
         )
         source = MockGeometry(
             polygons=[
-                ((2.0, 2.0), (2.1, 2.0), (2.1, 3.0), (2.0, 3.0)),
-                ((4.9, 1.0), (5.0, 1.0), (5.0, 2.0), (4.9, 2.0)),
+                ((2.0, 2.0), (2.1, 2.0), (2.1, 2.1), (2.0, 2.1)),  # in 7
+                ((8.9, 8.9), (9.0, 8.9), (9.0, 9.0), (8.9, 9.0)),  # in 1
             ],
             properties=[{"id": 1}, {"id": 2}],
         )
@@ -1149,7 +1149,7 @@ class TestAggregateRaster(unittest.TestCase):
             source=source, raster=raster, statistic="max"
         )
         result = view.get_data(**self.request)
-        assert_almost_equal(result["features"]["agg"].values, [2., 4.])
+        assert_almost_equal(result["features"]["agg"].values, [7., 1.])
 
     def test_small_geometry_threshold(self):
         # Rasterize only takes pixels into account whose center is
@@ -1158,7 +1158,7 @@ class TestAggregateRaster(unittest.TestCase):
             origin=Datetime(2018, 1, 1),
             timedelta=Timedelta(hours=1),
             bands=1,
-            value=np.indices((10, 10))[1],  # increasing in x only
+            value=np.indices((10, 10))[1].astype(float),  # increasing in x only
         )
         source = MockGeometry(
             polygons=[
