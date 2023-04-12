@@ -568,6 +568,8 @@ def raster_2x3():
         pixel_size=2.0,
         pixel_origin=(0, 4),
     )
+
+
 @pytest.mark.parametrize(
     "polygons,expected",
     [
@@ -593,7 +595,12 @@ def test_small_geometry(geometry_request, polygons, expected, raster_2x3):
 @pytest.mark.parametrize(
     "statistic,expected",
     [
-        ("max", 3.0), ("min", 3.0),("sum", 3.0),("count", 1.0),("mean", 3.0),("p95", 3.0)
+        ("max", 3.0),
+        ("min", 3.0),
+        ("sum", 3.0),
+        ("count", 1.0),
+        ("mean", 3.0),
+        ("p95", 3.0),
     ],
 )
 def test_small_geometry_statistics(geometry_request, statistic, expected, raster_2x3):
@@ -610,9 +617,7 @@ def test_small_geometry_statistics(geometry_request, statistic, expected, raster
 
 @pytest.mark.parametrize(
     "threshold,expected",
-    [
-        (2.0, 3.0),(3.0, 3.0),(4.0, np.nan)
-    ],
+    [(2.0, 3.0), (3.0, 3.0), (4.0, np.nan)],
 )
 def test_small_geometry_threshold(geometry_request, raster_2x3, threshold, expected):
     source = MockGeometry(
