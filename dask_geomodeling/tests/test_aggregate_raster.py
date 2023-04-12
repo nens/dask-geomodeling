@@ -143,7 +143,9 @@ def test_column_attr(aggregate_raster, geometry_source):
     )
 
 
-@pytest.mark.parametrize("statistic,expected", [
+@pytest.mark.parametrize(
+    "statistic,expected",
+    [
         ("sum", 162.0),
         ("count", 36.0),
         ("mean", 4.5),
@@ -151,8 +153,11 @@ def test_column_attr(aggregate_raster, geometry_source):
         ("max", 7.0),
         ("median", 4.5),
         ("p75", 6.0),
-    ])
-def test_statistics(range_raster, geometry_source, geometry_request, statistic, expected):
+    ],
+)
+def test_statistics(
+    range_raster, geometry_source, geometry_request, statistic, expected
+):
     geometry_request["start"] = Datetime(2018, 1, 1)
     geometry_request["stop"] = Datetime(2018, 1, 1, 3)
 
@@ -164,7 +169,9 @@ def test_statistics(range_raster, geometry_source, geometry_request, statistic, 
     assert expected == agg
 
 
-@pytest.mark.parametrize("statistic,expected", [
+@pytest.mark.parametrize(
+    "statistic,expected",
+    [
         ("sum", 0),
         ("count", 0),
         ("mean", np.nan),
@@ -172,8 +179,11 @@ def test_statistics(range_raster, geometry_source, geometry_request, statistic, 
         ("max", np.nan),
         ("median", np.nan),
         ("p75", np.nan),
-    ])
-def test_statistics_empty(geometry_source, nodata_raster, geometry_request, statistic, expected):
+    ],
+)
+def test_statistics_empty(
+    geometry_source, nodata_raster, geometry_request, statistic, expected
+):
     geometry_request["start"] = Datetime(2018, 1, 1)
     geometry_request["stop"] = Datetime(2018, 1, 1, 3)
 
@@ -185,7 +195,9 @@ def test_statistics_empty(geometry_source, nodata_raster, geometry_request, stat
     assert_almost_equal(agg, expected)
 
 
-@pytest.mark.parametrize("statistic,expected", [
+@pytest.mark.parametrize(
+    "statistic,expected",
+    [
         ("sum", 0),
         ("count", 0),
         ("mean", np.nan),
@@ -193,8 +205,11 @@ def test_statistics_empty(geometry_source, nodata_raster, geometry_request, stat
         ("max", np.nan),
         ("median", np.nan),
         ("p75", np.nan),
-    ])
-def test_statistics_partial_empty(geometry_source, geometry_request, statistic, expected):
+    ],
+)
+def test_statistics_partial_empty(
+    geometry_source, geometry_request, statistic, expected
+):
     values = np.indices((10, 10), dtype=np.uint8)[0]
     values[2:8, 2:8] = 255  # nodata
     raster = MockRaster(
@@ -204,9 +219,7 @@ def test_statistics_partial_empty(geometry_source, geometry_request, statistic, 
         value=values,
     )
 
-    view = AggregateRaster(
-        source=geometry_source, raster=raster, statistic=statistic
-    )
+    view = AggregateRaster(source=geometry_source, raster=raster, statistic=statistic)
     features = view.get_data(**geometry_request)["features"]
     agg = features.iloc[0]["agg"]
     assert_almost_equal(agg, expected)
@@ -215,9 +228,7 @@ def test_statistics_partial_empty(geometry_source, geometry_request, statistic, 
 @pytest.mark.parametrize("geom", [box(0, 0, 10, 10), box(4, 4, 6, 6), Point(5, 5)])
 def test_raster_request(geometry_request, aggregate_raster, geom):
     geometry_request["geometry"] = geom
-    _, (_, request), _ = aggregate_raster.get_sources_and_requests(
-        **geometry_request
-    )
+    _, (_, request), _ = aggregate_raster.get_sources_and_requests(**geometry_request)
     assert_almost_equal(request["bbox"], (2, 2, 8, 8))
     assert 6 == request["width"]
     assert 6 == request["height"]
@@ -279,20 +290,22 @@ def test_max_pixels(geometry_source, constant_raster, geometry_request):
     assert 3 == request["height"]
 
 
-@pytest.mark.parametrize("box,exp_bbox,exp_shape", ([(2.01, 1.99, 7.99, 8.01), (2, 1, 8, 9), (6, 8)],
+@pytest.mark.parametrize(
+    "box,exp_bbox,exp_shape",
+    (
+        [(2.01, 1.99, 7.99, 8.01), (2, 1, 8, 9), (6, 8)],
         [(1.99, 2.01, 8.01, 7.99), (1, 2, 9, 8), (8, 6)],
         [(2.0, 2.0, 8.0, 8.0), (2, 2, 8, 8), (6, 6)],
         [(2.9, 1.1, 8.9, 7.1), (2, 1, 9, 8), (7, 7)],
-    ))
-def test_snap_bbox(constant_raster, geometry_request, box,exp_bbox,exp_shape):
+    ),
+)
+def test_snap_bbox(constant_raster, geometry_request, box, exp_bbox, exp_shape):
     (x1, y1, x2, y2) = box
 
     aggregate_raster = AggregateRaster(
         MockGeometry([((x1, y1), (x2, y1), (x2, y2), (x1, y2))]), constant_raster
     )
-    _, (_, request), _ = aggregate_raster.get_sources_and_requests(
-        **geometry_request
-    )
+    _, (_, request), _ = aggregate_raster.get_sources_and_requests(**geometry_request)
 
     assert_almost_equal(request["bbox"], exp_bbox)
     assert exp_shape[0] == request["width"]
@@ -466,9 +479,7 @@ def test_aggregate_percentile_one_empty(geometry_request, agg):
     # statistic of mean, min, max, median and percentile to be NaN.
     data = np.ones((1, 10, 10), dtype=np.uint8)
     data[:, :5, :] = 255
-    raster = MemorySource(
-        data, 255, "EPSG:3857", pixel_size=1, pixel_origin=(0, 10)
-    )
+    raster = MemorySource(data, 255, "EPSG:3857", pixel_size=1, pixel_origin=(0, 10))
     source = MockGeometry(
         polygons=[
             ((2.0, 2.0), (4.0, 2.0), (4.0, 4.0), (2.0, 4.0)),
@@ -488,11 +499,14 @@ def test_empty_dataset(constant_raster, geometry_request):
     assert 0 == len(result["features"])
 
 
-@pytest.mark.parametrize("statistic,expected", [
+@pytest.mark.parametrize(
+    "statistic,expected",
+    [
         ("sum", [16.0, 30.0, 0.0, 0.0]),
         ("count", [2, 4, 0, 0]),
         ("mean", [8.0, 7.5, np.nan, np.nan]),
-    ])
+    ],
+)
 def test_aggregate_above_threshold(range_raster, geometry_request, statistic, expected):
     source = MockGeometry(
         polygons=[
@@ -545,48 +559,71 @@ def test_aggregate_no_interaction(geometry_request, dx):
     assert result["features"]["agg"][2] == 3
 
 
-def test_small_geometry(geometry_request):
+@pytest.fixture
+def raster_2x3():
+    return MemorySource(
+        np.arange(6).reshape(2, 3).astype(float),
+        255,
+        "EPSG:3857",
+        pixel_size=2.0,
+        pixel_origin=(0, 4),
+    )
+@pytest.mark.parametrize(
+    "polygons,expected",
+    [
+        ([((2, 2), (1.9, 2), (2, 1.9))], [3.0]),
+        ([((2, 2), (2.1, 2), (2, 1.9))], [4.0]),
+        ([((2, 2), (2.1, 2), (2, 2.1))], [1.0]),
+        ([((2, 2), (1.9, 2), (2, 2.1))], [0.0]),
+        ([((2, 2), (1.9, 2), (2, 1.9)), ((2, 2), (2.1, 2), (2, 2.1))], [3.0, 1.0]),
+    ],
+)
+def test_small_geometry(geometry_request, polygons, expected, raster_2x3):
     # Rasterize only takes pixels into account whose center is
-    # inside the polygon.
-    raster = MockRaster(
-        origin=Datetime(2018, 1, 1),
-        timedelta=Timedelta(hours=1),
-        bands=1,
-        value=np.indices((10, 10))[1],  # increasing in x only
-    )
+    # inside the polygon
     source = MockGeometry(
-        polygons=[
-            ((2.0, 2.0), (2.1, 2.0), (2.1, 3.0), (2.0, 3.0)),
-            ((4.9, 1.0), (5.0, 1.0), (5.0, 2.0), (4.9, 2.0)),
-        ],
-        properties=[{"id": 1}, {"id": 2}],
+        polygons=polygons,
+        properties=[{"id": i + 1} for i in range(len(polygons))],
     )
-    view = AggregateRaster(source=source, raster=raster, statistic="max")
+    view = AggregateRaster(source=source, raster=raster_2x3, statistic="max")
     result = view.get_data(**geometry_request)
-    assert_almost_equal(result["features"]["agg"].values, [2.0, 4.0])
+    assert_almost_equal(result["features"]["agg"].values, expected)
 
 
-def test_small_geometry_threshold(geometry_request):
+@pytest.mark.parametrize(
+    "statistic,expected",
+    [
+        ("max", 3.0), ("min", 3.0),("sum", 3.0),("count", 1.0),("mean", 3.0),("p95", 3.0)
+    ],
+)
+def test_small_geometry_statistics(geometry_request, statistic, expected, raster_2x3):
     # Rasterize only takes pixels into account whose center is
-    # inside the polygon.
-    raster = MockRaster(
-        origin=Datetime(2018, 1, 1),
-        timedelta=Timedelta(hours=1),
-        bands=1,
-        value=np.indices((10, 10))[1],  # increasing in x only
-    )
+    # inside the polygon
     source = MockGeometry(
-        polygons=[
-            ((2.0, 2.0), (2.1, 2.0), (2.1, 3.0), (2.0, 3.0)),
-            ((4.9, 1.0), (5.0, 1.0), (5.0, 2.0), (4.9, 2.0)),
-        ],
-        properties=[{"id": 1, "threshold": 3.0}, {"id": 2, "threshold": 3.0}],
+        polygons=[((2, 2), (1.9, 2), (2, 1.9))],
+        properties=[{"id": 1}],
+    )
+    view = AggregateRaster(source=source, raster=raster_2x3, statistic=statistic)
+    result = view.get_data(**geometry_request)
+    assert_almost_equal(result["features"]["agg"].values, expected)
+
+
+@pytest.mark.parametrize(
+    "threshold,expected",
+    [
+        (2.0, 3.0),(3.0, 3.0),(4.0, np.nan)
+    ],
+)
+def test_small_geometry_threshold(geometry_request, raster_2x3, threshold, expected):
+    source = MockGeometry(
+        polygons=[((2, 2), (1.9, 2), (2, 1.9))],
+        properties=[{"id": 1, "threshold": threshold}],
     )
     view = AggregateRasterAboveThreshold(
-        source=source, raster=raster, statistic="max", threshold_name="threshold"
+        source=source, raster=raster_2x3, statistic="max", threshold_name="threshold"
     )
     result = view.get_data(**geometry_request)
-    assert_almost_equal(result["features"]["agg"].values, [np.nan, 4.0])
+    assert_almost_equal(result["features"]["agg"].values, [expected])
 
 
 def test_small_geometry_temporal(geometry_request):

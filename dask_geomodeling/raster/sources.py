@@ -57,7 +57,8 @@ class MemorySource(RasterBlock):
         time_delta=None,
         metadata=None,
     ):
-        data = np.atleast_3d(data)
+        if data.ndim == 2:
+            data = data[np.newaxis]
         no_data_value = data.dtype.type(no_data_value)
         projection = utils.get_epsg_or_wkt(projection)
         if not hasattr(pixel_size, "__iter__"):
