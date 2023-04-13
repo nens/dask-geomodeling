@@ -6,7 +6,7 @@ import sys
 import json
 import logging
 
-from dask.base import tokenize, normalize_token
+from dask.base import get_scheduler, tokenize, normalize_token
 from dask.local import get_sync
 
 from shapely.geometry.base import BaseGeometry
@@ -40,9 +40,13 @@ def _reconstruct_token(key):
 
 
 def compute(graph, name, *args, **kwargs):
-    """Compute a graph ({name: [func, arg1, arg2, ...]}) using dask.get_sync
+    """Compute a graph ({name: [func, arg1, arg2, ...]}) using the configured
+    scheduler. See dask.config.
     """
-    return get_sync(graph, [name])[0]
+    dask_get = get_scheduler()
+    if dask_get is None:
+        dask_get = get_sync
+    return dask_get(graph, [name])[0]
 
 
 def construct(graph, name, validate=True):
