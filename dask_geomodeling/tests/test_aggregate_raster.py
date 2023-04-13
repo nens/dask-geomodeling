@@ -463,7 +463,7 @@ def test_overlapping_geometries(constant_raster, geometry_request):
     )
     view = AggregateRaster(source=source, raster=constant_raster, statistic="sum")
     result = view.get_data(**geometry_request)
-    assert (result["features"]["agg"].values.tolist(), [36.0 == 18.0])
+    assert result["features"]["agg"].values.tolist() == [36.0, 18.0]
 
 
 @pytest.mark.parametrize("agg", ["mean", "min", "max", "median", "p90.0"])

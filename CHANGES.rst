@@ -1,10 +1,11 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.14 (unreleased)
--------------------
+2.4.0 (unreleased)
+------------------
 
-- Nothing changed yet.
+- Change Block.get_data; instead of always computing in the main thread, use
+  the scheduler that is setup via dask.config.
 
 
 2.3.13 (2023-04-04)
