@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.4.0 (unreleased)
+2.4.0 (2023-04-13)
 ------------------
 
 - Change Block.get_data; instead of always computing in the main thread, use
