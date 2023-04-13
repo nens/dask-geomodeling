@@ -75,13 +75,6 @@ def nodata_raster():
     )
 
 
-# class TestAggregateRaster(unittest.TestCase):
-#     (geometry_source, constant_raster, geometry_request).default_raster_limit = config.get("geomodeling.raster-limit")
-
-#     def tearDown(geometry_source, constant_raster, geometry_request):
-#         config.set({"geomodeling.raster-limit": (geometry_source, constant_raster, geometry_request).default_raster_limit})
-
-
 def test_arg_types(geometry_source, constant_raster):
     with pytest.raises(TypeError):
         AggregateRaster(geometry_source, None)
