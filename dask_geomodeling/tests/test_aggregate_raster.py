@@ -290,6 +290,9 @@ def test_max_pixels(geometry_source, constant_raster, geometry_request):
         [(1.99, 2.01, 8.01, 7.99), (1, 2, 9, 8), (8, 6)],
         [(2.0, 2.0, 8.0, 8.0), (2, 2, 8, 8), (6, 6)],
         [(2.9, 1.1, 8.9, 7.1), (2, 1, 9, 8), (7, 7)],
+        [(2.0, 1.0, 3.0, 2.0), (2.5, 1.5, 2.5, 1.5), (1, 1)],  # 1 cell
+        [(2.0, 1.1, 3.0, 2.1), (2, 1, 3, 3), (1, 2)],  # 1 cell only in x
+        [(1.1, 1.0, 3., 2.0), (1, 1, 3, 2), (2, 1)],  # 1 cell only in y
     ),
 )
 def test_snap_bbox(constant_raster, geometry_request, box, exp_bbox, exp_shape):

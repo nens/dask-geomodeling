@@ -461,13 +461,20 @@ class AggregateRaster(GeometryBlock):
         width = max(int((x2 - x1) / pixel_size), 1)
         height = max(int((y2 - y1) / pixel_size), 1)
 
+        # change point-like requests in real point requests
+        # (reducing possible edge effects)
+        if width == 1 and height == 1:
+            raster_req_bbox = ((x1 + x2) / 2, (y1 + y2) / 2 ) * 2
+        else:
+            raster_req_bbox = (x1, y1, x2, y2)
+
         raster_request = {
             "mode": "vals",
             "projection": agg_srs,
             "start": request.get("start"),
             "stop": request.get("stop"),
             "aggregation": None,  # TODO
-            "bbox": (x1, y1, x2, y2),
+            "bbox": raster_req_bbox,
             "width": width,
             "height": height,
         }
