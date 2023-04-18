@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.4.1 (unreleased)
+2.4.1 (2023-04-18)
 ------------------
 
 - AggregateRaster will do a point request to the raster if only 1 cell is required
