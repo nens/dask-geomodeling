@@ -339,9 +339,8 @@ def _resampled_period(period, frequency, closed, label, timezone):
 def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, timezone):
     """Snap start and stop to the *resampled* datetimes of the raster.
 
-    The result is a "first" and "last" bin (pd.Period).
-
-    These are denoted by their label (as a python datetime).
+    The result are 2 labels: a start and a stop label, as python datetimes.
+    If the stop label is None, start == stop. If both are None, there is no label in range.
     """
     period = _resampled_period(period, frequency, closed, label, timezone)
     if period is None:  # return early for an empty source
@@ -379,6 +378,10 @@ def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, tim
             stop = _get_closest_label(
                 stop, frequency, closed, label, timezone, side="left"
             )
+
+        if start > stop:
+            return None, None
+
     return start, stop
 
 

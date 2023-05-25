@@ -101,8 +101,8 @@ def test_get_closest_label(dt, freq, closed, label, timezone, side, expected):
     (dt(2001, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
     # in bounds, snap to nearest (in a situation with 2 bins: 2000-01-01 and 2000-02-01)
     (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
-    (dt(2000, 1, 15), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
-    (dt(2000, 1, 16), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+    (dt(2000, 1, 16), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+    (dt(2000, 1, 17), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
     (dt(2000, 2, 1), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
     # (start, stop) means a two-sided closed interval
     (dt(2000, 1, 1), dt(2000, 2, 1), "MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
