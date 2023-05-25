@@ -382,29 +382,27 @@ def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, tim
     return start, stop
 
 
-def _labels_to_start_stop(period, start, stop, frequency, closed, label, timezone):
+def _labels_to_start_stop(start, stop, frequency, closed, label, timezone):
     """Given a start and stop label, get the start/stop to request from source"""
     request = {}
-    if frequency is None:
-        request["start"], request["stop"] = period
+    assert frequency is not None
+    if stop is None or start == stop:
+        # recover the period that is closest to start
+        start_period = stop_period = _label_to_period(
+            start, frequency, closed, label, timezone
+        )
     else:
-        if stop is None or start == stop:
-            # recover the period that is closest to start
-            start_period = stop_period = _label_to_period(
-                start, frequency, closed, label, timezone
-            )
-        else:
-            # recover the period that has label >= start
-            start_period = _label_to_period(start, frequency, closed, label, timezone)
-            # recover the period that has label <= stop
-            stop_period = _label_to_period(stop, frequency, closed, label, timezone)
+        # recover the period that has label >= start
+        start_period = _label_to_period(start, frequency, closed, label, timezone)
+        # recover the period that has label <= stop
+        stop_period = _label_to_period(stop, frequency, closed, label, timezone)
 
-        # snap request 'start' to the start of the first period
-        request["start"] = _ts_to_dt(start_period.start_time, timezone)
-        # snap request 'stop' to the end of the last period
-        request["stop"] = _ts_to_dt(stop_period.end_time, timezone)
-        if closed != "left":
-            request["stop"] += Timedelta(microseconds=1)
+    # snap request 'start' to the start of the first period
+    request["start"] = _ts_to_dt(start_period.start_time, timezone)
+    # snap request 'stop' to the end of the last period
+    request["stop"] = _ts_to_dt(stop_period.end_time, timezone)
+    if closed != "left":
+        request["stop"] += Timedelta(microseconds=1)
     return request["start"], request["stop"]
 
 
@@ -568,9 +566,12 @@ class TemporalAggregate(BaseSingle):
             return [(kwargs, None)]
 
         # vals or source requests do need a request to self.source
-        request["start"], request["stop"] = _labels_to_start_stop(
-            self.source.period, start_label, stop_label, **kwargs
-        )
+        if self.frequency is None:
+            request["start"], request["stop"] = self.source.period
+        else:
+            request["start"], request["stop"] = _labels_to_start_stop(
+                start_label, stop_label, **kwargs
+            )
 
         # return sources and requests depending on the mode
         kwargs["mode"] = request["mode"]

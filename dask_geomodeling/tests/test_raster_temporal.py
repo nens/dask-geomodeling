@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import assert_equal
 
 from dask_geomodeling.raster import TemporalAggregate, Cumulative
-from dask_geomodeling.raster.temporal import _get_closest_label, _snap_to_resampled_labels
+from dask_geomodeling.raster.temporal import _get_closest_label, _snap_to_resampled_labels, _labels_to_start_stop
 from dask_geomodeling.tests.factories import MockRaster
 
 import pytest
@@ -118,19 +118,25 @@ def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, ex
     assert actual == expected
 
 
-# @pytest.mark.parametrize("start,stop,closed,label,expected", [
-#     # (None, None) means 'latest'
-#     # We need all raster data that falls into the latest bin (with label 2000-1-3)
-#     ((None, None, "left", "left", ((dt(2000, 1, 3), dt(2000, 1, 4) - us)))),
-#     ((None, None, "left", "right", ((dt(2000, 1, 2), dt(2000, 1, 3) - us)))),
-#     ((None, None, "right", "left", ((dt(2000, 1, 3) + us, dt(2000, 1, 4))))),
-#     ((None, None, "right", "right", ((dt(2000, 1, 2) + us, dt(2000, 1, 3))))),
-# ])
-# def test_eventual_start_stop(start, stop, closed, label, expected):
-#     period = (dt(2000, 1, 1), dt(2000, 1, 3))
-#     self = FakeTemporalAggregate(period, "D", closed, label, "UTC")
-#     actual = TemporalAggregate._snap_to_resampled_labels(self, start, stop)
-#     assert actual == expected
+us = Timedelta(microseconds=1)
+
+@pytest.mark.parametrize("start_label,stop_label,freq,closed,label,timezone,expected", [
+    (dt(2000, 1, 1), None, "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2) - us)),
+    (dt(2000, 1, 1), None, "D", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1) - us)),
+    (dt(2000, 1, 1), None, "D", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 1, 2))),
+    (dt(2000, 1, 1), None, "D", "right", "right", "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 1))),
+    (dt(2000, 1, 1), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1) - us)),
+    (dt(2000, 1, 1), None, "MS", "left", "right", "UTC", (dt(1999, 12, 1), dt(2000, 1, 1) - us)),
+    (dt(2000, 1, 1), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 2, 1))),
+    (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(1999, 12, 1) + us, dt(2000, 1, 1))),
+    # with a 'stop_label' it is just more of the same ...
+    (dt(2000, 1, 1), dt(2000, 1, 10), "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 11) - us)),
+    (dt(2000, 1, 1), dt(2000, 10, 1), "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 11, 1) - us)),
+])
+def test_labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone, expected):
+    actual = _labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone)
+    assert actual == expected
+
     
 
 class TestTemporalAggregate(unittest.TestCase):
