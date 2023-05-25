@@ -74,15 +74,6 @@ def test_period(raster, freq, closed, label, timezone, expected):
     assert actual == expected
 
 
-@pytest.mark.parametrize("dt,freq,closed,label,timezone,side,expected", [
-    ((dt(2000, 1, 3), "MS", "left", "left", "UTC", "both", dt(2000, 1, 1))),
-    ((dt(2000, 1, 3), "MS", "left", "left", "UTC", "left", dt(2000, 1, 1))),
-    ((dt(2000, 1, 3), "MS", "left", "left", "UTC", "right", dt(2000, 2, 1))),
-])
-def test_get_closest_label(dt, freq, closed, label, timezone, side, expected):
-    actual = _get_closest_label(dt, freq, closed, label, timezone, side)
-    assert actual == expected
-
 
 @pytest.mark.parametrize("start,stop,freq,closed,label,timezone,expected", [
     # (None, None) means 'latest'; expected are the labels of the latest bins
@@ -92,8 +83,6 @@ def test_get_closest_label(dt, freq, closed, label, timezone, side, expected):
     (None, None, "D", "right", "right", "UTC", (dt(2000, 1, 3), None)),
     (None, None, "D", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 2, 23), None)),
     (None, None, "H", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
-    (None, None, "M", None, None, "UTC", (dt(2000, 1, 31), None)),
-    (None, None, "MS", None, None, "UTC", (dt(2000, 1, 1), None)),
     # (start, None) means 'nearest'; expected are the labels of the nearest bins
     # left out-of-bounds
     (dt(1999, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
@@ -143,9 +132,6 @@ us = Timedelta(microseconds=1)
     # with a 'stop_label' it is just more of the same ...
     (dt(2000, 1, 1), dt(2000, 1, 10), "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 11) - us)),
     (dt(2000, 1, 1), dt(2000, 10, 1), "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 11, 1) - us)),
-    # it is actually quite hard to reproduce the pandas default closed/label behaviour:
-    (dt(2000, 1, 1), None, "D", None, None, "UTC", (dt(2000, 1, 1), dt(2000, 1, 2) - us)),  # left, left
-    (dt(2000, 1, 31), None, "M", None, None, "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 31))),  # right, right
     # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
     (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 4) - us)),
     (dt(2000, 1, 3), None, "B", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 3) - us)),

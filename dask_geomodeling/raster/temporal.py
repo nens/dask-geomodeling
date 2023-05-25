@@ -23,7 +23,6 @@ __all__ = ["Snap", "Shift", "TemporalSum", "TemporalAggregate", "Cumulative"]
 
 
 MICROSECOND = Timedelta(microseconds=1)
-DEFAULT_RIGHT = frozenset(["M", "A", "Q", "BM", "BA", "BQ", "W"])
 
 
 class Snap(RasterBlock):
@@ -307,10 +306,13 @@ def _get_closest_label(dt, frequency, closed, label, timezone, side="both"):
     return _ts_to_dt(result, timezone)
 
 
-def _default_closed_label(freq, closed, label):
+def _default_closed_label(frequency, closed, label):
+    """To make closed & label not-None"""
+    if frequency is None:
+        return ("right", "right")
     # Copied from pandas 'TimeGrouper.__init__':
     end_types = {"M", "A", "Q", "BM", "BA", "BQ", "W"}
-    rule = freq.rule_code
+    rule = to_offset(frequency).rule_code
     if rule in end_types or ("-" in rule and rule[: rule.find("-")] in end_types):
         if closed is None:
             closed = "right"
@@ -325,28 +327,29 @@ def _default_closed_label(freq, closed, label):
 
 
 def _label_to_bin_start(dt, frequency, closed, label, timezone):
-    freq = to_offset(frequency)
-    closed, label = _default_closed_label(freq, closed, label)
+    """Returns the first datetime in bin with label 'dt'"""
     ts = _dt_to_ts(dt, timezone)
     if label == "right":
-        ts -= freq
+        ts -= to_offset(frequency)
     if closed == "right":
         ts += MICROSECOND
     return _ts_to_dt(ts, timezone)
 
 
 def _label_to_bin_end(dt, frequency, closed, label, timezone):
-    freq = to_offset(frequency)
-    closed, label = _default_closed_label(freq, closed, label)
+    """Returns the last datetime in bin with label 'dt'"""
     ts = _dt_to_ts(dt, timezone)
     if label == "left":
-        ts += freq
+        ts += to_offset(frequency)
     if closed == "left":
         ts -= MICROSECOND
     return _ts_to_dt(ts, timezone)
 
 
 def _resampled_period(period, frequency, closed, label, timezone):
+    """Given a source (start, stop) and frequency, compute the (start, stop) interval
+    that contains data after resampling. The returned start and stop are bin labels.
+    """
     if period is None:
         return
     if frequency is None:
@@ -355,7 +358,7 @@ def _resampled_period(period, frequency, closed, label, timezone):
 
 
 def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, timezone):
-    """Snap start and stop to the *resampled* datetimes of the raster.
+    """Snap start and stop to the bin labels (so timeframes of a resampled raster).
 
     The result are 2 labels: a start and a stop label, as python datetimes.
     If the stop label is None, start == stop. If both are None, there is no label in range.
@@ -527,10 +530,12 @@ class TemporalAggregate(BaseSingle):
 
     @property
     def _snap_kwargs(self):
+        # make closed & label not-None
+        closed, label = _default_closed_label(self.frequency, self.closed, self.label)
         return {
             "frequency": self.frequency,
-            "closed": self.closed,
-            "label": self.label,
+            "closed": closed,
+            "label": label,
             "timezone": self.timezone,
         }
 
