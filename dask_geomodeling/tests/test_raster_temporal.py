@@ -132,6 +132,9 @@ us = Timedelta(microseconds=1)
     # with a 'stop_label' it is just more of the same ...
     (dt(2000, 1, 1), dt(2000, 1, 10), "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 11) - us)),
     (dt(2000, 1, 1), dt(2000, 10, 1), "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 11, 1) - us)),
+    # it is actually quite hard to reproduce the pandas default closed/label behaviour:
+    (dt(2000, 1, 1), None, "D", None, None, "UTC", (dt(2000, 1, 1), dt(2000, 1, 2) - us)),  # left, left
+    (dt(2000, 1, 31), None, "M", None, None, "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 31))),  # right, right
 ])
 def test_labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone, expected):
     actual = _labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone)

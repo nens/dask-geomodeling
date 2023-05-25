@@ -22,6 +22,10 @@ from .base import RasterBlock, BaseSingle
 __all__ = ["Snap", "Shift", "TemporalSum", "TemporalAggregate", "Cumulative"]
 
 
+MICROSECOND = Timedelta(microseconds=1)
+DEFAULT_RIGHT = frozenset(["M", "A", "Q", "BM", "BA", "BQ", "W"])
+
+
 class Snap(RasterBlock):
     """
     Snap the time structure of a raster to that of another raster.
@@ -303,29 +307,43 @@ def _get_closest_label(dt, frequency, closed, label, timezone, side="both"):
     return _ts_to_dt(result, timezone)
 
 
-def _label_to_period(dt, frequency, closed, label, timezone):
-    """Converts a datetime to a period whose label equals that datetime"""
-    label_ts = _dt_to_ts(dt, timezone)
-    # translate that back to the period
-    series = pd.Series([0], index=[label_ts])
-    label_candidate = (
-        series.resample(frequency, closed=closed, label=label, kind="timestamp")
-        .first()
-        .index[0]
-    )
-    # in most cases the label_candidate == label, but sometimes it doesnt work
-    # because the label actually falls outside of the bin
-    if label_candidate < label_ts:
-        series.index += to_offset(frequency)
-    elif label_candidate > label_ts:
-        series.index -= to_offset(frequency)
-    # now retrieve the period
-    period = (
-        series.resample(frequency, closed=closed, label=label, kind="period")
-        .first()
-        .index[0]
-    )
-    return period
+def _default_closed_label(freq, closed, label):
+    # Copied from pandas 'TimeGrouper.__init__':
+    end_types = {"M", "A", "Q", "BM", "BA", "BQ", "W"}
+    rule = freq.rule_code
+    if rule in end_types or ("-" in rule and rule[: rule.find("-")] in end_types):
+        if closed is None:
+            closed = "right"
+        if label is None:
+            label = "right"
+    else:
+        if closed is None:
+            closed = "left"
+        if label is None:
+            label = "left"
+    return closed, label
+
+
+def _label_to_bin_start(dt, frequency, closed, label, timezone):
+    freq = to_offset(frequency)
+    closed, label = _default_closed_label(freq, closed, label)
+    ts = _dt_to_ts(dt, timezone)
+    if label == "right":
+        ts -= freq
+    if closed == "right":
+        ts += MICROSECOND
+    return _ts_to_dt(ts, timezone)
+
+
+def _label_to_bin_end(dt, frequency, closed, label, timezone):
+    freq = to_offset(frequency)
+    closed, label = _default_closed_label(freq, closed, label)
+    ts = _dt_to_ts(dt, timezone)
+    if label == "left":
+        ts += freq
+    if closed == "left":
+        ts -= MICROSECOND
+    return _ts_to_dt(ts, timezone)
 
 
 def _resampled_period(period, frequency, closed, label, timezone):
@@ -388,23 +406,10 @@ def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, tim
 def _labels_to_start_stop(start_label, stop_label, frequency, closed, label, timezone):
     """Given a start and stop label, get the start/stop to request from source"""
     assert frequency is not None
-    if stop_label is None or start_label == stop_label:
-        # recover the period that is closest to start
-        start_period = stop_period = _label_to_period(
-            start_label, frequency, closed, label, timezone
-        )
-    else:
-        # recover the period that has label >= start
-        start_period = _label_to_period(start_label, frequency, closed, label, timezone)
-        # recover the period that has label <= stop
-        stop_period = _label_to_period(stop_label, frequency, closed, label, timezone)
-
-    # snap request 'start' to the start of the first period
-    start = _ts_to_dt(start_period.start_time, timezone)
-    # snap request 'stop' to the end of the last period
-    stop = _ts_to_dt(stop_period.end_time, timezone)
-    if closed != "left":
-        stop += Timedelta(microseconds=1)
+    start = _label_to_bin_start(start_label, frequency, closed, label, timezone)
+    stop = _label_to_bin_end(
+        stop_label or start_label, frequency, closed, label, timezone
+    )
     return start, stop
 
 
