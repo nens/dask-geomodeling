@@ -328,6 +328,86 @@ def _label_to_period(dt, frequency, closed, label, timezone):
     return period
 
 
+def _resampled_period(period, frequency, closed, label, timezone):
+    if period is None:
+        return
+    if frequency is None:
+        return period[-1], period[-1]
+    return tuple(_get_bin_label(x, frequency, closed, label, timezone) for x in period)
+
+
+def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, timezone):
+    """Snap start and stop to the *resampled* datetimes of the raster.
+
+    The result is a "first" and "last" bin (pd.Period).
+
+    These are denoted by their label (as a python datetime).
+    """
+    period = _resampled_period(period, frequency, closed, label, timezone)
+    if period is None:  # return early for an empty source
+        return None, None
+
+    if start is None:  # start is None means: return the latest
+        start = period[1]
+
+    if stop is None:
+        # snap start to a label closest to it
+        if start <= period[0]:
+            start = period[0]
+        elif start >= period[1]:
+            start = period[1]
+        else:
+            start = _get_closest_label(
+                start, frequency, closed, label, timezone, side="both"
+            )
+    else:
+        # snap start to a label right from it
+        if start <= period[0]:
+            start = period[0]
+        elif start > period[1]:
+            return None, None
+        else:
+            start = _get_closest_label(
+                start, frequency, closed, label, timezone, side="right"
+            )
+        # snap stop to a label left from it
+        if stop >= period[1]:
+            stop = period[1]
+        elif stop < period[0]:
+            return None, None
+        else:
+            stop = _get_closest_label(
+                stop, frequency, closed, label, timezone, side="left"
+            )
+    return start, stop
+
+
+def _labels_to_start_stop(period, start, stop, frequency, closed, label, timezone):
+    """Given a start and stop label, get the start/stop to request from source"""
+    request = {}
+    if frequency is None:
+        request["start"], request["stop"] = period
+    else:
+        if stop is None or start == stop:
+            # recover the period that is closest to start
+            start_period = stop_period = _label_to_period(
+                start, frequency, closed, label, timezone
+            )
+        else:
+            # recover the period that has label >= start
+            start_period = _label_to_period(start, frequency, closed, label, timezone)
+            # recover the period that has label <= stop
+            stop_period = _label_to_period(stop, frequency, closed, label, timezone)
+
+        # snap request 'start' to the start of the first period
+        request["start"] = _ts_to_dt(start_period.start_time, timezone)
+        # snap request 'stop' to the end of the last period
+        request["stop"] = _ts_to_dt(stop_period.end_time, timezone)
+        if closed != "left":
+            request["stop"] += Timedelta(microseconds=1)
+    return request["start"], request["stop"]
+
+
 def count_not_nan(x, *args, **kwargs):
     return np.sum(~np.isnan(x), *args, **kwargs)
 
@@ -451,12 +531,7 @@ class TemporalAggregate(BaseSingle):
 
     @property
     def period(self):
-        period = self.source.period
-        if period is None:
-            return
-        if self.frequency is None:
-            return period[-1], period[-1]
-        return tuple(_get_bin_label(x, **self._snap_kwargs) for x in period)
+        return _resampled_period(self.source.period, **self._snap_kwargs)
 
     @property
     def timedelta(self):
@@ -473,82 +548,34 @@ class TemporalAggregate(BaseSingle):
     def fillvalue(self):
         return get_dtype_max(self.dtype)
 
-    def _snap_to_resampled_labels(self, start, stop):
-        """Snaps start and stop to resampled frames"""
-        kwargs = self._snap_kwargs
-        period = self.period
-        if period is None:  # return early for an empty source
-            return None, None
-
-        if start is None:  # start is None means: return the latest
-            start = period[1]
-
-        if stop is None:
-            # snap start to a label closest to it
-            if start <= period[0]:
-                start = period[0]
-            elif start >= period[1]:
-                start = period[1]
-            else:
-                start = _get_closest_label(start, side="both", **kwargs)
-        else:
-            # snap start to a label right from it
-            if start <= period[0]:
-                start = period[0]
-            elif start > period[1]:
-                return None, None
-            else:
-                start = _get_closest_label(start, side="right", **kwargs)
-            # snap stop to a label left from it
-            if stop >= period[1]:
-                stop = period[1]
-            elif stop < period[0]:
-                return None, None
-            else:
-                stop = _get_closest_label(stop, side="left", **kwargs)
-        return start, stop
-
     def get_sources_and_requests(self, **request):
         kwargs = self._snap_kwargs
         start = request.get("start")
         stop = request.get("stop")
         mode = request["mode"]
 
-        start, stop = self._snap_to_resampled_labels(start, stop)
-        if start is None:
+        start_label, stop_label = _snap_to_resampled_labels(
+            self.source.period, start, stop, **kwargs
+        )
+        if start_label is None:
             return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source
         if mode == "time":
             kwargs["mode"] = "time"
-            kwargs["start"] = start
-            kwargs["stop"] = stop
+            kwargs["start"] = start_label
+            kwargs["stop"] = stop_label
             return [(kwargs, None)]
 
         # vals or source requests do need a request to self.source
-        if self.frequency is None:
-            request["start"], request["stop"] = self.source.period
-        else:
-            if stop is None or start == stop:
-                # recover the period that is closest to start
-                start_period = stop_period = _label_to_period(start, **kwargs)
-            else:
-                # recover the period that has label >= start
-                start_period = _label_to_period(start, **kwargs)
-                # recover the period that has label <= stop
-                stop_period = _label_to_period(stop, **kwargs)
-
-            # snap request 'start' to the start of the first period
-            request["start"] = _ts_to_dt(start_period.start_time, self.timezone)
-            # snap request 'stop' to the end of the last period
-            request["stop"] = _ts_to_dt(stop_period.end_time, self.timezone)
-            if kwargs["closed"] != "left":
-                request["stop"] += Timedelta(microseconds=1)
+        request["start"], request["stop"] = _labels_to_start_stop(
+            self.source.period, start_label, stop_label, **kwargs
+        )
 
         # return sources and requests depending on the mode
         kwargs["mode"] = request["mode"]
-        kwargs["start"] = start
-        kwargs["stop"] = stop
+        kwargs["start"] = start_label
+        kwargs["stop"] = stop_label
         if mode == "vals":
             kwargs["dtype"] = np.dtype(self.dtype).str
             kwargs["statistic"] = self.statistic
