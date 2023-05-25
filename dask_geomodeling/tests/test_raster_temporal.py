@@ -23,7 +23,6 @@ def raster():
 dt = Datetime
 
 
-
 @pytest.mark.parametrize("freq,closed,label,timezone,expected", [
     ("D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
     ("D", "left", "right", "UTC", (dt(2000, 1, 2), dt(2000, 1, 4))),
@@ -37,6 +36,15 @@ dt = Datetime
     # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
     # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
     ("D", "left", "left", "America/New_York", (dt(1999, 12, 31, 5), dt(2000, 1, 2, 5))),
+    ("H", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
+    ("H", "left", "right", "UTC", (dt(2000, 1, 1, 1), dt(2000, 1, 3, 1))),
+    ("H", "right", "left", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
+    ("H", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
+    # the 2000-01-01 01:00 bin corresponds to 2000-01-01 00:00 UTC
+    # you don't notice the timezone here
+    ("H", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    ("H", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
 ])
 def test_period(raster, freq, closed, label, timezone, expected):
     view = TemporalAggregate(raster, freq, closed=closed, label=label, timezone=timezone)
@@ -75,36 +83,6 @@ class TestTemporalAggregate(unittest.TestCase):
             "stop": Datetime(1971, 1, 1),
             **self.request,
         }
-
-    def test_period_hour_agg(self):
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
-            self.klass(self.raster, "H", closed="left", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 1), Datetime(2000, 1, 3, 1)),
-            self.klass(self.raster, "H", closed="left", label="right").period,
-        )
-        self.assertEqual(
-            (Datetime(1999, 12, 31, 23), Datetime(2000, 1, 2, 23)),
-            self.klass(self.raster, "H", closed="right", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
-            self.klass(self.raster, "H", closed="right", label="right").period,
-        )
-
-        # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
-        # the 2000-01-01 01:00 bin corresponds to 2000-01-01 00:00 UTC
-        # you don't notice the timezone here
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
-            self.klass(self.raster, "H", timezone="Europe/Amsterdam").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
-            self.klass(self.raster, "H", timezone="America/New_York").period,
-        )
 
     def test_period_none(self):
         view = self.klass(self.raster, frequency=None, statistic="sum")
