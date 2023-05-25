@@ -45,6 +45,7 @@ dt = Datetime
     # you don't notice the timezone here
     ("H", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
     ("H", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    (None, "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
 ])
 def test_period(raster, freq, closed, label, timezone, expected):
     view = TemporalAggregate(raster, freq, closed=closed, label=label, timezone=timezone)
@@ -84,13 +85,9 @@ class TestTemporalAggregate(unittest.TestCase):
             **self.request,
         }
 
+
     def test_period_none(self):
         view = self.klass(self.raster, frequency=None, statistic="sum")
-
-        # test period
-        self.assertEqual(
-            (Datetime(2000, 1, 3, 0), Datetime(2000, 1, 3, 0)), view.period
-        )
 
         # test timedelta
         self.assertIsNone(view.timedelta)
