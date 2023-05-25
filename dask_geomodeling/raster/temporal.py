@@ -382,28 +382,27 @@ def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, tim
     return start, stop
 
 
-def _labels_to_start_stop(start, stop, frequency, closed, label, timezone):
+def _labels_to_start_stop(start_label, stop_label, frequency, closed, label, timezone):
     """Given a start and stop label, get the start/stop to request from source"""
-    request = {}
     assert frequency is not None
-    if stop is None or start == stop:
+    if stop_label is None or start_label == stop_label:
         # recover the period that is closest to start
         start_period = stop_period = _label_to_period(
-            start, frequency, closed, label, timezone
+            start_label, frequency, closed, label, timezone
         )
     else:
         # recover the period that has label >= start
-        start_period = _label_to_period(start, frequency, closed, label, timezone)
+        start_period = _label_to_period(start_label, frequency, closed, label, timezone)
         # recover the period that has label <= stop
-        stop_period = _label_to_period(stop, frequency, closed, label, timezone)
+        stop_period = _label_to_period(stop_label, frequency, closed, label, timezone)
 
     # snap request 'start' to the start of the first period
-    request["start"] = _ts_to_dt(start_period.start_time, timezone)
+    start = _ts_to_dt(start_period.start_time, timezone)
     # snap request 'stop' to the end of the last period
-    request["stop"] = _ts_to_dt(stop_period.end_time, timezone)
+    stop = _ts_to_dt(stop_period.end_time, timezone)
     if closed != "left":
-        request["stop"] += Timedelta(microseconds=1)
-    return request["start"], request["stop"]
+        stop += Timedelta(microseconds=1)
+    return start, stop
 
 
 def count_not_nan(x, *args, **kwargs):
