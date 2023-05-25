@@ -5,12 +5,48 @@ import unittest
 import numpy as np
 from numpy.testing import assert_equal
 
-from dask_geomodeling import raster
+from dask_geomodeling.raster import TemporalAggregate, Cumulative
 from dask_geomodeling.tests.factories import MockRaster
+
+import pytest
+
+@pytest.fixture
+def raster():
+    return MockRaster(
+            origin=Datetime(2000, 1, 1),
+            value=np.array([[1.0, 0.0, np.nan]]),
+            timedelta=Timedelta(days=1),
+            bands=3,
+        )
+
+
+dt = Datetime
+
+
+
+@pytest.mark.parametrize("freq,closed,label,timezone,expected", [
+    ("D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    ("D", "left", "right", "UTC", (dt(2000, 1, 2), dt(2000, 1, 4))),
+    ("D", "right", "left", "UTC", (dt(1999, 12, 31), dt(2000, 1, 2))),
+    ("D", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
+    # 2000-01-01 01:00 falls in the 2000-01-01 bin (still Amsterdam)
+    # the 2000-01-01 bin corresponds to 1999-12-31 23:00 UTC
+    ("D", "left", "left", "Europe/Amsterdam", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
+    # 2000-01-01 00:00 UTC is 1999-12-31 19:00 in New York
+    # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
+    # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
+    ("D", "left", "left", "America/New_York", (dt(1999, 12, 31, 5), dt(2000, 1, 2, 5))),
+])
+def test_period(raster, freq, closed, label, timezone, expected):
+    view = TemporalAggregate(raster, freq, closed=closed, label=label, timezone=timezone)
+    actual = view.period
+
+    assert actual == expected
 
 
 class TestTemporalAggregate(unittest.TestCase):
-    klass = raster.TemporalAggregate
+    klass = TemporalAggregate
 
     def setUp(self):
         self.raster = MockRaster(
@@ -39,39 +75,6 @@ class TestTemporalAggregate(unittest.TestCase):
             "stop": Datetime(1971, 1, 1),
             **self.request,
         }
-
-    def test_period_day_agg(self):
-        self.assertEqual(
-            (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
-            self.klass(self.raster, "D", closed="left", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 2), Datetime(2000, 1, 4)),
-            self.klass(self.raster, "D", closed="left", label="right").period,
-        )
-        self.assertEqual(
-            (Datetime(1999, 12, 31), Datetime(2000, 1, 2)),
-            self.klass(self.raster, "D", closed="right", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
-            self.klass(self.raster, "D", closed="right", label="right").period,
-        )
-
-        # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
-        # 2000-01-01 01:00 falls in the 2000-01-01 bin (still Amsterdam)
-        # the 2000-01-01 bin corresponds to 1999-12-31 23:00 UTC
-        self.assertEqual(
-            (Datetime(1999, 12, 31, 23), Datetime(2000, 1, 2, 23)),
-            self.klass(self.raster, "D", timezone="Europe/Amsterdam").period,
-        )
-        # 2000-01-01 00:00 UTC is 1999-12-31 19:00 in New York
-        # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
-        # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
-        self.assertEqual(
-            (Datetime(1999, 12, 31, 5), Datetime(2000, 1, 2, 5)),
-            self.klass(self.raster, "D", timezone="America/New_York").period,
-        )
 
     def test_period_hour_agg(self):
         self.assertEqual(
@@ -334,7 +337,7 @@ class TestTemporalAggregate(unittest.TestCase):
 
 
 class TestCumulative(unittest.TestCase):
-    klass = raster.Cumulative
+    klass = Cumulative
 
     def setUp(self):
         self.raster = MockRaster(
