@@ -1,25 +1,24 @@
 from datetime import datetime as Datetime
 from datetime import timedelta as Timedelta
 import unittest
-from collections import namedtuple
-from unittest import mock
 import numpy as np
 from numpy.testing import assert_equal
 
 from dask_geomodeling.raster import TemporalAggregate, Cumulative
-from dask_geomodeling.raster.temporal import _get_closest_label, _snap_to_resampled_labels, _labels_to_start_stop
+from dask_geomodeling.raster.temporal import _snap_to_resampled_labels, _labels_to_start_stop
 from dask_geomodeling.tests.factories import MockRaster
 
 import pytest
 
+
 @pytest.fixture
 def raster():
     return MockRaster(
-            origin=Datetime(2000, 1, 1),
-            value=np.array([[1.0, 0.0, np.nan]]),
-            timedelta=Timedelta(days=1),
-            bands=3,
-        )
+        origin=Datetime(2000, 1, 1),
+        value=np.array([[1.0, 0.0, np.nan]]),
+        timedelta=Timedelta(days=1),
+        bands=3,
+    )
 
 
 dt = Datetime
@@ -74,7 +73,6 @@ def test_period(raster, freq, closed, label, timezone, expected):
     assert actual == expected
 
 
-
 @pytest.mark.parametrize("start,stop,freq,closed,label,timezone,expected", [
     # (None, None) means 'latest'; expected are the labels of the latest bins
     (None, None, "D", "left", "left", "UTC", (dt(2000, 1, 3), None)),
@@ -120,6 +118,7 @@ def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, ex
 
 us = Timedelta(microseconds=1)
 
+
 @pytest.mark.parametrize("start_label,stop_label,freq,closed,label,timezone,expected", [
     (dt(2000, 1, 1), None, "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2) - us)),
     (dt(2000, 1, 1), None, "D", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1) - us)),
@@ -142,7 +141,6 @@ def test_labels_to_start_stop(start_label, stop_label, freq, closed, label, time
     actual = _labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone)
     assert actual == expected
 
-    
 
 class TestTemporalAggregate(unittest.TestCase):
     klass = TemporalAggregate
@@ -174,7 +172,6 @@ class TestTemporalAggregate(unittest.TestCase):
             "stop": Datetime(1971, 1, 1),
             **self.request,
         }
-
 
     def test_period_none(self):
         view = self.klass(self.raster, frequency=None, statistic="sum")
