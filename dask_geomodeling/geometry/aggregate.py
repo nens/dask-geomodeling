@@ -123,7 +123,7 @@ def aggregate_polygons(
     """Compute aggregates for given geometries.
 
     Geometries are rasterized using gdal_rasterize (without the ALL_TOUCHED option).
-    
+
     Args:
       geometries (GeoSeries): The geometries to aggregate the raster in.
       values (ndarray): A three-dimensional raster ``(t, y, x)`` to aggregate.
@@ -214,7 +214,7 @@ def aggregate_points(
     """Compute aggregates for given point geometries.
 
     The values of the raster is taken at the point coordinates.
-    
+
     Args:
       points (GeoSeries): The geometries (points) to aggregate the raster in.
       values (ndarray): A three-dimensional raster ``(t, y, x)`` to aggregate.
@@ -256,7 +256,7 @@ class AggregateRaster(GeometryBlock):
     """
     Compute statistics of a raster for each geometry in a geometry source.
 
-    A statistic is computed in a specific projection and with a specified raster 
+    A statistic is computed in a specific projection and with a specified raster
     cell size. If ``projection`` or ``pixel_size`` are not given, these default to
     the native projection of the provided raster source. The following cells are
     selected to perform the statistic (e.g. mean) on:
@@ -267,7 +267,7 @@ class AggregateRaster(GeometryBlock):
 
     If this assignment leads to the situation that a geometry covers no raster
     cells (for instance with a polygon much smaller than the raster cell size),
-    the geometry is reduced to a point by taking its centroid.    
+    the geometry is reduced to a point by taking its centroid.
 
     Should the combination of the requested pixel_size and the extent of the
     source geometry cause the required raster size to exceed ``max_pixels``,
@@ -464,7 +464,7 @@ class AggregateRaster(GeometryBlock):
         # change point-like requests in real point requests
         # (reducing possible edge effects)
         if width == 1 and height == 1:
-            raster_req_bbox = ((x1 + x2) / 2, (y1 + y2) / 2 ) * 2
+            raster_req_bbox = ((x1 + x2) / 2, (y1 + y2) / 2) * 2
         else:
             raster_req_bbox = (x1, y1, x2, y2)
 

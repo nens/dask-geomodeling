@@ -1,16 +1,149 @@
 from datetime import datetime as Datetime
 from datetime import timedelta as Timedelta
 import unittest
-
 import numpy as np
 from numpy.testing import assert_equal
 
-from dask_geomodeling import raster
+from dask_geomodeling.raster import TemporalAggregate, Cumulative
+from dask_geomodeling.raster.temporal import _snap_to_resampled_labels, _labels_to_start_stop
 from dask_geomodeling.tests.factories import MockRaster
+
+import pytest
+
+
+@pytest.fixture
+def raster():
+    return MockRaster(
+        origin=Datetime(2000, 1, 1),
+        value=np.array([[1.0, 0.0, np.nan]]),
+        timedelta=Timedelta(days=1),
+        bands=3,
+    )
+
+
+dt = Datetime
+
+
+@pytest.mark.parametrize("freq,closed,label,timezone,expected", [
+    ("D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    ("D", "left", "right", "UTC", (dt(2000, 1, 2), dt(2000, 1, 4))),
+    ("D", "right", "left", "UTC", (dt(1999, 12, 31), dt(2000, 1, 2))),
+    ("D", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
+    # 2000-01-01 01:00 falls in the 2000-01-01 bin (still Amsterdam)
+    # the 2000-01-01 bin corresponds to 1999-12-31 23:00 UTC
+    ("D", "left", "left", "Europe/Amsterdam", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
+    # 2000-01-01 00:00 UTC is 1999-12-31 19:00 in New York
+    # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
+    # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
+    ("D", "left", "left", "America/New_York", (dt(1999, 12, 31, 5), dt(2000, 1, 2, 5))),
+    ("H", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
+    ("H", "left", "right", "UTC", (dt(2000, 1, 1, 1), dt(2000, 1, 3, 1))),
+    ("H", "right", "left", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
+    ("H", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
+    # the 2000-01-01 01:00 bin corresponds to 2000-01-01 00:00 UTC
+    # you don't notice the timezone here
+    ("H", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    ("H", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    (None, "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
+    # pandas MonthEnd ("M") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
+    ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ("M", "left", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+    ("M", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ("M", "right", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+    ("M", None, None, "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),  # (right, right)
+    # pandas MonthStart ("MS") bin is 2000-01-01 00:00 UTC to 2000-02-01 00:00 UTC
+    ("MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
+    ("MS", "left", "right", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),
+    ("MS", "right", "left", "UTC", (dt(1999, 12, 1), dt(2000, 1, 1))),
+    ("MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
+    ("MS", None, None, "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),  # (left, left)
+    # businessday (our sample dataset is Saturday, Sunday, Monday); Sat + Sun belong to Friday
+    ("B", "left", "left", "UTC", (dt(1999, 12, 31), dt(2000, 1, 3))),
+    ("B", "left", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 4))),
+    # closed=right moves "monday" into the weekend because it is on 00:00
+    ("B", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ("B", "right", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
+])
+def test_period(raster, freq, closed, label, timezone, expected):
+    view = TemporalAggregate(raster, freq, closed=closed, label=label, timezone=timezone)
+    actual = view.period
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize("start,stop,freq,closed,label,timezone,expected", [
+    # (None, None) means 'latest'; expected are the labels of the latest bins
+    (None, None, "D", "left", "left", "UTC", (dt(2000, 1, 3), None)),
+    (None, None, "D", "left", "right", "UTC", (dt(2000, 1, 4), None)),
+    (None, None, "D", "right", "left", "UTC", (dt(2000, 1, 2), None)),
+    (None, None, "D", "right", "right", "UTC", (dt(2000, 1, 3), None)),
+    (None, None, "D", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 2, 23), None)),
+    (None, None, "H", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
+    # (start, None) means 'nearest'; expected are the labels of the nearest bins
+    # left out-of-bounds
+    (dt(1999, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
+    (dt(1999, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
+    (dt(1999, 5, 6), None, "MS", "right", "left", "UTC", (dt(1999, 12, 1), None)),
+    (dt(1999, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+    # right out-of-bounds (equals 'latest')
+    (dt(2001, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
+    (dt(2001, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
+    (dt(2001, 5, 6), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1), None)),
+    (dt(2001, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+    # in bounds, snap to nearest (in a situation with 2 bins: 2000-01-01 and 2000-02-01)
+    (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+    (dt(2000, 1, 16), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+    (dt(2000, 1, 17), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+    (dt(2000, 2, 1), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+    # (start, stop) means a two-sided closed interval
+    (dt(2000, 1, 1), dt(2000, 2, 1), "MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
+    (dt(1999, 5, 6), dt(2001, 5, 6), "MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
+    (dt(2000, 1, 1), dt(2000, 1, 31), "MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
+    (dt(2000, 1, 2), dt(2000, 2, 1), "MS", "right", "right", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),
+    (dt(2000, 1, 2), dt(2000, 1, 31), "MS", "right", "right", "UTC", (None, None)),  # no frames
+    # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
+    (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
+    (dt(2000, 1, 2), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
+    (dt(2000, 1, 1), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
+    (dt(1999, 12, 31), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
+])
+def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, expected):
+    actual = _snap_to_resampled_labels(
+        (dt(2000, 1, 1), dt(2000, 1, 3)), start, stop, freq, closed, label, timezone
+    )
+    assert actual == expected
+
+
+us = Timedelta(microseconds=1)
+
+
+@pytest.mark.parametrize("start_label,stop_label,freq,closed,label,timezone,expected", [
+    (dt(2000, 1, 1), None, "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2) - us)),
+    (dt(2000, 1, 1), None, "D", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1) - us)),
+    (dt(2000, 1, 1), None, "D", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 1, 2))),
+    (dt(2000, 1, 1), None, "D", "right", "right", "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 1))),
+    (dt(2000, 1, 1), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1) - us)),
+    (dt(2000, 1, 1), None, "MS", "left", "right", "UTC", (dt(1999, 12, 1), dt(2000, 1, 1) - us)),
+    (dt(2000, 1, 1), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 2, 1))),
+    (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(1999, 12, 1) + us, dt(2000, 1, 1))),
+    # with a 'stop_label' it is just more of the same ...
+    (dt(2000, 1, 1), dt(2000, 1, 10), "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 11) - us)),
+    (dt(2000, 1, 1), dt(2000, 10, 1), "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 11, 1) - us)),
+    # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
+    (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 4) - us)),
+    (dt(2000, 1, 3), None, "B", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 3) - us)),
+    (dt(2000, 1, 3), None, "B", "right", "left", "UTC", (dt(2000, 1, 3) + us, dt(2000, 1, 4))),
+    (dt(2000, 1, 3), None, "B", "right", "right", "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 3))),
+])
+def test_labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone, expected):
+    actual = _labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone)
+    assert actual == expected
 
 
 class TestTemporalAggregate(unittest.TestCase):
-    klass = raster.TemporalAggregate
+    klass = TemporalAggregate
 
     def setUp(self):
         self.raster = MockRaster(
@@ -40,76 +173,8 @@ class TestTemporalAggregate(unittest.TestCase):
             **self.request,
         }
 
-    def test_period_day_agg(self):
-        self.assertEqual(
-            (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
-            self.klass(self.raster, "D", closed="left", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 2), Datetime(2000, 1, 4)),
-            self.klass(self.raster, "D", closed="left", label="right").period,
-        )
-        self.assertEqual(
-            (Datetime(1999, 12, 31), Datetime(2000, 1, 2)),
-            self.klass(self.raster, "D", closed="right", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
-            self.klass(self.raster, "D", closed="right", label="right").period,
-        )
-
-        # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
-        # 2000-01-01 01:00 falls in the 2000-01-01 bin (still Amsterdam)
-        # the 2000-01-01 bin corresponds to 1999-12-31 23:00 UTC
-        self.assertEqual(
-            (Datetime(1999, 12, 31, 23), Datetime(2000, 1, 2, 23)),
-            self.klass(self.raster, "D", timezone="Europe/Amsterdam").period,
-        )
-        # 2000-01-01 00:00 UTC is 1999-12-31 19:00 in New York
-        # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
-        # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
-        self.assertEqual(
-            (Datetime(1999, 12, 31, 5), Datetime(2000, 1, 2, 5)),
-            self.klass(self.raster, "D", timezone="America/New_York").period,
-        )
-
-    def test_period_hour_agg(self):
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
-            self.klass(self.raster, "H", closed="left", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 1), Datetime(2000, 1, 3, 1)),
-            self.klass(self.raster, "H", closed="left", label="right").period,
-        )
-        self.assertEqual(
-            (Datetime(1999, 12, 31, 23), Datetime(2000, 1, 2, 23)),
-            self.klass(self.raster, "H", closed="right", label="left").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1), Datetime(2000, 1, 3)),
-            self.klass(self.raster, "H", closed="right", label="right").period,
-        )
-
-        # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
-        # the 2000-01-01 01:00 bin corresponds to 2000-01-01 00:00 UTC
-        # you don't notice the timezone here
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
-            self.klass(self.raster, "H", timezone="Europe/Amsterdam").period,
-        )
-        self.assertEqual(
-            (Datetime(2000, 1, 1, 0), Datetime(2000, 1, 3, 0)),
-            self.klass(self.raster, "H", timezone="America/New_York").period,
-        )
-
     def test_period_none(self):
         view = self.klass(self.raster, frequency=None, statistic="sum")
-
-        # test period
-        self.assertEqual(
-            (Datetime(2000, 1, 3, 0), Datetime(2000, 1, 3, 0)), view.period
-        )
 
         # test timedelta
         self.assertIsNone(view.timedelta)
@@ -334,7 +399,7 @@ class TestTemporalAggregate(unittest.TestCase):
 
 
 class TestCumulative(unittest.TestCase):
-    klass = raster.Cumulative
+    klass = Cumulative
 
     def setUp(self):
         self.raster = MockRaster(
