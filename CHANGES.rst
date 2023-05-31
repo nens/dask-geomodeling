@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.4.2 (unreleased)
+2.4.2 (2023-05-31)
 ------------------
 
 - Fixed TemporalAggregate and Cumulative for month start ("MS") frequency.
