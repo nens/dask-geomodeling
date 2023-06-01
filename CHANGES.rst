@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.4.3 (unreleased)
+2.4.3 (2023-06-01)
 ------------------
 
 - Fixed an edge case in TemporalAggregate / Cumulative for month start ("MS") frequency.
