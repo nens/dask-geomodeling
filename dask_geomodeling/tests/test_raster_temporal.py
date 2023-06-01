@@ -5,7 +5,7 @@ import numpy as np
 from numpy.testing import assert_equal
 
 from dask_geomodeling.raster import TemporalAggregate, Cumulative
-from dask_geomodeling.raster.temporal import _snap_to_resampled_labels, _labels_to_start_stop
+from dask_geomodeling.raster.temporal import _snap_to_resampled_labels, _labels_to_start_stop, _get_closest_label
 from dask_geomodeling.tests.factories import MockRaster
 
 import pytest
@@ -115,6 +115,12 @@ def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, ex
     )
     assert actual == expected
 
+
+def test_issue_5917():
+    actual = _get_closest_label(
+        dt(2020, 1, 1, 22), "MS", "right", "left", "UTC", side="right"
+    )
+    assert actual == dt(2020, 2, 1)
 
 us = Timedelta(microseconds=1)
 

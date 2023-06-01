@@ -263,11 +263,14 @@ def _get_bin_label(dt, frequency, closed, label, timezone):
 
     :type dt: datetime.datetime without timezone.
     """
-    # go through resample, this is the only function that supports 'closed'
+    # the strategy is leveraging pandas.Series.resample to put the dt in a bin
+    # while there is only 1 sample here, there might be multiple (empty) bins
+    # in some cases (see test_issue_5917)
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    resampled = series.resample(frequency, closed=closed, label=label, kind="timestamp")
-    snapped = resampled.first().index[0]
-    return _ts_to_dt(snapped, timezone)
+    for label, bin in series.resample(frequency, closed=closed, label=label, kind="timestamp"):
+        if len(bin) != 0:
+            break
+    return _ts_to_dt(label, timezone)
 
 
 def _get_bin_period(dt, frequency, closed, label, timezone):
