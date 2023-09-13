@@ -134,7 +134,7 @@ class TstRasterSourceBase:
         )
         self.assertEqual(data["values"].shape, (1, 2, 4))
         n = data["no_data_value"]
-        assert_equal(data["values"], [[[5, 4, n, n], [5, 4, n, n]]])
+        assert_equal(data["values"], [[[5, 5, n, n], [5, 5, n, n]]])
 
     def test_bbox_single_pixel_zoom_in(self):
         data = self.source.get_data(

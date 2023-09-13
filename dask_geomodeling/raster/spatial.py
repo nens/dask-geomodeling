@@ -728,4 +728,7 @@ class Place(BaseSingle):
                 "no_data_value": out_no_data_value,
             }
         else:
+            if stack[0]['values'].ndim == 4:
+                import pdb
+                pdb.set_trace() 
             return reduce_rasters(stack, process_kwargs["statistic"])

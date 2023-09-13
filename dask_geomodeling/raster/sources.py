@@ -3,7 +3,7 @@ Module containing raster sources.
 """
 import numpy as np
 
-from osgeo import gdal, gdal_array
+from osgeo import gdal, gdal_array, osr
 
 from datetime import datetime, timedelta
 
@@ -14,7 +14,117 @@ from .base import RasterBlock
 __all__ = ["MemorySource", "RasterFileSource"]
 
 
-class MemorySource(RasterBlock):
+class RasterSourceBase(RasterBlock):
+
+    @staticmethod
+    def process(process_kwargs):
+        mode = process_kwargs["mode"]
+
+        # handle empty requests
+        if mode == "empty_vals":
+            return
+        elif mode == "empty_time":
+            return {"time": []}
+        elif mode == "empty_meta":
+            return {"meta": []}
+
+        bands = process_kwargs["bands"]
+        length = bands[1] - bands[0]
+
+        # handle time requests
+        if mode == "time":
+            start = process_kwargs["start"]
+            delta = process_kwargs["delta"]
+            return {"time": [start + i * delta for i in range(length)]}
+
+        # open the dataset
+        source = process_kwargs.get("dataset")
+        if source is None:
+            url = process_kwargs["url"]
+            path = utils.safe_abspath(url)
+            source = gdal.Open(path)
+
+        # handle meta requests
+        if mode == "meta":
+            return {
+                "meta": [
+                    source.GetRasterBand(i + 1).GetMetadataItem("metadata")
+                    for i in range(bands[0], bands[1])
+                ]
+            }
+
+        # handle 'vals' requests
+        dtype = process_kwargs["dtype"]
+        bbox = process_kwargs["bbox"]
+        width = process_kwargs["width"]
+        height = process_kwargs["height"]
+        target_projection = process_kwargs["projection"]
+        target_no_data_value = process_kwargs["fillvalue"].item()
+
+        # return an empty array if 0-sized data was requested
+        if width == 0 or height == 0:
+            return np.empty((length, height, width), dtype=dtype)
+
+        # handle point request
+        if bbox[0] == bbox[2] or bbox[1] == bbox[3]:
+            source_geo_transform = utils.GeoTransform(source.GetGeoTransform())
+            ct = osr.CoordinateTransformation(
+                utils.get_sr(target_projection),
+                utils.get_sr(source.GetProjection()),
+            )
+            source_x, source_y, _ = ct.TransformPoint(bbox[0], bbox[1], 0.0)
+            source_i, source_j = source_geo_transform.get_indices(
+                ((source_x, source_y))
+            )
+            # create the result
+            shape = source.RasterCount, 1, 1
+            result = np.full(shape, target_no_data_value, dtype=dtype)
+            if (
+                0 <= source_i < source.RasterYSize
+                and 0 <= source_j < source.RasterXSize
+            ):
+                # read data into the result
+                source.ReadAsArray(int(source_j), int(source_i), 1, 1, result)
+
+            result = result[bands[0] : bands[1]]
+            # fill nan values if they popped up
+            result[~np.isfinite(result)] = target_no_data_value
+            return {"values": result, "no_data_value": target_no_data_value}
+
+        target_geo_transform = utils.GeoTransform.from_bbox(
+            bbox=bbox,
+            width=width,
+            height=height,
+        )
+
+        # transform the complete raster
+        shape = source.RasterCount, height, width
+        result = np.full(shape, target_no_data_value, dtype=dtype)
+        kwargs = {
+            "geo_transform": target_geo_transform,
+            "no_data_value": target_no_data_value,
+            "projection": osr.GetUserInputAsWKT(target_projection),
+        }
+        with utils.Dataset(result, **kwargs) as target:
+            gdal.ReprojectImage(
+                source,
+                target,
+                source.GetProjection(),
+                target.GetProjection(),
+                gdal.GRA_NearestNeighbour,
+                0.0,  # Dummy WarpMemoryLimit, same as default.
+                0.125,  # Max error in pixels. Without passing this,
+                # it's 0.0, which is very slow. 0.125 is the
+                # default of gdalwarp on the command line.
+            )
+
+        result = result[bands[0] : bands[1]]
+        # fill nan values if they popped up
+        result[~np.isfinite(result)] = target_no_data_value
+        return {"values": result, "no_data_value": target_no_data_value}
+
+
+class MemorySource(RasterSourceBase):
     """A raster source that interfaces data from memory.
 
     Nodata values are supported, but when upsampling the data, these are
@@ -198,7 +308,7 @@ class MemorySource(RasterBlock):
             return [({"mode": "empty_meta"}, None)]
 
         # interpret start and stop request parameters
-        start, stop, first_i, last_i = utils.snap_start_stop(
+        start, stop, band1, band2 = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
             datetime.utcfromtimestamp(self.time_first / 1000),
@@ -207,87 +317,57 @@ class MemorySource(RasterBlock):
         )
         if start is None:
             return [({"mode": "empty_" + request["mode"]}, None)]
+        bands = band1, band2 + 1
+
+        # create a dataset
+        array = self.data
+        kwargs = {
+            "no_data_value": float(self.no_data_value),
+            "geo_transform": self.geo_transform,
+            "projection": osr.GetUserInputAsWKT(self.projection),
+        }
+
+        driver = gdal.GetDriverByName("mem")
+        with utils.Dataset(array, **kwargs) as _dataset:
+            dataset = driver.CreateCopy("", _dataset)
+        if self.metadata is not None:
+            for i in range(len(self.metadata)):
+                band = dataset.GetRasterBand(i + 1)
+                band.SetMetadataItem("metadata", self.metadata[i])
 
         # set the process kwargs depending on the mode
         if mode == "vals":
             process_kwargs = {
                 "mode": "vals",
-                "data": self.data[first_i : last_i + 1],
-                "no_data_value": self.no_data_value,
+                "dataset": dataset,
                 "bbox": request["bbox"],
                 "width": request["width"],
                 "height": request["height"],
-                "geo_transform": self.geo_transform,
+                "projection": request["projection"],
+                "bands": bands,
+                "dtype": self.dtype,
+                "fillvalue": self.fillvalue,
             }
         elif mode == "meta":
             # metadata can't be None at this point
             process_kwargs = {
                 "mode": "meta",
-                "metadata": self.metadata[first_i : last_i + 1],
+                "dataset": dataset,
+                "bands": bands,
             }
         elif mode == "time":
             process_kwargs = {
                 "mode": "time",
                 "start": start,
                 "delta": self.timedelta or timedelta(0),
-                "length": last_i - first_i + 1,
+                "bands": bands,
             }
         else:
             raise RuntimeError("Unknown mode '{}'".format(mode))
         return [(process_kwargs, None)]
 
-    @staticmethod
-    def process(process_kwargs):
-        mode = process_kwargs["mode"]
 
-        # handle empty results
-        if mode == "empty_vals":
-            return
-        elif mode == "empty_time":
-            return {"time": []}
-        elif mode == "empty_meta":
-            return {"meta": []}
-
-        # handle time requests
-        if mode == "time":
-            start = process_kwargs["start"]
-            length = process_kwargs["length"]
-            delta = process_kwargs["delta"]
-            return {"time": [start + i * delta for i in range(length)]}
-        elif mode == "meta":
-            return {"meta": process_kwargs["metadata"]}
-
-        # handle 'vals' requests
-        data = process_kwargs["data"]
-        no_data_value = process_kwargs["no_data_value"]
-        bbox = process_kwargs["bbox"]
-        width = process_kwargs["width"]
-        height = process_kwargs["height"]
-        gt = utils.GeoTransform(process_kwargs["geo_transform"])
-
-        # return an empty array if 0-sized data was requested
-        if width == 0 or height == 0:
-            return np.empty((data.shape[0], height, width), dtype=data.dtype)
-
-        # transform the requested bounding box to indices into the array
-        shape = data.shape
-        ranges, padding = gt.get_array_ranges(bbox, shape)
-        result = data[:, slice(*ranges[0]), slice(*ranges[1])]
-
-        # pad the data to the shape given by the index
-        if padding is not None:
-            padding = ((0, 0),) + padding  # for the time axis
-            result = np.pad(result, padding, "constant", constant_values=no_data_value)
-
-        # zoom to the desired height and width
-        result = utils.zoom_raster(result, no_data_value, height, width)
-
-        # fill nan values if they popped up
-        result[~np.isfinite(result)] = no_data_value
-        return {"values": result, "no_data_value": no_data_value}
-
-
-class RasterFileSource(RasterBlock):
+class RasterFileSource(RasterSourceBase):
     """A raster source that interfaces data from a file path.
 
     The value at raster cell with its topleft corner at [x, y] is assumed to
@@ -408,14 +488,8 @@ class RasterFileSource(RasterBlock):
     def get_sources_and_requests(self, **request):
         mode = request["mode"]
 
-        if (
-            mode == "vals"
-            and request.get("projection").upper() != self.projection.upper()
-        ):
-            raise RuntimeError("This source block cannot reproject data")
-
         # interpret start and stop request parameters
-        start, stop, first_i, last_i = utils.snap_start_stop(
+        start, stop, band1, band2 = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
             datetime.utcfromtimestamp(self.time_first / 1000),
@@ -424,6 +498,7 @@ class RasterFileSource(RasterBlock):
         )
         if start is None:
             return [({"mode": "empty_" + request["mode"]}, None)]
+        bands = band1, band2 + 1
 
         # set the process kwargs depending on the mode
         if mode == "vals":
@@ -433,8 +508,8 @@ class RasterFileSource(RasterBlock):
                 "bbox": request["bbox"],
                 "width": request["width"],
                 "height": request["height"],
-                "first_band": last_i,
-                "last_band": first_i,
+                "projection": request["projection"],
+                "bands": bands,
                 "dtype": self.dtype,
                 "fillvalue": self.fillvalue,
             }
@@ -443,99 +518,15 @@ class RasterFileSource(RasterBlock):
             process_kwargs = {
                 "mode": "meta",
                 "url": self.url,
-                "first_band": last_i,
-                "last_band": first_i,
+                "bands": bands,
             }
         elif mode == "time":
             process_kwargs = {
                 "mode": "time",
                 "start": start,
                 "delta": self.timedelta or timedelta(0),
-                "length": last_i - first_i + 1,
+                "bands": bands,
             }
         else:
             raise RuntimeError("Unknown mode '{}'".format(mode))
         return [(process_kwargs, None)]
-
-    @staticmethod
-    def process(process_kwargs):
-        mode = process_kwargs["mode"]
-
-        # handle empty requests
-        if mode == "empty_vals":
-            return
-        elif mode == "empty_time":
-            return {"time": []}
-        elif mode == "empty_meta":
-            return {"meta": []}
-
-        # handle time requests
-        if mode == "time":
-            start = process_kwargs["start"]
-            length = process_kwargs["length"]
-            delta = process_kwargs["delta"]
-            return {"time": [start + i * delta for i in range(length)]}
-
-        # open the dataset
-        url = process_kwargs["url"]
-        path = utils.safe_abspath(url)
-        dataset = gdal.Open(path)
-        first_band = process_kwargs["first_band"]
-        last_band = process_kwargs["last_band"]
-
-        # handle meta requests
-        if mode == "meta":
-            return {
-                "meta": [
-                    dataset.GetRasterBand(i + 1).GetMetadata_Dict()
-                    for i in range(first_band, last_band + 1)
-                ]
-            }
-
-        # handle 'vals' requests
-        dtype = process_kwargs["dtype"]
-        no_data_value = process_kwargs["fillvalue"]
-        bbox = process_kwargs["bbox"]
-        width = process_kwargs["width"]
-        height = process_kwargs["height"]
-        length = last_band - first_band + 1
-
-        # return an empty array if 0-sized data was requested
-        if width == 0 or height == 0:
-            return np.empty((length, height, width), dtype=dtype)
-
-        # transform the requested bounding box to indices into the array
-        shape = dataset.RasterCount, dataset.RasterYSize, dataset.RasterXSize
-        gt = utils.GeoTransform(dataset.GetGeoTransform())
-        ranges, padding = gt.get_array_ranges(bbox, shape)
-        read_shape = [rng[1] - rng[0] for rng in ranges]
-
-        # return nodata immediately for empty
-        if any([x <= 0 for x in read_shape]):
-            result = np.full(
-                shape=(length, height, width), fill_value=no_data_value, dtype=dtype
-            )
-            return {"values": result, "no_data_value": no_data_value}
-
-        # read arrays from file
-        result = np.empty([length] + read_shape, dtype=dtype)
-        for k in range(length):
-            band = dataset.GetRasterBand(first_band + k + 1)
-            result[k] = band.ReadAsArray(
-                int(ranges[1][0]),
-                int(ranges[0][0]),
-                int(read_shape[1]),
-                int(read_shape[0]),
-            )
-
-        # pad the data to the shape given by the index
-        if padding is not None:
-            padding = ((0, 0),) + padding  # for the time axis
-            result = np.pad(result, padding, "constant", constant_values=no_data_value)
-
-        # zoom to the desired height and width
-        result = utils.zoom_raster(result, no_data_value, height, width)
-
-        # fill nan values if they popped up
-        result[~np.isfinite(result)] = no_data_value
-        return {"values": result, "no_data_value": no_data_value}
