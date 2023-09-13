@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.4.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fixed issue with raster sources returning wrong values.
 
 
 2.4.3 (2023-06-01)
