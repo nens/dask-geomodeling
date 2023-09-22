@@ -439,12 +439,15 @@ class RasterFileSource(RasterSourceBase):
     @property
     def dtype(self):
         first_band = self.gdal_dataset.GetRasterBand(1)
-        return gdal_array.GDALTypeCodeToNumericTypeCode(first_band.DataType)
+        gdal_data_type = first_band.DataType
+        numpy_type = gdal_array.GDALTypeCodeToNumericTypeCode(gdal_data_type)
+        return np.dtype(numpy_type)
 
     @property
     def fillvalue(self):
         first_band = self.gdal_dataset.GetRasterBand(1)
-        return self.dtype(first_band.GetNoDataValue())
+        return self.dtype.type((first_band.GetNoDataValue()))
+
 
     @property
     def geo_transform(self):
