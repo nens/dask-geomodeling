@@ -567,7 +567,7 @@ class Place(BaseSingle):
         if extent_geometry is None:
             # no geometry means: no data
             return (({"mode": "null"}, None),)
-        xmin, xmax, ymin, ymax = Extent.from_geometry(extent_geometry).transformed(request["projection"]).bbox
+        xmin, ymin, xmax, ymax = Extent.from_geometry(extent_geometry).transformed(request["projection"]).bbox
 
         # compute the requested cellsize
         x1, y1, x2, y2 = request["bbox"]
