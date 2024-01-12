@@ -18,8 +18,12 @@ sphinx:
 formats:
   - pdf
 
+build:
+  os: "ubuntu-22.04"
+  tools:
+    python: "3.8"
+
 python:
-  version: 3.7
   # only numpy is in the requirements file; the rest is mocked by autodoc_mock_imports
   install:
     - requirements: docs/requirements.txt

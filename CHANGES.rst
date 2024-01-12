@@ -6,6 +6,8 @@ Changelog of dask-geomodeling
 
 - Fixed issue with raster sources returning wrong values.
 
+- Fix Place block.
+
 
 2.4.3 (2023-06-01)
 ------------------
