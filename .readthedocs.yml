@@ -18,10 +18,14 @@ sphinx:
 formats:
   - pdf
 
+build:
+  os: "ubuntu-22.04"
+  tools:
+    python: "3.8"
+
 python:
-  version: 3.7
-  # use system_packages for numpy; the rest is mocked by autodoc_mock_imports
-  system_packages: true
+  # only numpy is in the requirements file; the rest is mocked by autodoc_mock_imports
   install:
+    - requirements: docs/requirements.txt
     - method: setuptools
       path: .  # setup.py includes a hack that emulates --no-deps for RTD

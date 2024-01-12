@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.4.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix Place block.
 
 
 2.4.3 (2023-06-01)
