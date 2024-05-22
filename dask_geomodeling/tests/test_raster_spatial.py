@@ -124,6 +124,13 @@ def test_place_exact(source, center, vals_request):
     assert (values[:, :10, :10] == 7).all()
 
 
+def test_place_exact_source_requests(source, center, vals_request):
+    place = raster.Place(source, "EPSG:28992", center, [(50, 50)])
+    source_request = place.get_sources_and_requests(**vals_request)[1][1]
+    # next assert assumes native resolution requests and source of 10 x 10 pixels
+    assert source_request['height'] * source_request['width'] <= 100
+
+
 def test_place_reproject(source, center_epsg3857):
     target = 572050, 6812050  # EPSG3857 coords somewhere inside RD validity
     place = raster.Place(source, "EPSG:3857", center_epsg3857, [target])

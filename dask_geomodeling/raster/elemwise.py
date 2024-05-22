@@ -5,7 +5,7 @@ from functools import wraps
 
 import numpy as np
 
-from dask_geomodeling.utils import get_dtype_max, get_index, GeoTransform
+from dask_geomodeling.utils import get_dtype_max, get_index, GeoTransform, Extent
 
 from .base import RasterBlock, BaseSingle
 
@@ -156,16 +156,12 @@ class BaseElementwise(RasterBlock):
             return
         if len(geometries) == 1:
             return geometries[0]
-        result = geometries[0]
-        sr = result.GetSpatialReference()
+        extent = Extent.from_geometry(geometries[0])
         for geometry in geometries[1:]:
-            if not geometry.GetSpatialReference().IsSame(sr):
-                geometry = geometry.Clone()
-                geometry.TransformTo(sr)
-            result = result.Intersection(geometry)
-        if result.GetArea() == 0.0:
-            return
-        return result
+            extent = extent.intersection(Extent.from_geometry(geometry))
+            if extent is None:
+                return None
+        return extent.as_geometry()
 
     @property
     def projection(self):

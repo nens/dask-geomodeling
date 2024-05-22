@@ -1,10 +1,67 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.3.11 (unreleased)
--------------------
+2.4.5 (unreleased)
+------------------
 
 - Nothing changed yet.
+
+
+2.4.4 (2024-01-17)
+------------------
+
+- Fix Place block.
+
+
+2.4.3 (2023-06-01)
+------------------
+
+- Fixed an edge case in TemporalAggregate / Cumulative for month start ("MS") frequency.
+
+
+2.4.2 (2023-05-31)
+------------------
+
+- Fixed TemporalAggregate and Cumulative for month start ("MS") frequency.
+
+
+2.4.1 (2023-04-18)
+------------------
+
+- AggregateRaster will do a point request to the raster if only 1 cell is required
+  (instead of a box request that encompasses the cell).
+
+
+2.4.0 (2023-04-13)
+------------------
+
+- Change Block.get_data; instead of always computing in the main thread, use
+  the scheduler that is setup via dask.config.
+
+
+2.3.13 (2023-04-04)
+-------------------
+
+- Expand AggregateRaster for usage on points (and other geometries that are
+  smaller than a cell).
+
+
+2.3.12 (2022-11-28)
+-------------------
+
+- Perform more geometry transformations via pyproj (see 2.3.11 notes).
+
+- The .geometry property of elementwise, reduction and combine RasterBlocks is
+  now computed through the extents of the arguments (and will always be a box). 
+
+
+2.3.11 (2022-11-22)
+-------------------
+
+- Perform geometry transformations via pyproj instead of GDAL SWIG bindings to circumvent
+  a performance degradation in GDAL >=3 (PROJ >=6).
+
+- Drop support for Python 3.6 and GDAL 2.
 
 
 2.3.10 (2022-08-22)

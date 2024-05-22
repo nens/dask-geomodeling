@@ -1,7 +1,7 @@
 from setuptools import setup
 import os
 
-version = '2.3.11.dev0'
+version = '2.4.5.dev0'
 
 long_description = "\n\n".join([open("README.rst").read(), open("CHANGES.rst").read()])
 
@@ -52,7 +52,7 @@ setup(
     zip_safe=False,
     install_requires=install_requires,
     tests_require=tests_require,
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     extras_require={"test": tests_require, "cityhash": ["cityhash"]},
     entry_points={"console_scripts": []},
 )

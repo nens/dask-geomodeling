@@ -22,6 +22,9 @@ from .base import RasterBlock, BaseSingle
 __all__ = ["Snap", "Shift", "TemporalSum", "TemporalAggregate", "Cumulative"]
 
 
+MICROSECOND = Timedelta(microseconds=1)
+
+
 class Snap(RasterBlock):
     """
     Snap the time structure of a raster to that of another raster.
@@ -260,11 +263,14 @@ def _get_bin_label(dt, frequency, closed, label, timezone):
 
     :type dt: datetime.datetime without timezone.
     """
-    # go through resample, this is the only function that supports 'closed'
+    # the strategy is leveraging pandas.Series.resample to put the dt in a bin
+    # while there is only 1 sample here, there might be multiple (empty) bins
+    # in some cases (see test_issue_5917)
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    resampled = series.resample(frequency, closed=closed, label=label, kind="timestamp")
-    snapped = resampled.first().index[0]
-    return _ts_to_dt(snapped, timezone)
+    for label, bin in series.resample(frequency, closed=closed, label=label, kind="timestamp"):
+        if len(bin) != 0:
+            break
+    return _ts_to_dt(label, timezone)
 
 
 def _get_bin_period(dt, frequency, closed, label, timezone):
@@ -303,29 +309,114 @@ def _get_closest_label(dt, frequency, closed, label, timezone, side="both"):
     return _ts_to_dt(result, timezone)
 
 
-def _label_to_period(dt, frequency, closed, label, timezone):
-    """Converts a datetime to a period whose label equals that datetime"""
-    label_ts = _dt_to_ts(dt, timezone)
-    # translate that back to the period
-    series = pd.Series([0], index=[label_ts])
-    label_candidate = (
-        series.resample(frequency, closed=closed, label=label, kind="timestamp")
-        .first()
-        .index[0]
+def _default_closed_label(frequency, closed, label):
+    """To make closed & label not-None"""
+    if frequency is None:
+        return ("right", "right")
+    # Copied from pandas 'TimeGrouper.__init__':
+    end_types = {"M", "A", "Q", "BM", "BA", "BQ", "W"}
+    rule = to_offset(frequency).rule_code
+    if rule in end_types or ("-" in rule and rule[: rule.find("-")] in end_types):
+        if closed is None:
+            closed = "right"
+        if label is None:
+            label = "right"
+    else:
+        if closed is None:
+            closed = "left"
+        if label is None:
+            label = "left"
+    return closed, label
+
+
+def _label_to_bin_start(dt, frequency, closed, label, timezone):
+    """Returns the first datetime in bin with label 'dt'"""
+    ts = _dt_to_ts(dt, timezone)
+    if label == "right":
+        ts -= to_offset(frequency)
+    if closed == "right":
+        ts += MICROSECOND
+    return _ts_to_dt(ts, timezone)
+
+
+def _label_to_bin_end(dt, frequency, closed, label, timezone):
+    """Returns the last datetime in bin with label 'dt'"""
+    ts = _dt_to_ts(dt, timezone)
+    if label == "left":
+        ts += to_offset(frequency)
+    if closed == "left":
+        ts -= MICROSECOND
+    return _ts_to_dt(ts, timezone)
+
+
+def _resampled_period(period, frequency, closed, label, timezone):
+    """Given a source (start, stop) and frequency, compute the (start, stop) interval
+    that contains data after resampling. The returned start and stop are bin labels.
+    """
+    if period is None:
+        return
+    if frequency is None:
+        return period[-1], period[-1]
+    return tuple(_get_bin_label(x, frequency, closed, label, timezone) for x in period)
+
+
+def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, timezone):
+    """Snap start and stop to the bin labels (so timeframes of a resampled raster).
+
+    The result are 2 labels: a start and a stop label, as python datetimes.
+    If the stop label is None, start == stop. If both are None, there is no label in range.
+    """
+    period = _resampled_period(period, frequency, closed, label, timezone)
+    if period is None:  # return early for an empty source
+        return None, None
+
+    if start is None:  # start is None means: return the latest
+        start = period[1]
+
+    if stop is None:
+        # snap start to a label closest to it
+        if start <= period[0]:
+            start = period[0]
+        elif start >= period[1]:
+            start = period[1]
+        else:
+            start = _get_closest_label(
+                start, frequency, closed, label, timezone, side="both"
+            )
+    else:
+        # snap start to a label right from it
+        if start <= period[0]:
+            start = period[0]
+        elif start > period[1]:
+            return None, None
+        else:
+            start = _get_closest_label(
+                start, frequency, closed, label, timezone, side="right"
+            )
+        # snap stop to a label left from it
+        if stop >= period[1]:
+            stop = period[1]
+        elif stop < period[0]:
+            return None, None
+        else:
+            stop = _get_closest_label(
+                stop, frequency, closed, label, timezone, side="left"
+            )
+
+        if start > stop:
+            return None, None
+
+    return start, stop
+
+
+def _labels_to_start_stop(start_label, stop_label, frequency, closed, label, timezone):
+    """Given a start and stop label, get the start/stop to request from source"""
+    assert frequency is not None
+    start = _label_to_bin_start(start_label, frequency, closed, label, timezone)
+    stop = _label_to_bin_end(
+        stop_label or start_label, frequency, closed, label, timezone
     )
-    # in most cases the label_candidate == label, but sometimes it doesnt work
-    # because the label actually falls outside of the bin
-    if label_candidate < label_ts:
-        series.index += to_offset(frequency)
-    elif label_candidate > label_ts:
-        series.index -= to_offset(frequency)
-    # now retrieve the period
-    period = (
-        series.resample(frequency, closed=closed, label=label, kind="period")
-        .first()
-        .index[0]
-    )
-    return period
+    return start, stop
 
 
 def count_not_nan(x, *args, **kwargs):
@@ -407,7 +498,7 @@ class TemporalAggregate(BaseSingle):
         if not isinstance(statistic, str):
             raise TypeError("'{}' object is not allowed.".format(type(statistic)))
         # interpret percentile statistic
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic.lower())
         if percentile:
             statistic = "p{0}".format(percentile)
         elif statistic not in self.STATISTICS:
@@ -442,21 +533,18 @@ class TemporalAggregate(BaseSingle):
 
     @property
     def _snap_kwargs(self):
+        # make closed & label not-None
+        closed, label = _default_closed_label(self.frequency, self.closed, self.label)
         return {
             "frequency": self.frequency,
-            "closed": self.closed,
-            "label": self.label,
+            "closed": closed,
+            "label": label,
             "timezone": self.timezone,
         }
 
     @property
     def period(self):
-        period = self.source.period
-        if period is None:
-            return
-        if self.frequency is None:
-            return period[-1], period[-1]
-        return tuple(_get_bin_label(x, **self._snap_kwargs) for x in period)
+        return _resampled_period(self.source.period, **self._snap_kwargs)
 
     @property
     def timedelta(self):
@@ -473,82 +561,37 @@ class TemporalAggregate(BaseSingle):
     def fillvalue(self):
         return get_dtype_max(self.dtype)
 
-    def _snap_to_resampled_labels(self, start, stop):
-        """Snaps start and stop to resampled frames"""
-        kwargs = self._snap_kwargs
-        period = self.period
-        if period is None:  # return early for an empty source
-            return None, None
-
-        if start is None:  # start is None means: return the latest
-            start = period[1]
-
-        if stop is None:
-            # snap start to a label closest to it
-            if start <= period[0]:
-                start = period[0]
-            elif start >= period[1]:
-                start = period[1]
-            else:
-                start = _get_closest_label(start, side="both", **kwargs)
-        else:
-            # snap start to a label right from it
-            if start <= period[0]:
-                start = period[0]
-            elif start > period[1]:
-                return None, None
-            else:
-                start = _get_closest_label(start, side="right", **kwargs)
-            # snap stop to a label left from it
-            if stop >= period[1]:
-                stop = period[1]
-            elif stop < period[0]:
-                return None, None
-            else:
-                stop = _get_closest_label(stop, side="left", **kwargs)
-        return start, stop
-
     def get_sources_and_requests(self, **request):
         kwargs = self._snap_kwargs
         start = request.get("start")
         stop = request.get("stop")
         mode = request["mode"]
 
-        start, stop = self._snap_to_resampled_labels(start, stop)
-        if start is None:
+        start_label, stop_label = _snap_to_resampled_labels(
+            self.source.period, start, stop, **kwargs
+        )
+        if start_label is None:
             return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source
         if mode == "time":
             kwargs["mode"] = "time"
-            kwargs["start"] = start
-            kwargs["stop"] = stop
+            kwargs["start"] = start_label
+            kwargs["stop"] = stop_label
             return [(kwargs, None)]
 
         # vals or source requests do need a request to self.source
         if self.frequency is None:
             request["start"], request["stop"] = self.source.period
         else:
-            if stop is None or start == stop:
-                # recover the period that is closest to start
-                start_period = stop_period = _label_to_period(start, **kwargs)
-            else:
-                # recover the period that has label >= start
-                start_period = _label_to_period(start, **kwargs)
-                # recover the period that has label <= stop
-                stop_period = _label_to_period(stop, **kwargs)
-
-            # snap request 'start' to the start of the first period
-            request["start"] = _ts_to_dt(start_period.start_time, self.timezone)
-            # snap request 'stop' to the end of the last period
-            request["stop"] = _ts_to_dt(stop_period.end_time, self.timezone)
-            if kwargs["closed"] != "left":
-                request["stop"] += Timedelta(microseconds=1)
+            request["start"], request["stop"] = _labels_to_start_stop(
+                start_label, stop_label, **kwargs
+            )
 
         # return sources and requests depending on the mode
         kwargs["mode"] = request["mode"]
-        kwargs["start"] = start
-        kwargs["stop"] = stop
+        kwargs["start"] = start_label
+        kwargs["stop"] = stop_label
         if mode == "vals":
             kwargs["dtype"] = np.dtype(self.dtype).str
             kwargs["statistic"] = self.statistic
@@ -620,8 +663,7 @@ class TemporalAggregate(BaseSingle):
         values = data["values"]
         if values.shape[0] != len(times):
             raise RuntimeError("Shape of raster does not match number of timestamps")
-        statistic = process_kwargs["statistic"]
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(process_kwargs["statistic"])
         if percentile:
             extensive = False
             agg_func = partial(np.nanpercentile, q=percentile)
@@ -706,7 +748,7 @@ class Cumulative(BaseSingle):
         if not isinstance(statistic, str):
             raise TypeError("'{}' object is not allowed.".format(type(statistic)))
         # interpret percentile statistic
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic.lower())
         if percentile:
             statistic = "p{0}".format(percentile)
         elif statistic not in self.STATISTICS:
@@ -860,8 +902,7 @@ class Cumulative(BaseSingle):
         values = data["values"]
         if values.shape[0] != len(times):
             raise RuntimeError("Shape of raster does not match number of timestamps")
-        statistic = process_kwargs["statistic"]
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(process_kwargs["statistic"])
         if percentile:
             extensive = False
             agg_func = partial(np.nanpercentile, q=percentile)

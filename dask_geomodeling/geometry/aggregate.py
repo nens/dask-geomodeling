@@ -61,8 +61,8 @@ def calculate_level_and_cells(bbox):
     x1, y1, x2, y2 = bbox
     level = -ceil(log(max(x2 - x1, y2 - y1), 2))
 
-    width = 0.5 ** level
-    height = 0.5 ** level
+    width = 0.5**level
+    height = 0.5**level
 
     j1 = floor(x1 / width)
     j2 = floor(x2 / width)
@@ -110,13 +110,164 @@ def bucketize(bboxes):
     ]
 
 
+def aggregate_polygons(
+    geometries,
+    values,
+    no_data_value,
+    agg_bbox,
+    agg_srs,
+    threshold_values,
+    statistic,
+    percentile,
+):
+    """Compute aggregates for given geometries.
+
+    Geometries are rasterized using gdal_rasterize (without the ALL_TOUCHED option).
+
+    Args:
+      geometries (GeoSeries): The geometries to aggregate the raster in.
+      values (ndarray): A three-dimensional raster ``(t, y, x)`` to aggregate.
+      no_data_value (number): The value in ``values`` that denotes missing data.
+      agg_bbox (tuple of 4 numbers): The bbox of ``values``.
+      agg_srs (str): The projection of ``values``.
+      threshold_values (ndarray, optional): A threshold value per geometry.
+      statistic (str): A key in ``AggregateRaster.STATISTICS``.
+      percentile (float, optional): Required if ``statistic == "percentile"``
+
+    Returns:
+      - ndarray of dtype float32 and with shape ``(t, len(geometries))``
+      - list of geometry indexes that didn't cover any cell
+    """
+    # Select the aggregation function
+    agg_func = AggregateRaster.STATISTICS[statistic]["func"]
+    if statistic == "percentile":
+        agg_func = partial(agg_func, qval=percentile)
+
+    # Append NaN to the threshold values for later usage
+    if threshold_values is not None:
+        threshold_values = np.concatenate(
+            [threshold_values, np.array([np.nan], dtype=threshold_values.dtype)]
+        )
+    depth, height, width = values.shape
+    geometries_no_cells = set()
+
+    agg = np.full((depth, len(geometries)), np.nan, dtype="f4")
+    for select in bucketize(geometries.bounds.values):
+        rasterize_result = utils.rasterize_geoseries(
+            geometries.iloc[select],
+            agg_bbox,
+            agg_srs,
+            height,
+            width,
+            values=np.asarray(select, dtype=np.int32),  # GDAL needs int32
+        )
+        labels = rasterize_result["values"][0]
+        unique_labels = set(np.unique(labels[labels != rasterize_result["no_data_value"]]).tolist())
+        geometries_no_cells |= (set(select) - unique_labels)
+        if not unique_labels:
+            continue
+
+        # if there is a threshold, generate a raster with thresholds
+        if threshold_values is not None:
+            # mode="clip" ensures that unlabeled cells use the appended NaN
+            thresholds = np.take(threshold_values, labels, mode="clip")
+        else:
+            thresholds = None
+
+        for frame_no, frame in enumerate(values):
+            # limit statistics to active pixels
+            active = frame != no_data_value
+            # if there is a threshold, mask the frame
+            if threshold_values is not None:
+                valid = ~np.isnan(thresholds)  # to suppress warnings
+                active[~valid] = False  # no threshold -> no aggregation
+                active[valid] &= frame[valid] >= thresholds[valid]
+
+            # if there is no single active value: do not aggregate
+            if not active.any():
+                continue
+
+            # select features that actually have data
+            # (min, max, median, and percentile cannot handle it otherwise)
+            active_labels = labels[active]
+            select_and_active = list(set(np.unique(active_labels)) & set(select))
+
+            if not select_and_active:
+                continue
+
+            agg[frame_no][select_and_active] = agg_func(
+                1 if statistic == "count" else frame[active],
+                labels=active_labels,
+                index=select_and_active,
+            )
+    return agg, list(geometries_no_cells)
+
+
+def aggregate_points(
+    points,
+    values,
+    no_data_value,
+    agg_bbox,
+    threshold_values,
+    statistic,
+):
+    """Compute aggregates for given point geometries.
+
+    The values of the raster is taken at the point coordinates.
+
+    Args:
+      points (GeoSeries): The geometries (points) to aggregate the raster in.
+      values (ndarray): A three-dimensional raster ``(t, y, x)`` to aggregate.
+      no_data_value (number): The value in ``values`` that denotes missing data.
+      agg_bbox (tuple of 4 numbers): The bbox of ``values``.
+      threshold_values (ndarray): A threshold value per geometry.
+      statistic (str): A key in ``AggregateRaster.STATISTICS``.
+
+    Returns:
+      ndarray of dtype float32 and with shape ``(t, len(n_geometries))``
+    """
+    # Transform the points to indices
+    _, height, width = values.shape
+    gt = utils.GeoTransform.from_bbox(agg_bbox, height, width)
+    i_y, i_x = gt.get_indices(np.array([points.x.values, points.y.values]).T)
+    point_values = values[:, np.clip(i_y, 0, height - 1), np.clip(i_x, 0, width - 1)]
+
+    # if there is a threshold, mask the point values
+    active = point_values != no_data_value
+    if threshold_values is not None:
+        threshold_values = threshold_values[np.newaxis, :]  # broadcast over t
+        valid = ~np.isnan(threshold_values)  # to suppress warnings
+        active[~valid] = False  # no threshold -> no aggregation
+        active[valid] &= point_values[valid] >= threshold_values[valid]
+
+    # Convert nodata to NaN
+    agg = point_values.astype("f4")
+    agg[~active] = np.nan
+
+    # For all statistics the aggregated value equals the pixel value
+    # (if there is only one pixel), with the exception of "count":
+    if statistic == "count":
+        agg[active] = 1.0
+
+    return agg
+
+
 class AggregateRaster(GeometryBlock):
     """
     Compute statistics of a raster for each geometry in a geometry source.
 
-    A statistic is computed in a specific projection and with a specified cell
-    size. If ``projection`` or ``pixel_size`` are not given, these default to
-    the native projection of the provided raster source.
+    A statistic is computed in a specific projection and with a specified raster
+    cell size. If ``projection`` or ``pixel_size`` are not given, these default to
+    the native projection of the provided raster source. The following cells are
+    selected to perform the statistic (e.g. mean) on:
+
+    - Polygons: all raster cells whose center is inside the polygon
+    - Points: the raster cell (singular) that contains the point
+    - Linestrings: Bresenham's line algorithm is used
+
+    If this assignment leads to the situation that a geometry covers no raster
+    cells (for instance with a polygon much smaller than the raster cell size),
+    the geometry is reduced to a point by taking its centroid.
 
     Should the combination of the requested pixel_size and the extent of the
     source geometry cause the required raster size to exceed ``max_pixels``,
@@ -184,8 +335,7 @@ class AggregateRaster(GeometryBlock):
             raise TypeError("'{}' object is not allowed".format(type(raster)))
         if not isinstance(statistic, str):
             raise TypeError("'{}' object is not allowed".format(type(statistic)))
-        statistic = statistic.lower()
-        percentile = utils.parse_percentile_statistic(statistic)
+        statistic, percentile = utils.parse_percentile_statistic(statistic.lower())
         if percentile:
             statistic = "p{0}".format(percentile)
         elif statistic not in self.STATISTICS or statistic == "percentile":
@@ -281,10 +431,10 @@ class AggregateRaster(GeometryBlock):
             ]
 
         # transform the extent into the projection in which we aggregate
-        x1, y1, x2, y2 = utils.transform_extent(extent, req_srs, agg_srs)
+        x1, y1, x2, y2 = utils.Extent(extent, req_srs).transformed(agg_srs).bbox
 
         # estimate the amount of required pixels
-        required_pixels = int(((x2 - x1) * (y2 - y1)) / (self.pixel_size ** 2))
+        required_pixels = int(((x2 - x1) * (y2 - y1)) / (self.pixel_size**2))
 
         # in case this request is too large, we adapt pixel size
         max_pixels = self.max_pixels
@@ -311,15 +461,22 @@ class AggregateRaster(GeometryBlock):
         width = max(int((x2 - x1) / pixel_size), 1)
         height = max(int((y2 - y1) / pixel_size), 1)
 
+        # change point-like requests in real point requests
+        # (reducing possible edge effects)
+        if width == 1 and height == 1:
+            raster_req_bbox = ((x1 + x2) / 2, (y1 + y2) / 2) * 2
+        else:
+            raster_req_bbox = (x1, y1, x2, y2)
+
         raster_request = {
             "mode": "vals",
             "projection": agg_srs,
             "start": request.get("start"),
             "stop": request.get("stop"),
             "aggregation": None,  # TODO
-            "bbox": (x1, y1, x2, y2),
+            "bbox": raster_req_bbox,
             "width": width,
-            "height": height
+            "height": height,
         }
 
         # only propagate if provided
@@ -367,30 +524,19 @@ class AggregateRaster(GeometryBlock):
             features["geometry"], req_srs, agg_srs
         )
 
-        statistic = process_kwargs["statistic"]
-        percentile = utils.parse_percentile_statistic(statistic)
-        if percentile:
-            statistic = "percentile"
-            agg_func = partial(
-                AggregateRaster.STATISTICS[statistic]["func"], qval=percentile
-            )
-        else:
-            agg_func = AggregateRaster.STATISTICS[statistic]["func"]
-
+        statistic, percentile = utils.parse_percentile_statistic(process_kwargs["statistic"])
         extensive = AggregateRaster.STATISTICS[statistic]["extensive"]
         result_column = process_kwargs["result_column"]
 
         # this is only there for the AggregateRasterAboveThreshold
         threshold_name = process_kwargs.get("threshold_name")
         if threshold_name:
-            # get the threshold, appending NaN for unlabeled pixels
-            threshold_values = np.empty((len(features) + 1,), dtype="f4")
-            threshold_values[:-1] = features[threshold_name].values
-            threshold_values[-1] = np.nan
+            threshold_values = features[threshold_name].values.astype("f4")
         else:
             threshold_values = None
 
         # investigate the raster data
+        agg_bbox = process_kwargs["agg_bbox"]
         if raster_data is None:
             values = no_data_value = None
         else:
@@ -399,57 +545,32 @@ class AggregateRaster(GeometryBlock):
         if values is None or np.all(values == no_data_value):  # skip the rest
             result[result_column] = 0 if extensive else np.nan
             return {"features": result, "projection": req_srs}
-        depth, height, width = values.shape
 
         pixel_size = process_kwargs["pixel_size"]
         actual_pixel_size = process_kwargs["actual_pixel_size"]
 
-        # process in groups of disjoint subsets of the features
-        agg = np.full((depth, len(features)), np.nan, dtype="f4")
-        for select in bucketize(features.bounds.values):
-            rasterize_result = utils.rasterize_geoseries(
-                agg_geometries.iloc[select],
-                process_kwargs["agg_bbox"],
-                agg_srs,
-                height,
-                width,
-                values=np.asarray(select, dtype=np.int32),  # GDAL needs int32
+        agg, geometries_no_cells = aggregate_polygons(
+            agg_geometries,
+            values,
+            no_data_value,
+            agg_bbox,
+            agg_srs,
+            threshold_values,
+            statistic,
+            percentile,
+        )
+
+        if geometries_no_cells:
+            # For points and polygons that don't touch a cell center,
+            # use the centroid.
+            agg[:, geometries_no_cells] = aggregate_points(
+                agg_geometries.iloc[geometries_no_cells].centroid,
+                values,
+                no_data_value,
+                agg_bbox,
+                None if threshold_values is None else threshold_values[geometries_no_cells],
+                statistic,
             )
-            labels = rasterize_result["values"][0]
-
-            # if there is a threshold, generate a raster with thresholds
-            if threshold_name:
-                # mode="clip" ensures that unlabeled cells use the appended NaN
-                thresholds = np.take(threshold_values, labels, mode="clip")
-            else:
-                thresholds = None
-
-            for frame_no, frame in enumerate(values):
-                # limit statistics to active pixels
-                active = frame != no_data_value
-                # if there is a threshold, mask the frame
-                if threshold_name:
-                    valid = ~np.isnan(thresholds)  # to suppress warnings
-                    active[~valid] = False  # no threshold -> no aggregation
-                    active[valid] &= frame[valid] >= thresholds[valid]
-
-                # if there is no single active value: do not aggregate
-                if not active.any():
-                    continue
-
-                # select features that actually have data
-                # (min, max, median, and percentile cannot handle it otherwise)
-                active_labels = labels[active]
-                select_and_active = list(set(np.unique(active_labels)) & set(select))
-
-                if not select_and_active:
-                    continue
-
-                agg[frame_no][select_and_active] = agg_func(
-                    1 if statistic == "count" else frame[active],
-                    labels=active_labels,
-                    index=select_and_active,
-                )
 
         if extensive:  # sum and count
             agg[~np.isfinite(agg)] = 0
@@ -459,7 +580,7 @@ class AggregateRaster(GeometryBlock):
         else:
             agg[~np.isfinite(agg)] = np.nan  # replaces inf by nan
 
-        if depth == 1:
+        if values.shape[0] == 1:
             result[result_column] = agg[0]
         else:
             # store an array in a dataframe cell: set each cell with [np.array]

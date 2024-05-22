@@ -44,7 +44,7 @@ def test_clip_attrs_intersects(source, empty_source):
     )
     expected_geometry = source.geometry.Intersection(clipping_mask.geometry)
     assert clip.extent == expected_extent
-    assert clip.geometry.ExportToWkt() == expected_geometry.ExportToWkt()
+    assert clip.geometry.GetEnvelope() == expected_geometry.GetEnvelope()
 
 
 def test_clip_attrs_with_reprojection(source, empty_source):

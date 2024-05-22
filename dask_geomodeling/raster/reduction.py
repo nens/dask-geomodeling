@@ -2,7 +2,7 @@
 Module containing reduction raster blocks.
 """
 import numpy as np
-from dask_geomodeling.utils import filter_none, get_index
+from dask_geomodeling.utils import filter_none, get_index, Extent
 from dask_geomodeling.utils import parse_percentile_statistic
 from .base import RasterBlock
 from .elemwise import BaseElementwise
@@ -30,7 +30,7 @@ STATISTICS = {
 
 def check_statistic(statistic):
     if statistic not in STATISTICS:
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic)
         if percentile is None:
             raise ValueError('Unknown statistic "{}"'.format(statistic))
 
@@ -59,11 +59,9 @@ def reduce_rasters(stack, statistic, no_data_value=None, dtype=None):
       dict with "values" and "no_data_value"
     """
     if statistic not in STATISTICS:
-        percentile = parse_percentile_statistic(statistic)
+        statistic, percentile = parse_percentile_statistic(statistic)
         if percentile is None:
             raise KeyError('Unknown statistic "{}"'.format(statistic))
-        else:
-            statistic = "percentile"
 
     if len(stack) == 0:
         raise ValueError("Cannot reduce a zero-length stack")
@@ -182,14 +180,10 @@ class BaseReduction(BaseElementwise):
             return
         elif len(geometries) == 1:
             return geometries[0]
-        result = geometries[0]
-        sr = result.GetSpatialReference()
+        extent = Extent.from_geometry(geometries[0])
         for geometry in geometries[1:]:
-            if not geometry.GetSpatialReference().IsSame(sr):
-                geometry = geometry.Clone()
-                geometry.TransformTo(sr)
-            result = result.Union(geometry)
-        return result
+            extent = extent.union(Extent.from_geometry(geometry))
+        return extent.as_geometry()
 
 
 def wrap_reduction_function(statistic):

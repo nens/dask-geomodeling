@@ -37,15 +37,15 @@ class TstRasterSourceBase:
 
     def test_extent(self):
         expected = (
-            utils.Extent((136700, 455795, 136705, 455800), utils.get_sr("EPSG:28992"))
-            .transformed(utils.get_sr("EPSG:4326"))
+            utils.Extent((136700, 455795, 136705, 455800), "EPSG:28992")
+            .transformed("EPSG:4326")
             .bbox
         )
         assert_allclose(self.source.extent, expected, atol=1e-10)
 
     def test_geometry(self):
         expected = (
-            utils.Extent((136700, 455795, 136705, 455800), utils.get_sr("EPSG:28992"))
+            utils.Extent((136700, 455795, 136705, 455800), "EPSG:28992")
             .as_geometry()
             .ExportToWkt()
         )

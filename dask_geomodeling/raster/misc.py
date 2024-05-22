@@ -126,14 +126,10 @@ class Clip(BaseSingle):
         result, mask = [x.geometry for x in self.args]
         if result is None or mask is None:
             return
-        sr = result.GetSpatialReference()
-        if not mask.GetSpatialReference().IsSame(sr):
-            mask = mask.Clone()
-            mask.TransformTo(sr)
-        result = result.Intersection(mask)
-        if result.GetArea() == 0.0:
-            return
-        return result
+        extent = utils.Extent.from_geometry(result).intersection(utils.Extent.from_geometry(mask))
+        if extent is None:
+            return None
+        return extent.as_geometry()
 
     @property
     def period(self):
@@ -680,7 +676,8 @@ class Rasterize(RasterBlock):
         values = result["values"]
 
         # cast to the expected dtype if necessary
-        cast_values = values.astype(process_kwargs["dtype"])
+        with np.errstate(over="ignore", under="ignore"):
+            cast_values = values.astype(process_kwargs["dtype"])
 
         # replace the nodata value if necessary
         if result["no_data_value"] != no_data_value:

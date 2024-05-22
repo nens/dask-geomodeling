@@ -753,7 +753,7 @@ class Choose(BaseSingleSeries):
 
     @staticmethod
     def process(source, *choices):
-        result = pd.Series(np.nan, index=source.index)
+        result = pd.Series(np.nan, dtype=object, index=source.index)
         for i, choice in enumerate(choices):
             mask = source == i
             result[mask] = choice[source.index[mask]]
