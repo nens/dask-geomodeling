@@ -9,7 +9,7 @@ install_requires = (
     [
         "dask[delayed]>=0.20",
         "pandas>=0.23",
-        "geopandas>=0.7",
+        "geopandas>=0.7,<1.0",
         "pytz",
         "numpy>=1.14",
         "scipy>=1.1",
