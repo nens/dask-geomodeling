@@ -87,9 +87,9 @@ def test_clip_matching_timedelta(source):
 def test_clip_unequal_timedelta(source, empty_source):
     # clip checks for matching timedeltas; test that here
     # NB: note that `source` is temporal and `empty_source` is not
-    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+    with pytest.raises(ValueError, match=".*Consider using Snap.*"):
         raster.Clip(source, empty_source)
-    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+    with pytest.raises(ValueError, match=".*Consider using Snap.*"):
         raster.Clip(empty_source, source)
 
 

@@ -1,10 +1,12 @@
 """
 Module containing the RasterBlock base classes.
 """
-from datetime import datetime as Datetime
+from datetime import datetime as Datetime, timedelta as Timedelta
 
 from dask_geomodeling import Block
 
+# this timedelta is expected from RasterStore non-temporal rasters:
+NONTEMPORAL_TIMEDELTA = Timedelta(minutes=5)
 
 class RasterBlock(Block):
     """ The base block for temporal rasters.
@@ -67,6 +69,33 @@ class RasterBlock(Block):
         period_seconds = (stop - start).total_seconds()
         delta_seconds = timedelta.total_seconds()
         return int(period_seconds / delta_seconds) + 1
+    
+    @property
+    def temporal(self):
+        """This guesses whether a raster is temporal or not based on timedelta + period.
+        
+        Ideally, this implementation is overridden in subclasses in case it is certain
+        whether a raster is temporal.      
+        """
+        if self.timedelta not in (None, NONTEMPORAL_TIMEDELTA):
+            # we are 100% sure that we have a temporal raster now
+            return True
+        if self.timedelta is None:
+            if self.period is None or (self.period[0] == self.period[1]):
+                # this is a guess. could also be non-equidistant raster with no data / single band
+                return False
+            else:
+                # non-equidistant (100% sure)
+                return True
+        else:
+            # temporal with 5min resolution, or non-temporal rasterstore backed
+            if self.period is None or (self.period[0] == self.period[1]):
+                # This is a guess. It could also be a 5-min temporal raster that has
+                # no data or only a single band uploaded.
+                return False
+            else:
+                # temporal with 5min resolution (100% sure)
+                return True
 
     def __add__(self, other):
         from . import Add
