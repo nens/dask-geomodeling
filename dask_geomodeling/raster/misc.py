@@ -55,12 +55,12 @@ class Clip(BaseSingle):
         if store.temporal and not source.temporal:
             raise ValueError(
                 "The values raster is temporal while the clipping mask is not. "
-                "Consider using Snap on the clipping mask."
+                "Consider using Snap."
             )
         if not store.temporal and source.temporal:
             raise ValueError(
                 "The clipping mask is temporal while the values raster is not. "
-                "Consider using Snap on the values raster."
+                "Consider using Snap."
             )
         if store.temporal and (store.timedelta != source.timedelta):
             raise ValueError(

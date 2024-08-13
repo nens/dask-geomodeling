@@ -45,6 +45,7 @@ class TestRasterBlockAttrs(unittest.TestCase):
                 "geometry",
                 "projection",
                 "geo_transform",
+                "temporal"
             ):
                 if not hasattr(klass, attr):
                     print(name, attr)
@@ -88,6 +89,22 @@ class TestElementwise(unittest.TestCase):
         for args in [(storage1, storage2), (storage2, storage1)]:
             elemwise = self.klass(*args)
             self.assertIsNone(elemwise.timedelta)
+
+    def test_propagate_temporal(self):
+        storage = MockRaster(timedelta=Timedelta(hours=1))
+
+        # result is temporal if all inputs are temporal
+        elemwise = self.klass(storage, storage)
+        self.assertTrue(elemwise.temporal)
+
+    def test_propagate_non_temporal(self):
+        storage1 = MockRaster(timedelta=Timedelta(hours=1))
+        storage2 = MockRaster(timedelta=None)
+
+        # result is non-temporal if any input is non-temporal
+        for args in [(storage1, storage2), (storage2, storage1)]:
+            elemwise = self.klass(*args)
+            self.assertFalse(elemwise.temporal)
 
     def test_propagate_period(self):
         storage1 = MockRaster(
@@ -667,6 +684,20 @@ class TestCombine(unittest.TestCase):
         combined = self.klass(storage1, storage5)
         self.assertIsNone(combined.timedelta)
 
+    def test_propagate_temporal(self):
+        # if any input is temporal, the result is temporal
+        storage1 = MockRaster(
+            timedelta=Timedelta(hours=1)
+        )
+        storage2 = MockRaster(
+            timedelta=None
+        )
+
+        self.assertTrue(self.klass(storage1, storage2).temporal)
+        self.assertTrue(self.klass(storage2, storage1).temporal)
+        self.assertTrue(self.klass(storage1, storage1).temporal)
+        self.assertFalse(self.klass(storage2, storage2).temporal)
+
     def test_propagate_period(self):
         storage1 = MockRaster(
             origin=Datetime(2018, 4, 1), timedelta=Timedelta(hours=1), bands=6
@@ -1194,6 +1225,7 @@ class TestBase(unittest.TestCase):
         self.assertEqual(original.extent, view.extent)
         self.assertEqual(original.period, view.period)
         self.assertEqual(original.timedelta, view.timedelta)
+        self.assertEqual(original.temporal, view.temporal)
 
     def test_shift(self):
         # store and view

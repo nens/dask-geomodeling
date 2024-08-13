@@ -78,7 +78,7 @@ class BaseElementwise(RasterBlock):
 
         timedeltas = [s.timedelta for s in self._sources]
         if any(timedelta is None for timedelta in timedeltas):
-            return None  # None precedes
+            return None  # None (non-equidistant or non-temporal) precedes
 
         # multiple timedeltas: assert that they are equal
         if not timedeltas[1:] == timedeltas[:-1]:
@@ -90,6 +90,11 @@ class BaseElementwise(RasterBlock):
             return timedeltas[0]
 
     @property
+    def temporal(self):
+        """If any of the sources is non-temporal, the result is non-temporal."""
+        return not any(not s.temporal for s in self._sources)
+
+    @property
     def period(self):
         """ Return period datetime tuple. """
         if len(self._sources) == 1:
@@ -97,7 +102,7 @@ class BaseElementwise(RasterBlock):
 
         periods = [s.period for s in self._sources]
         if any(period is None for period in periods):
-            return None  # None precedes
+            return None  # None (empty raster) precedes
 
         # multiple periods: return the overlapping period
         start = max([p[0] for p in periods])

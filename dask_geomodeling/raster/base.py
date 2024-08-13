@@ -211,6 +211,10 @@ class BaseSingle(RasterBlock):
         return self.store.timedelta
 
     @property
+    def temporal(self):
+        return self.store.temporal
+
+    @property
     def dtype(self):
         return self.store.dtype
 
