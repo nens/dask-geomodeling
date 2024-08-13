@@ -13,6 +13,7 @@ install_requires = (
         "pytz",
         "numpy>=1.14,<2",
         "scipy>=1.1",
+        "fiona"
     ],
 )
 
