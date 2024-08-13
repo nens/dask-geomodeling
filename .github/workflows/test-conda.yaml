@@ -29,7 +29,7 @@ jobs:
       - name: Setup Environment
         shell: bash
         run: |
-          conda create --name test python=${{ matrix.python }} pytest numpy=1.* gdal=3.* scipy pytz dask-core toolz geopandas=0.* pyproj>=2
+          conda create --name test python=${{ matrix.python }} pytest numpy=1.* gdal=3.* scipy pytz dask-core toolz pandas<=2.2 geopandas=0.* pyproj>=2
           source activate test
           python -V
           conda info

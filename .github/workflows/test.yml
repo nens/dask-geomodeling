@@ -37,8 +37,8 @@ jobs:
             pins: "pygdal==3.4.1.* scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.11.*"
           - os: ubuntu-22.04
             python: "3.11"
-            display_name: "latest"
-            pins: "pygdal==3.4.1.* numpy==1.* geopandas==0.*"
+            numpy: "==1.*"
+            pins: "pygdal==3.4.1.* geopandas==0.* pandas==2.1.*"
 
     steps:
       - uses: actions/checkout@v2

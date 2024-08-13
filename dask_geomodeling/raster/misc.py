@@ -51,7 +51,6 @@ class Clip(BaseSingle):
     def __init__(self, store, source):
         if not isinstance(source, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
-        # timedeltas are required to be equal unless both are non-temporal
         if store.temporal and not source.temporal:
             raise ValueError(
                 "The values raster is temporal while the clipping mask is not. "
