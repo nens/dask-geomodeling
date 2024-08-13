@@ -38,7 +38,7 @@ jobs:
           - os: ubuntu-22.04
             python: "3.11"
             display_name: "latest"
-            pins: "pygdal==3.4.1.* geopandas==0.*"
+            pins: "pygdal==3.4.1.* numpy==1.* geopandas==0.*"
 
     steps:
       - uses: actions/checkout@v2
