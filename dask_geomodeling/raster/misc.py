@@ -582,6 +582,10 @@ class Rasterize(RasterBlock):
     @property
     def timedelta(self):
         return None
+    
+    @property
+    def temporal(self):
+        return False
 
     @property
     def geometry(self):
@@ -753,6 +757,10 @@ class RasterizeWKT(RasterBlock):
     @property
     def timedelta(self):
         return None
+    
+    @property
+    def temporal(self):
+        return False
 
     @property
     def geometry(self):

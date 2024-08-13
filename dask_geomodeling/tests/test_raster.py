@@ -1069,6 +1069,7 @@ class TestSnap(unittest.TestCase):
         self.assertEqual(self.view.period, self.index.period)
         self.assertEqual(self.view.timedelta, self.index.timedelta)
         self.assertEqual(len(self.view), len(self.index))
+        self.assertEqual(self.view.temporal, self.index.temporal)
 
     def test_snap_empty_store_or_index(self):
         view = self.klass(self.raster, self.empty)
@@ -1561,6 +1562,9 @@ class TestRasterize(unittest.TestCase):
         properties = [{"id": x, "value": x / 3} for x in (51, 212, 512)]
         self.geometry_source = MockGeometry(squares, properties)
         self.view = raster.Rasterize(self.geometry_source, "id")
+    
+    def test_attrs(self):
+        self.assertFalse(self.view.temporal)
 
     def test_vals_request(self):
         data = self.view.get_data(**self.vals_request)

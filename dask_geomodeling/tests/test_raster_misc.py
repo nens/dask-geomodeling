@@ -290,3 +290,4 @@ def test_rasterize_wkt_attrs():
     )
     assert view.timedelta is None
     assert view.period == (datetime(1970, 1, 1), datetime(1970, 1, 1))
+    assert view.temporal is False
