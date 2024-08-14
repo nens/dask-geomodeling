@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.4.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fixed warnings when reprojecting geometries with geopandas >= 0.9.
 
 
 2.4.4 (2024-01-17)
