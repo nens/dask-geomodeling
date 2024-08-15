@@ -81,9 +81,9 @@ class TestElementwise(unittest.TestCase):
             elemwise = self.klass(*args)
             self.assertEqual(elemwise.timedelta, storage1.timedelta)
 
-    def test_propagate_none_timedelta(self):
+    def test_propagate_nonequidistant_time(self):
         storage1 = MockRaster(timedelta=Timedelta(hours=1))
-        storage2 = MockRaster(timedelta=None)
+        storage2 = MockRaster(timedelta=None, temporal=True)
 
         # None timedelta precedes
         for args in [(storage1, storage2), (storage2, storage1)]:
@@ -91,20 +91,20 @@ class TestElementwise(unittest.TestCase):
             self.assertIsNone(elemwise.timedelta)
 
     def test_propagate_temporal(self):
-        storage = MockRaster(timedelta=Timedelta(hours=1))
-
-        # result is temporal if all inputs are temporal
-        elemwise = self.klass(storage, storage)
-        self.assertTrue(elemwise.temporal)
-
-    def test_propagate_non_temporal(self):
         storage1 = MockRaster(timedelta=Timedelta(hours=1))
         storage2 = MockRaster(timedelta=None)
 
-        # result is non-temporal if any input is non-temporal
-        for args in [(storage1, storage2), (storage2, storage1)]:
-            elemwise = self.klass(*args)
-            self.assertFalse(elemwise.temporal)
+        # result is temporal if all inputs are temporal
+        elemwise = self.klass(storage1, storage1)
+        self.assertTrue(elemwise.temporal)
+
+        # result is non-temporal if all inputs are non-temporal
+        elemwise = self.klass(storage2, storage2)
+        self.assertFalse(elemwise.temporal)
+
+        # can't mix the two
+        self.assertRaises(ValueError, self.klass, storage1, storage2)
+        self.assertRaises(ValueError, self.klass, storage2, storage1)
 
     def test_propagate_period(self):
         storage1 = MockRaster(
@@ -135,7 +135,7 @@ class TestElementwise(unittest.TestCase):
         self.assertIsNone(elemwise.period)
 
     def test_propagate_none_period(self):
-        storage1 = MockRaster(origin=None)
+        storage1 = MockRaster(origin=None, temporal=True)
         storage2 = MockRaster(
             origin=Datetime(2018, 4, 1), timedelta=Timedelta(hours=1), bands=6
         )

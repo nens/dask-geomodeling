@@ -1,12 +1,10 @@
 """
 Module containing the RasterBlock base classes.
 """
-from datetime import datetime as Datetime, timedelta as Timedelta
+from datetime import datetime as Datetime
 
 from dask_geomodeling import Block
 
-# this timedelta is expected from RasterStore non-temporal rasters:
-NONTEMPORAL_TIMEDELTA = Timedelta(minutes=5)
 
 class RasterBlock(Block):
     """ The base block for temporal rasters.

@@ -8,23 +8,27 @@ from shapely.geometry import box
 from dask_geomodeling import raster
 from dask_geomodeling.utils import shapely_transform, get_sr
 from dask_geomodeling.raster.sources import MemorySource
+from dask_geomodeling.tests.factories import (
+    MockRaster,
+)
 
 
-def test_clip_attrs_store_empty(source, empty_source):
+
+def test_clip_attrs_store_empty(source, empty_temporal_source):
     # clip should propagate the (empty) extent of the store
-    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
+    clip = raster.Clip(empty_temporal_source, source)
     assert clip.extent is None
     assert clip.geometry is None
 
 
-def test_clip_attrs_mask_empty(source, empty_source):
+def test_clip_attrs_mask_empty(source, empty_temporal_source):
     # clip should propagate the (empty) extent of the clipping mask
-    clip = raster.Clip(source, raster.Snap(empty_source, source))
+    clip = raster.Clip(source, empty_temporal_source)
     assert clip.extent is None
     assert clip.geometry is None
 
 
-def test_clip_attrs_intersects(source, empty_source):
+def test_clip_attrs_intersects(source):
     # create a raster in that only partially overlaps the store
     clipping_mask = MemorySource(
         data=source.data,
@@ -47,7 +51,7 @@ def test_clip_attrs_intersects(source, empty_source):
     assert clip.geometry.GetEnvelope() == expected_geometry.GetEnvelope()
 
 
-def test_clip_attrs_with_reprojection(source, empty_source):
+def test_clip_attrs_with_reprojection(source):
     # create a raster in WGS84 that contains the store
     clipping_mask = MemorySource(
         data=source.data,
@@ -84,8 +88,8 @@ def test_clip_matching_timedelta(source):
     assert clip.timedelta == source.timedelta
 
 
-def test_clip_unequal_timedelta(source, empty_source):
-    # clip checks for matching timedeltas; test that here
+def test_clip_unequal_temporal(source, empty_source):
+    # clip checks for matching "temporal" attribute; test that here
     # NB: note that `source` is temporal and `empty_source` is not
     with pytest.raises(ValueError, match=".*Consider using Snap.*"):
         raster.Clip(source, empty_source)
@@ -93,13 +97,13 @@ def test_clip_unequal_timedelta(source, empty_source):
         raster.Clip(empty_source, source)
 
 
-def test_clip_empty_source(source, empty_source, vals_request):
-    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
+def test_clip_empty_source(source, empty_temporal_source, vals_request):
+    clip = raster.Clip(empty_temporal_source, source)
     assert clip.get_data(**vals_request) is None
 
 
-def test_clip_with_empty_mask(source, empty_source, vals_request):
-    clip = raster.Clip(source, raster.Snap(empty_source, source))
+def test_clip_with_empty_mask(source, empty_temporal_source, vals_request):
+    clip = raster.Clip(source, empty_temporal_source)
     assert clip.get_data(**vals_request) is None
 
 

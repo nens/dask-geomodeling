@@ -34,6 +34,10 @@ __all__ = [
 ]
 
 
+def _is_equal_none_allowed(a, b):
+    """Check if a and b are equal, or one of them is None"""
+    return a is None or b is None or a == b
+
 class BaseElementwise(RasterBlock):
     """ Base block for elementwise operations on rasters.
 
@@ -45,9 +49,16 @@ class BaseElementwise(RasterBlock):
 
     def __init__(self, *args):
         super(BaseElementwise, self).__init__(*args)
-        # check the timedelta so that an error is raised if incompatible
-        if len(self._sources) > 1:
-            self.timedelta  # NOQA
+        # check the temporal and timedelta attributes of the sources
+        temporal, delta = self._sources[0].temporal, self._sources[0].timedelta
+        for source in self._sources[1:]:
+            if source.temporal != temporal:
+                raise ValueError("Temporal properties of input rasters do not match.")
+            # check time resolutions (unless one of the two is nonequidistant)
+            if temporal and not _is_equal_none_allowed(delta, source.timedelta):
+                raise ValueError(
+                    "Time resolutions of input rasters are not equal."
+                )
 
     @property
     def _sources(self):
@@ -75,24 +86,16 @@ class BaseElementwise(RasterBlock):
         """ The period between timesteps in case of equidistant time. """
         if len(self._sources) == 1:
             return self._sources[0].timedelta
-
         timedeltas = [s.timedelta for s in self._sources]
-        if any(timedelta is None for timedelta in timedeltas):
-            return None  # None (non-equidistant or non-temporal) precedes
-
-        # multiple timedeltas: assert that they are equal
-        if not timedeltas[1:] == timedeltas[:-1]:
-            raise ValueError(
-                "Time resolutions of input rasters are not "
-                "equal ({}).".format(timedeltas)
-            )
+        if any(x is None for x in timedeltas):
+            return None
         else:
             return timedeltas[0]
 
     @property
     def temporal(self):
-        """If any of the sources is non-temporal, the result is non-temporal."""
-        return not any(not s.temporal for s in self._sources)
+        """If any of the sources is temporal, the result is temporal."""
+        return self._sources[0].temporal
 
     @property
     def period(self):
