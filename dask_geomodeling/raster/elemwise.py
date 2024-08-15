@@ -47,11 +47,16 @@ class BaseElementwise(RasterBlock):
         super(BaseElementwise, self).__init__(*args)
         # check the temporal and timedelta attributes of the sources
         temporal, delta = self._sources[0].temporal, self._sources[0].timedelta
+        has_delta = temporal and (delta is not None)
         for source in self._sources[1:]:
             if source.temporal != temporal:
                 raise ValueError("Temporal properties of input rasters do not match.")
-            # check time resolutions unless one of the two is None (nonequidistant time)
-            if temporal and delta is not None and source.timedelta is not None and delta != source.timedelta:
+            if not has_delta:
+                continue  # non temporal or nonequidistant in time; skip the check on timedelta
+            other_delta = source.timedelta
+            if other_delta is None:
+                continue  # nonequidistant in time; skip the check on timedelta
+            if delta != other_delta:
                 raise ValueError(
                     "Time resolutions of input rasters are not equal."
                 )
