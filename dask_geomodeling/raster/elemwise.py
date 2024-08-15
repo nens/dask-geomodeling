@@ -34,10 +34,6 @@ __all__ = [
 ]
 
 
-def _is_equal_none_allowed(a, b):
-    """Check if a and b are equal, or one of them is None"""
-    return a is None or b is None or a == b
-
 class BaseElementwise(RasterBlock):
     """ Base block for elementwise operations on rasters.
 
@@ -54,8 +50,8 @@ class BaseElementwise(RasterBlock):
         for source in self._sources[1:]:
             if source.temporal != temporal:
                 raise ValueError("Temporal properties of input rasters do not match.")
-            # check time resolutions (unless one of the two is nonequidistant)
-            if temporal and not _is_equal_none_allowed(delta, source.timedelta):
+            # check time resolutions unless one of the two is None (nonequidistant time)
+            if temporal and delta is not None and source.timedelta is not None and delta != source.timedelta:
                 raise ValueError(
                     "Time resolutions of input rasters are not equal."
                 )
