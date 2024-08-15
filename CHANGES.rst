@@ -1,10 +1,10 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.4.5 (unreleased)
+2.5.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Added mandatory `temporal` attribute for RasterBlock.
 
 
 2.4.4 (2024-01-17)

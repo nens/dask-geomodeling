@@ -155,6 +155,10 @@ class MockRaster(RasterBlock):
     @property
     def timedelta(self):
         return self._timedelta
+    
+    @property
+    def temporal(self):
+        return self._timedelta is not None
 
     @property
     def extent(self):

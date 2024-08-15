@@ -23,8 +23,6 @@ class RasterBlock(Block):
     - ``projection``: WKT string
     - ``geo_transform``: a tuple of 6 numbers
     - ``temporal``: a boolean indicating whether the raster is temporal
-       NB: The default implementation is a guess; the intention is for it to be
-       overridden in subclasses to provide more certainty.
 
     These attributes are ``None`` if the raster is empty.
 
@@ -72,33 +70,6 @@ class RasterBlock(Block):
         period_seconds = (stop - start).total_seconds()
         delta_seconds = timedelta.total_seconds()
         return int(period_seconds / delta_seconds) + 1
-    
-    @property
-    def temporal(self):
-        """This guesses whether a raster is temporal or not based on timedelta + period.
-        
-        Ideally, this implementation is overridden in subclasses in case it is certain
-        whether a raster is temporal.      
-        """
-        if self.timedelta not in (None, NONTEMPORAL_TIMEDELTA):
-            # we are 100% sure that we have a temporal raster now
-            return True
-        if self.timedelta is None:
-            if self.period is None or (self.period[0] == self.period[1]):
-                # this is a guess. could also be non-equidistant raster with no data / single band
-                return False
-            else:
-                # non-equidistant (100% sure)
-                return True
-        else:
-            # temporal with 5min resolution, or non-temporal rasterstore backed
-            if self.period is None or (self.period[0] == self.period[1]):
-                # This is a guess. It could also be a 5-min temporal raster that has
-                # no data or only a single band uploaded.
-                return False
-            else:
-                # temporal with 5min resolution (100% sure)
-                return True
 
     def __add__(self, other):
         from . import Add
