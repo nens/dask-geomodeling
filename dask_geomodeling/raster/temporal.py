@@ -277,14 +277,14 @@ def _get_bin_label(dt, frequency, closed, label, timezone):
     return _ts_to_dt(label, timezone)
 
 
-def _get_bin_period(dt, frequency, closed, label, timezone):
-    """Returns the label of the bin the input dt belongs to.
+def _get_bin_start(dt, frequency, closed, label, timezone):
+    """Returns the start (left side) of the bin the input dt belongs to.
 
     :type dt: datetime.datetime without timezone.
     """
     # go through resample, this is the only function that supports 'closed'
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    resampled = series.resample(frequency, closed=closed, label=label, kind="period")
+    resampled = series.resample(frequency, closed=closed, label="left")
     return resampled.first().index[0]
 
 
@@ -491,6 +491,8 @@ class TemporalAggregate(BaseSingle):
                 frequency = "h"
             if frequency == "M":
                 frequency = "ME"
+            if frequency == "S":
+                frequency = "s"
             frequency = to_offset(frequency).freqstr
 
             if closed not in {None, "left", "right"}:
@@ -558,8 +560,8 @@ class TemporalAggregate(BaseSingle):
     @property
     def timedelta(self):
         try:
-            return to_offset(self.frequency).delta
-        except AttributeError:
+            return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
+        except ValueError:
             return  # e.g. Month is non-equidistant
 
     @property
@@ -835,10 +837,8 @@ class Cumulative(BaseSingle):
             request["start"] = self.period[0]
             request["stop"] = stop
         else:
-            start_period = _get_bin_period(start, **kwargs)
-
             # snap request 'start' to the start of the first period
-            request["start"] = _ts_to_dt(start_period.start_time, self.timezone)
+            request["start"] = _ts_to_dt(_get_bin_start(start, **kwargs), self.timezone)
             # snap request 'stop' to the last requested time
             request["stop"] = stop
             if kwargs["closed"] != "left":
