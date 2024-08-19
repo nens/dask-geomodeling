@@ -90,7 +90,7 @@ class BaseElementwise(RasterBlock):
 
     @property
     def temporal(self):
-        """If any of the sources is temporal, the result is temporal."""
+        """Temporal property of sources is enforced to be equal in the init"""
         return self._sources[0].temporal
 
     @property
