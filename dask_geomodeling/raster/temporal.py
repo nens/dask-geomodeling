@@ -553,6 +553,8 @@ class TemporalAggregate(BaseSingle):
 
     @property
     def timedelta(self):
+        if self.frequency is None:
+            return None
         try:
             return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
         except ValueError:
