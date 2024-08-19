@@ -34,9 +34,10 @@ jobs:
           - os: ubuntu-22.04
             python: "3.11"
             numpy: "==1.*"
-            pins: "pygdal==3.4.1.* geopandas==0.* pandas==2.1.*"
+            pins: "pygdal==3.4.1.* scipy==1.11.* dask[delayed]==2023.* pandas==2.0.* geopandas==0.*"
           - os: ubuntu-22.04
             python: "3.12"
+            numpy: "==1.*"
             pins: "pygdal==3.4.1.*"
 
     steps:
