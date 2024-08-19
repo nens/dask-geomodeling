@@ -38,6 +38,22 @@ def empty_source():
     )
 
 
+
+@pytest.fixture(scope="session")
+def empty_temporal_source():
+    time_first = datetime(2000, 1, 1)
+    time_delta = timedelta(hours=1)
+    yield MemorySource(
+        data=np.empty((0, 0, 0), dtype=np.uint8),
+        no_data_value=255,
+        projection="EPSG:28992",
+        pixel_size=0.5,
+        pixel_origin=(135000, 456000),
+        time_first=time_first,
+        time_delta=time_delta,
+
+    )
+
 @pytest.fixture(scope="session")
 def nodata_source():
     time_first = datetime(2000, 1, 1)

@@ -45,9 +45,16 @@ class BaseElementwise(RasterBlock):
 
     def __init__(self, *args):
         super(BaseElementwise, self).__init__(*args)
-        # check the timedelta so that an error is raised if incompatible
+        # check the temporal and timedelta attributes of the sources
         if len(self._sources) > 1:
-            self.timedelta  # NOQA
+            temporal, delta = self._sources[0].temporal, self._sources[0].timedelta
+
+            if any(source.temporal != temporal for source in self._sources[1:]):
+                raise ValueError("Temporal properties of input rasters do not match.")
+
+            if temporal and (delta is not None):
+                if not all(source.timedelta in (None, delta) for source in self._sources[1:]):
+                    raise ValueError("Time resolutions of input rasters are not equal.")
 
     @property
     def _sources(self):
@@ -75,19 +82,16 @@ class BaseElementwise(RasterBlock):
         """ The period between timesteps in case of equidistant time. """
         if len(self._sources) == 1:
             return self._sources[0].timedelta
-
         timedeltas = [s.timedelta for s in self._sources]
-        if any(timedelta is None for timedelta in timedeltas):
-            return None  # None precedes
-
-        # multiple timedeltas: assert that they are equal
-        if not timedeltas[1:] == timedeltas[:-1]:
-            raise ValueError(
-                "Time resolutions of input rasters are not "
-                "equal ({}).".format(timedeltas)
-            )
+        if any(x is None for x in timedeltas):
+            return None
         else:
             return timedeltas[0]
+
+    @property
+    def temporal(self):
+        """Temporal property of sources is enforced to be equal in the init"""
+        return self._sources[0].temporal
 
     @property
     def period(self):
@@ -97,7 +101,7 @@ class BaseElementwise(RasterBlock):
 
         periods = [s.period for s in self._sources]
         if any(period is None for period in periods):
-            return None  # None precedes
+            return None  # None (empty raster) precedes
 
         # multiple periods: return the overlapping period
         start = max([p[0] for p in periods])

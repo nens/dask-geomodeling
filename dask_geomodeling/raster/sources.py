@@ -182,9 +182,14 @@ class MemorySource(RasterBlock):
 
     @property
     def timedelta(self):
-        if len(self) <= 1:
+        if self.time_delta is None:
             return None
-        return timedelta(milliseconds=self.time_delta)
+        else:
+            return timedelta(milliseconds=self.time_delta)
+
+    @property
+    def temporal(self):
+        return self.time_delta is not None
 
     def get_sources_and_requests(self, **request):
         mode = request["mode"]
@@ -404,6 +409,10 @@ class RasterFileSource(RasterBlock):
         if len(self) <= 1:
             return None
         return timedelta(milliseconds=self.time_delta)
+    
+    @property
+    def temporal(self):
+        return len(self) > 1
 
     def get_sources_and_requests(self, **request):
         mode = request["mode"]

@@ -35,13 +35,15 @@ class MockRaster(RasterBlock):
     """
 
     def __init__(
-        self, origin=None, timedelta=None, bands=None, value=1, projection="EPSG:3857"
+        self, origin=None, timedelta=None, bands=None, value=1, projection="EPSG:3857", temporal=None
     ):
         self.origin = origin
         self._timedelta = timedelta
         self.bands = bands
         self.value = value
-        super(MockRaster, self).__init__(origin, timedelta, bands, value, projection)
+        if temporal is None:
+            temporal = timedelta is not None
+        super(MockRaster, self).__init__(origin, timedelta, bands, value, projection, temporal)
 
     @property
     def dtype(self):
@@ -53,13 +55,17 @@ class MockRaster(RasterBlock):
     @property
     def fillvalue(self):
         return get_dtype_max(self.dtype)
+    
+    @property
+    def temporal(self):
+        return self.args[5]
 
     def get_sources_and_requests(self, **request):
         return [(self.args, None), (request, None)]
 
     @staticmethod
     def process(args, request):
-        origin, timedelta, bands, value, src_projection = args
+        origin, timedelta, bands, value, src_projection, temporal = args
         if origin is None or timedelta is None or bands is None:
             return
         td_seconds = timedelta.total_seconds()
@@ -155,6 +161,10 @@ class MockRaster(RasterBlock):
     @property
     def timedelta(self):
         return self._timedelta
+    
+    @property
+    def temporal(self):
+        return self.args[5]
 
     @property
     def extent(self):

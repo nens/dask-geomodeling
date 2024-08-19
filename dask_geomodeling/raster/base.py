@@ -12,14 +12,15 @@ class RasterBlock(Block):
     All RasterBlocks must be derived from this base class and must implement
     the following attributes:
 
-    - ``period``: a tuple of datetimes
-    - ``timedelta``: a datetime.timedelta (or None if nonequidistant)
+    - ``period``: a tuple of datetimes (or None if empty)
+    - ``timedelta``: a datetime.timedelta (or None if nonequidistant / nontemporal)
     - ``extent``: a tuple ``(x1, y1, x2, y2)``
     - ``dtype``: a numpy dtype object
     - ``fillvalue``: a number
     - ``geometry``: OGR Geometry
     - ``projection``: WKT string
     - ``geo_transform``: a tuple of 6 numbers
+    - ``temporal``: a boolean indicating whether the raster is temporal
 
     These attributes are ``None`` if the raster is empty.
 
@@ -177,6 +178,10 @@ class BaseSingle(RasterBlock):
     @property
     def timedelta(self):
         return self.store.timedelta
+
+    @property
+    def temporal(self):
+        return self.store.temporal
 
     @property
     def dtype(self):
