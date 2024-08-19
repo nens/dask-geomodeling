@@ -487,12 +487,6 @@ class TemporalAggregate(BaseSingle):
         if frequency is not None:
             if not isinstance(frequency, str):
                 raise TypeError("'{}' object is not allowed.".format(type(frequency)))
-            if frequency == "H":
-                frequency = "h"
-            if frequency == "M":
-                frequency = "ME"
-            if frequency == "S":
-                frequency = "s"
             frequency = to_offset(frequency).freqstr
 
             if closed not in {None, "left", "right"}:
