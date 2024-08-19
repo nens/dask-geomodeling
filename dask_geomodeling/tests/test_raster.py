@@ -45,6 +45,7 @@ class TestRasterBlockAttrs(unittest.TestCase):
                 "geometry",
                 "projection",
                 "geo_transform",
+                "temporal"
             ):
                 if not hasattr(klass, attr):
                     print(name, attr)
@@ -80,14 +81,30 @@ class TestElementwise(unittest.TestCase):
             elemwise = self.klass(*args)
             self.assertEqual(elemwise.timedelta, storage1.timedelta)
 
-    def test_propagate_none_timedelta(self):
+    def test_propagate_nonequidistant_time(self):
         storage1 = MockRaster(timedelta=Timedelta(hours=1))
-        storage2 = MockRaster(timedelta=None)
+        storage2 = MockRaster(timedelta=None, temporal=True)
 
         # None timedelta precedes
         for args in [(storage1, storage2), (storage2, storage1)]:
             elemwise = self.klass(*args)
             self.assertIsNone(elemwise.timedelta)
+
+    def test_propagate_temporal(self):
+        storage1 = MockRaster(timedelta=Timedelta(hours=1))
+        storage2 = MockRaster(timedelta=None)
+
+        # result is temporal if all inputs are temporal
+        elemwise = self.klass(storage1, storage1)
+        self.assertTrue(elemwise.temporal)
+
+        # result is non-temporal if all inputs are non-temporal
+        elemwise = self.klass(storage2, storage2)
+        self.assertFalse(elemwise.temporal)
+
+        # can't mix the two
+        self.assertRaises(ValueError, self.klass, storage1, storage2)
+        self.assertRaises(ValueError, self.klass, storage2, storage1)
 
     def test_propagate_period(self):
         storage1 = MockRaster(
@@ -118,7 +135,7 @@ class TestElementwise(unittest.TestCase):
         self.assertIsNone(elemwise.period)
 
     def test_propagate_none_period(self):
-        storage1 = MockRaster(origin=None)
+        storage1 = MockRaster(origin=None, temporal=True)
         storage2 = MockRaster(
             origin=Datetime(2018, 4, 1), timedelta=Timedelta(hours=1), bands=6
         )
@@ -667,6 +684,20 @@ class TestCombine(unittest.TestCase):
         combined = self.klass(storage1, storage5)
         self.assertIsNone(combined.timedelta)
 
+    def test_propagate_temporal(self):
+        # if any input is temporal, the result is temporal
+        storage1 = MockRaster(
+            timedelta=Timedelta(hours=1)
+        )
+        storage2 = MockRaster(
+            timedelta=None
+        )
+
+        self.assertTrue(self.klass(storage1, storage2).temporal)
+        self.assertTrue(self.klass(storage2, storage1).temporal)
+        self.assertTrue(self.klass(storage1, storage1).temporal)
+        self.assertFalse(self.klass(storage2, storage2).temporal)
+
     def test_propagate_period(self):
         storage1 = MockRaster(
             origin=Datetime(2018, 4, 1), timedelta=Timedelta(hours=1), bands=6
@@ -1038,6 +1069,7 @@ class TestSnap(unittest.TestCase):
         self.assertEqual(self.view.period, self.index.period)
         self.assertEqual(self.view.timedelta, self.index.timedelta)
         self.assertEqual(len(self.view), len(self.index))
+        self.assertEqual(self.view.temporal, self.index.temporal)
 
     def test_snap_empty_store_or_index(self):
         view = self.klass(self.raster, self.empty)
@@ -1194,6 +1226,7 @@ class TestBase(unittest.TestCase):
         self.assertEqual(original.extent, view.extent)
         self.assertEqual(original.period, view.period)
         self.assertEqual(original.timedelta, view.timedelta)
+        self.assertEqual(original.temporal, view.temporal)
 
     def test_shift(self):
         # store and view
@@ -1529,6 +1562,9 @@ class TestRasterize(unittest.TestCase):
         properties = [{"id": x, "value": x / 3} for x in (51, 212, 512)]
         self.geometry_source = MockGeometry(squares, properties)
         self.view = raster.Rasterize(self.geometry_source, "id")
+    
+    def test_attrs(self):
+        self.assertFalse(self.view.temporal)
 
     def test_vals_request(self):
         data = self.view.get_data(**self.vals_request)

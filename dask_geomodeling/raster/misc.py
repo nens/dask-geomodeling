@@ -51,8 +51,17 @@ class Clip(BaseSingle):
     def __init__(self, store, source):
         if not isinstance(source, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
-        # timedeltas are required to be equal
-        if store.timedelta != source.timedelta:
+        if store.temporal and not source.temporal:
+            raise ValueError(
+                "The values raster is temporal while the clipping mask is not. "
+                "Consider using Snap."
+            )
+        if not store.temporal and source.temporal:
+            raise ValueError(
+                "The clipping mask is temporal while the values raster is not. "
+                "Consider using Snap."
+            )
+        if store.temporal and (store.timedelta != source.timedelta):
             raise ValueError(
                 "Time resolution of the clipping mask does not match that of "
                 "the values raster. Consider using Snap."
@@ -572,6 +581,10 @@ class Rasterize(RasterBlock):
     @property
     def timedelta(self):
         return None
+    
+    @property
+    def temporal(self):
+        return False
 
     @property
     def geometry(self):
@@ -743,6 +756,10 @@ class RasterizeWKT(RasterBlock):
     @property
     def timedelta(self):
         return None
+    
+    @property
+    def temporal(self):
+        return False
 
     @property
     def geometry(self):

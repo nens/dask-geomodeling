@@ -77,6 +77,10 @@ class Snap(RasterBlock):
     @property
     def timedelta(self):
         return self.index.timedelta
+    
+    @property
+    def temporal(self):
+        return self.index.temporal
 
     @property
     def extent(self):
@@ -552,6 +556,10 @@ class TemporalAggregate(BaseSingle):
             return to_offset(self.frequency).delta
         except AttributeError:
             return  # e.g. Month is non-equidistant
+
+    @property
+    def temporal(self):
+        return self.frequency is not None
 
     @property
     def dtype(self):

@@ -111,8 +111,8 @@ def test_max_with_nodata(source, nodata_source, vals_request):
     assert data["values"][:, 0, 0].tolist() == [1, 7, data["no_data_value"]]
 
 
-def test_max_with_empty(source, empty_source, vals_request):
-    block = raster.Max(source, empty_source)
+def test_max_with_empty(source, empty_temporal_source, vals_request):
+    block = raster.Max(source, empty_temporal_source)
     data = block.get_data(**vals_request)
     assert data is None
 
