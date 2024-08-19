@@ -5,7 +5,7 @@ import numpy as np
 
 from osgeo import gdal, gdal_array
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from dask_geomodeling import utils
 
@@ -13,6 +13,10 @@ from .base import RasterBlock
 
 __all__ = ["MemorySource", "RasterFileSource"]
 
+
+def utc_from_ms_timestamp(timestamp):
+    """Returns naive UTC datetime from ms timestamp"""
+    return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc).replace(tzinfo=None)
 
 class MemorySource(RasterBlock):
     """A raster source that interfaces data from memory.
@@ -174,9 +178,9 @@ class MemorySource(RasterBlock):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
+            return (utc_from_ms_timestamp(self.time_first),) * 2
         else:
-            first = datetime.utcfromtimestamp(self.time_first / 1000)
+            first = utc_from_ms_timestamp(self.time_first)
             last = first + (len(self) - 1) * self.timedelta
             return first, last
 
@@ -206,7 +210,7 @@ class MemorySource(RasterBlock):
         start, stop, first_i, last_i = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
-            datetime.utcfromtimestamp(self.time_first / 1000),
+            utc_from_ms_timestamp(self.time_first),
             self.timedelta,
             len(self),
         )
@@ -398,9 +402,9 @@ class RasterFileSource(RasterBlock):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
+            return (utc_from_ms_timestamp(self.time_first)) * 2
         else:
-            first = datetime.utcfromtimestamp(self.time_first / 1000)
+            first = utc_from_ms_timestamp(self.time_first)
             last = first + (len(self) - 1) * self.timedelta
             return first, last
 
@@ -427,7 +431,7 @@ class RasterFileSource(RasterBlock):
         start, stop, first_i, last_i = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
-            datetime.utcfromtimestamp(self.time_first / 1000),
+            utc_from_ms_timestamp(self.time_first),
             self.timedelta,
             len(self),
         )

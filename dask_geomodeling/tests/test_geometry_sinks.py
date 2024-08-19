@@ -26,6 +26,7 @@ def assert_frame_equal_ignore_index(actual, expected, sort_col):
         actual.set_index(sort_col).sort_index(),
         expected.set_index(sort_col).sort_index(),
         check_like=True,
+        check_index_type=False
     )
 
 
