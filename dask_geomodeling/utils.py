@@ -471,7 +471,13 @@ class WKTReadingError(Exception):
     pass
 
 
-def geoseries_transform(df, src_srs, dst_srs):
+def _geopandas_set_srs(df_or_series, crs):
+    try:
+        df_or_series.set_crs(crs, inplace=True, allow_override=True)
+    except AttributeError:  # geopandas < 0.9
+        df_or_series.crs = crs
+
+def geoseries_transform(geoseries, src_srs, dst_srs):
     """
     Transform a GeoSeries to a different SRS. Returns a copy.
 
@@ -482,8 +488,8 @@ def geoseries_transform(df, src_srs, dst_srs):
     Note that we do not use .to_crs() for the transformation, because this is
     much slower than OGR. Also, we ignore the .crs property (but we do set it)
     """
-    result = df.geometry.apply(shapely_transform, args=(src_srs, dst_srs))
-    result.crs = get_crs(dst_srs)
+    result = geoseries.apply(shapely_transform, args=(src_srs, dst_srs))
+    _geopandas_set_srs(result, get_crs(dst_srs))
     return result
 
 
@@ -499,8 +505,8 @@ def geodataframe_transform(df, src_srs, dst_srs):
     much slower than OGR. Also, we ignore the .crs property (but we do set it)
     """
     geoseries = geoseries_transform(df.geometry, src_srs, dst_srs)
-    df.crs = geoseries.crs
     df.set_geometry(geoseries)
+    _geopandas_set_srs(df, geoseries.crs)
     return df
 
 

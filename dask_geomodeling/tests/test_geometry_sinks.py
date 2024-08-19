@@ -80,18 +80,23 @@ class TestGeometryFileSink(unittest.TestCase):
         self.expected_combined["dct"] = self.expected_combined["dct"].map(json.dumps)
 
     @staticmethod
-    def expected_to_geojson(expected):
+    def read_file_geojson(path):
         """The result from gpd.read_file for a geojson is different from the
         others for list and dict typed values:
 
         - lists are omitted
-        - dicts are deserialized
-
-        Call this function to transform self.expected for GeoJSON testing.
+        - dicts are deserialized differently
+        - the projection is always EPSG:4326
         """
-        del expected["lst"]
-        expected["dct"] = expected["dct"].map(json.loads)
-        return utils.geodataframe_transform(expected, "EPSG:3857", "EPSG:4326")
+        df = gpd.read_file(path)
+
+        with open(path) as f:
+            data = json.load(f)
+            for i, feature in enumerate(data["features"]):
+                df.loc[i, "lst"] = json.dumps(feature["properties"].get("lst"))
+                df.loc[i, "dct"] = json.dumps(feature["properties"].get("dct"))
+
+        return utils.geodataframe_transform(df, "EPSG:4326", "EPSG:3857")
 
     def test_non_available_extension(self):
         with pytest.raises(ValueError):
@@ -103,18 +108,12 @@ class TestGeometryFileSink(unittest.TestCase):
 
         filename = [x for x in os.listdir(self.path) if x.endswith(".geojson")][0]
         path = os.path.join(self.path, filename)
-        actual = gpd.read_file(path)
-
-        # gpd.read_file doesn't read list values. test it separately:
-        with open(path) as f:
-            data = json.load(f)
-            assert data["features"][0]["properties"]["lst"] == [1]
-        expected = self.expected_to_geojson(self.expected)
+        actual = self.read_file_geojson(path)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal_ignore_index(actual, expected, "int")
+        assert_frame_equal_ignore_index(actual, self.expected, "int")
         # compare projections
-        assert actual.crs == expected.crs
+        assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
         "gpkg" not in sinks.GeometryFileSink.supported_extensions,
@@ -189,14 +188,16 @@ class TestGeometryFileSink(unittest.TestCase):
         assert len(os.listdir(self.path)) == 2
         filename = os.path.join(self.root, "combined.geojson")
         sinks.GeometryFileSink.merge_files(self.path, filename)
-        actual = gpd.read_file(filename)
+        actual = self.read_file_geojson(filename)
 
-        expected = self.expected_to_geojson(self.expected_combined)
+        # merge_files drops lists for geojson files!
+        del actual["lst"]
+        del self.expected_combined["lst"]
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal_ignore_index(actual, expected, "int")
+        assert_frame_equal_ignore_index(actual, self.expected_combined, "int")
         # compare projections
-        assert actual.crs == expected.crs
+        assert actual.crs == self.expected_combined.crs
 
     def test_merge_files_cleanup(self):
         block = self.klass(self.source, self.path, "geojson")
@@ -239,12 +240,10 @@ class TestGeometryFileSink(unittest.TestCase):
 
     def test_to_file_geojson(self):
         self.source.to_file(self.path + ".geojson", **self.request)
-        actual = gpd.read_file(self.path + ".geojson")
-
-        expected = self.expected_to_geojson(self.expected)
+        actual = self.read_file_geojson(self.path + ".geojson")
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal_ignore_index(actual, expected, "int")
+        assert_frame_equal_ignore_index(actual, self.expected, "int")
 
     def test_to_file_shapefile(self):
         self.source.to_file(self.path + ".shp", **self.request)

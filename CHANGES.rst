@@ -4,6 +4,8 @@ Changelog of dask-geomodeling
 2.5.0 (unreleased)
 ------------------
 
+- Fixed warnings when reprojecting geometries with geopandas >= 0.9.
+
 - Added mandatory `temporal` attribute for RasterBlock.
 
 - Added version constraints showing incompatibility with geopandas 1.*,
