@@ -80,7 +80,7 @@ def test_period(raster, freq, closed, label, timezone, expected):
     (None, None, "D", "right", "left", "UTC", (dt(2000, 1, 2), None)),
     (None, None, "D", "right", "right", "UTC", (dt(2000, 1, 3), None)),
     (None, None, "D", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 2, 23), None)),
-    (None, None, "h", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
+    (None, None, "H", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
     # (start, None) means 'nearest'; expected are the labels of the nearest bins
     # left out-of-bounds
     (dt(1999, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
@@ -504,7 +504,7 @@ class TestCumulative(unittest.TestCase):
         assert_equal(result, [[[1.0, 0.0, 0.0]]])
 
     def test_get_data_sum_month(self):
-        view = self.klass(self.raster, frequency="ME", statistic="sum")
+        view = self.klass(self.raster, frequency="M", statistic="sum")
         result = view.get_data(**self.request_all)["values"]
         assert_equal(result, [[[1.0, 0.0, 0.0]], [[2.0, 0.0, 0.0]], [[3.0, 0.0, 0.0]]])
         result = view.get_data(**self.request_first_two)["values"]
@@ -526,7 +526,7 @@ class TestCumulative(unittest.TestCase):
         assert_equal(result, [[[3.0, 0.0, 0.0]]])
 
     def test_get_data_count(self):
-        view = self.klass(self.raster, frequency="ME", statistic="count")
+        view = self.klass(self.raster, frequency="M", statistic="count")
         result = view.get_data(**self.request_all)
         assert_equal(result["values"], [[[1, 1, 0]], [[2, 2, 0]], [[3, 3, 0]]])
 
