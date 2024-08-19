@@ -32,6 +32,19 @@ __all__ = [
 ]
 
 
+def _none_to_nan(series: pd.Series) -> pd.Series:
+    """Put NaN in place of None in a Series
+    
+    If the series has only nones, downcasts type to float."""
+    if series.dtype == object:
+        nones = series.isna()
+        if nones.all(): # downcasts type to float:
+            return pd.Series(index=series.index, name=series.name, dtype=float)
+        else:
+            series=series.copy()
+            series[nones] = np.nan
+    return series
+
 class Classify(BaseSingleSeries):
     """
     Classify a value column into different bins
@@ -106,12 +119,11 @@ class Classify(BaseSingleSeries):
         return self.args[3]
 
     @staticmethod
-    def process(series, bins, labels, right):
+    def process(series: pd.Series, bins, labels, right):
         open_bounds = len(labels) == len(bins) + 1
         if open_bounds:
             bins = np.concatenate([[-np.inf], bins, [np.inf]])
-        if series.dtype == object:
-            series = series.fillna(value=np.nan)
+        series = _none_to_nan(series)
         result = pd.cut(series, bins, right, labels)
 
         # Transform from categorical to whatever suits the "labels". The
@@ -207,8 +219,7 @@ class ClassifyFromColumns(SeriesBlock):
             return pd.Series([], dtype=float)
         features = data["features"]
         series = features[value_column]
-        if series.dtype == object:
-            series = series.fillna(value=np.nan)
+        series = _none_to_nan(series)
         values = series.values
         bins = features[bin_columns].values
         n_bins = len(bin_columns)

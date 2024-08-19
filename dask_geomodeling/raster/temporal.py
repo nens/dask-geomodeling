@@ -271,7 +271,7 @@ def _get_bin_label(dt, frequency, closed, label, timezone):
     # while there is only 1 sample here, there might be multiple (empty) bins
     # in some cases (see test_issue_5917)
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    for label, bin in series.resample(frequency, closed=closed, label=label, kind="timestamp"):
+    for label, bin in series.resample(frequency, closed=closed, label=label):
         if len(bin) != 0:
             break
     return _ts_to_dt(label, timezone)
@@ -487,7 +487,12 @@ class TemporalAggregate(BaseSingle):
         if frequency is not None:
             if not isinstance(frequency, str):
                 raise TypeError("'{}' object is not allowed.".format(type(frequency)))
+            if frequency == "H":
+                frequency = "h"
+            if frequency == "M":
+                frequency = "ME"
             frequency = to_offset(frequency).freqstr
+
             if closed not in {None, "left", "right"}:
                 raise ValueError("closed must be None, 'left', or 'right'.")
             if label not in {None, "left", "right"}:
