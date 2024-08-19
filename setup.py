@@ -8,7 +8,7 @@ long_description = "\n\n".join([open("README.rst").read(), open("CHANGES.rst").r
 install_requires = (
     [
         "dask[delayed]>=0.20",
-        "pandas>=0.23,<=2.2",
+        "pandas>=0.23,<2.2",
         "geopandas>=0.7",
         "pytz",
         "numpy>=1.14,<2",
