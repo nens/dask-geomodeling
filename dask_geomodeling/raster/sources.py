@@ -5,7 +5,7 @@ import numpy as np
 
 from osgeo import gdal, gdal_array
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from dask_geomodeling import utils
 
@@ -174,9 +174,9 @@ class MemorySource(RasterBlock):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
+            return (datetime.fromtimestamp(self.time_first / 1000, tz=timezone.utc)) * 2
         else:
-            first = datetime.utcfromtimestamp(self.time_first / 1000)
+            first = datetime.fromtimestamp(self.time_first / 1000, tz=timezone.utc)
             last = first + (len(self) - 1) * self.timedelta
             return first, last
 
@@ -206,7 +206,7 @@ class MemorySource(RasterBlock):
         start, stop, first_i, last_i = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
-            datetime.utcfromtimestamp(self.time_first / 1000),
+            datetime.fromtimestamp(self.time_first / 1000, tz=timezone.utc),
             self.timedelta,
             len(self),
         )
@@ -398,9 +398,9 @@ class RasterFileSource(RasterBlock):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
+            return (datetime.fromtimestamp(self.time_first / 1000, tz=timezone.utc)) * 2
         else:
-            first = datetime.utcfromtimestamp(self.time_first / 1000)
+            first = datetime.fromtimestamp(self.time_first / 1000, tz=timezone.utc)
             last = first + (len(self) - 1) * self.timedelta
             return first, last
 
@@ -427,7 +427,7 @@ class RasterFileSource(RasterBlock):
         start, stop, first_i, last_i = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
-            datetime.utcfromtimestamp(self.time_first / 1000),
+            datetime.fromtimestamp(self.time_first / 1000, tz=timezone.utc),
             self.timedelta,
             len(self),
         )
