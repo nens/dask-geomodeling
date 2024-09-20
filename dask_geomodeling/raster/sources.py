@@ -5,7 +5,7 @@ import numpy as np
 
 from osgeo import gdal, gdal_array, osr
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from dask_geomodeling import utils
 
@@ -122,6 +122,11 @@ class RasterSourceBase(RasterBlock):
         # fill nan values if they popped up
         result[~np.isfinite(result)] = target_no_data_value
         return {"values": result, "no_data_value": target_no_data_value}
+
+
+def utc_from_ms_timestamp(timestamp):
+    """Returns naive UTC datetime from ms timestamp"""
+    return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc).replace(tzinfo=None)
 
 
 class MemorySource(RasterSourceBase):
@@ -284,17 +289,22 @@ class MemorySource(RasterSourceBase):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
+            return (utc_from_ms_timestamp(self.time_first),) * 2
         else:
-            first = datetime.utcfromtimestamp(self.time_first / 1000)
+            first = utc_from_ms_timestamp(self.time_first)
             last = first + (len(self) - 1) * self.timedelta
             return first, last
 
     @property
     def timedelta(self):
-        if len(self) <= 1:
+        if self.time_delta is None:
             return None
-        return timedelta(milliseconds=self.time_delta)
+        else:
+            return timedelta(milliseconds=self.time_delta)
+
+    @property
+    def temporal(self):
+        return self.time_delta is not None
 
     def get_sources_and_requests(self, **request):
         mode = request["mode"]
@@ -311,7 +321,7 @@ class MemorySource(RasterSourceBase):
         start, stop, band1, band2 = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
-            datetime.utcfromtimestamp(self.time_first / 1000),
+            utc_from_ms_timestamp(self.time_first),
             self.timedelta,
             len(self),
         )
@@ -448,7 +458,6 @@ class RasterFileSource(RasterSourceBase):
         first_band = self.gdal_dataset.GetRasterBand(1)
         return self.dtype.type((first_band.GetNoDataValue()))
 
-
     @property
     def geo_transform(self):
         return utils.GeoTransform(self.gdal_dataset.GetGeoTransform())
@@ -476,9 +485,9 @@ class RasterFileSource(RasterSourceBase):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (datetime.utcfromtimestamp(self.time_first / 1000),) * 2
+            return (utc_from_ms_timestamp(self.time_first)) * 2
         else:
-            first = datetime.utcfromtimestamp(self.time_first / 1000)
+            first = utc_from_ms_timestamp(self.time_first)
             last = first + (len(self) - 1) * self.timedelta
             return first, last
 
@@ -488,6 +497,10 @@ class RasterFileSource(RasterSourceBase):
             return None
         return timedelta(milliseconds=self.time_delta)
 
+    @property
+    def temporal(self):
+        return len(self) > 1
+
     def get_sources_and_requests(self, **request):
         mode = request["mode"]
 
@@ -495,7 +508,7 @@ class RasterFileSource(RasterSourceBase):
         start, stop, band1, band2 = utils.snap_start_stop(
             request.get("start"),
             request.get("stop"),
-            datetime.utcfromtimestamp(self.time_first / 1000),
+            utc_from_ms_timestamp(self.time_first),
             self.timedelta,
             len(self),
         )

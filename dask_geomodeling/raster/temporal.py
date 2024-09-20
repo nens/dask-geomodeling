@@ -77,6 +77,10 @@ class Snap(RasterBlock):
     @property
     def timedelta(self):
         return self.index.timedelta
+    
+    @property
+    def temporal(self):
+        return self.index.temporal
 
     @property
     def extent(self):
@@ -267,20 +271,20 @@ def _get_bin_label(dt, frequency, closed, label, timezone):
     # while there is only 1 sample here, there might be multiple (empty) bins
     # in some cases (see test_issue_5917)
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    for label, bin in series.resample(frequency, closed=closed, label=label, kind="timestamp"):
+    for label, bin in series.resample(frequency, closed=closed, label=label):
         if len(bin) != 0:
             break
     return _ts_to_dt(label, timezone)
 
 
-def _get_bin_period(dt, frequency, closed, label, timezone):
-    """Returns the label of the bin the input dt belongs to.
+def _get_bin_start(dt, frequency, closed, label, timezone):
+    """Returns the start (left side) of the bin the input dt belongs to.
 
     :type dt: datetime.datetime without timezone.
     """
     # go through resample, this is the only function that supports 'closed'
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    resampled = series.resample(frequency, closed=closed, label=label, kind="period")
+    resampled = series.resample(frequency, closed=closed, label="left")
     return resampled.first().index[0]
 
 
@@ -484,6 +488,7 @@ class TemporalAggregate(BaseSingle):
             if not isinstance(frequency, str):
                 raise TypeError("'{}' object is not allowed.".format(type(frequency)))
             frequency = to_offset(frequency).freqstr
+
             if closed not in {None, "left", "right"}:
                 raise ValueError("closed must be None, 'left', or 'right'.")
             if label not in {None, "left", "right"}:
@@ -548,10 +553,16 @@ class TemporalAggregate(BaseSingle):
 
     @property
     def timedelta(self):
+        if self.frequency is None:
+            return None
         try:
-            return to_offset(self.frequency).delta
-        except AttributeError:
+            return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
+        except ValueError:
             return  # e.g. Month is non-equidistant
+
+    @property
+    def temporal(self):
+        return self.frequency is not None
 
     @property
     def dtype(self):
@@ -822,10 +833,8 @@ class Cumulative(BaseSingle):
             request["start"] = self.period[0]
             request["stop"] = stop
         else:
-            start_period = _get_bin_period(start, **kwargs)
-
             # snap request 'start' to the start of the first period
-            request["start"] = _ts_to_dt(start_period.start_time, self.timezone)
+            request["start"] = _ts_to_dt(_get_bin_start(start, **kwargs), self.timezone)
             # snap request 'stop' to the last requested time
             request["stop"] = stop
             if kwargs["closed"] != "left":

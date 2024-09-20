@@ -24,6 +24,9 @@ class TstRasterSourceBase:
     def test_timedelta(self):
         self.assertEqual(timedelta(days=1), self.source.timedelta)
 
+    def test_temporal(self):
+        self.assertTrue(self.source.temporal)
+
     def test_len(self):
         self.assertEqual(2, len(self.source))
 
