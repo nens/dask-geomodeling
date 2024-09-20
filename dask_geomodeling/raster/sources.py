@@ -1,9 +1,10 @@
 """
 Module containing raster sources.
 """
-import numpy as np
-
+from dataclasses import dataclass
 from osgeo import gdal, gdal_array, osr
+from shapely import Point
+import numpy as np
 
 from datetime import datetime, timedelta, timezone
 
@@ -12,6 +13,26 @@ from dask_geomodeling import utils
 from .base import RasterBlock
 
 __all__ = ["MemorySource", "RasterFileSource"]
+
+
+@dataclass
+class RasterData:
+    array: np.ndarray
+    projection: str
+    geo_transform: tuple
+    no_data_value: float
+    metadata: dict
+
+    def as_gdal_dataset(self):
+        dataset = gdal_array.OpenArray(self.array)
+        dataset.SetGeoTransform(self.geo_transform)
+        dataset.SetProjection(self.projection)
+        for i in range(dataset.RasterCount):
+            band = dataset.GetRasterBand(i + 1)
+            band.SetNoDataValue(self.no_data_value)
+            if self.metadata is not None:
+                band.SetMetadataItem("metadata", self.metadata[i])
+        return dataset
 
 
 class RasterSourceBase(RasterBlock):
@@ -37,12 +58,17 @@ class RasterSourceBase(RasterBlock):
             delta = process_kwargs["delta"]
             return {"time": [start + i * delta for i in range(length)]}
 
-        # open the dataset
-        source = process_kwargs.get("dataset")
-        if source is None:
+        # this is where the code paths for the MemorySource and RasterFileSource come
+        # together
+        raster_data = process_kwargs.get("raster_data")
+        if raster_data is None:
+            # coming from a RasterFileSource block
             url = process_kwargs["url"]
             path = utils.safe_abspath(url)
             source = gdal.Open(path)
+        else:
+            # coming from a MemorySource block
+            source = raster_data.as_gdal_dataset()
 
         # handle meta requests
         if mode == "meta":
@@ -67,15 +93,16 @@ class RasterSourceBase(RasterBlock):
 
         # handle point request
         if bbox[0] == bbox[2] or bbox[1] == bbox[3]:
+            source_x, source_y = utils.shapely_transform(
+                geometry=Point(bbox[0], bbox[1]),
+                src_srs=target_projection,
+                dst_srs=source.GetProjection(),
+            ).coords[0]
             source_geo_transform = utils.GeoTransform(source.GetGeoTransform())
-            ct = osr.CoordinateTransformation(
-                utils.get_sr(target_projection),
-                utils.get_sr(source.GetProjection()),
-            )
-            source_x, source_y, _ = ct.TransformPoint(bbox[0], bbox[1], 0.0)
             source_i, source_j = source_geo_transform.get_indices(
                 ((source_x, source_y))
             )
+
             # create the result
             shape = source.RasterCount, 1, 1
             result = np.full(shape, target_no_data_value, dtype=dtype)
@@ -87,8 +114,6 @@ class RasterSourceBase(RasterBlock):
                 source.ReadAsArray(int(source_j), int(source_i), 1, 1, result)
 
             result = result[bands[0] : bands[1]]
-            # fill nan values if they popped up
-            result[~np.isfinite(result)] = target_no_data_value
             return {"values": result, "no_data_value": target_no_data_value}
 
         target_geo_transform = utils.GeoTransform.from_bbox(
@@ -330,26 +355,19 @@ class MemorySource(RasterSourceBase):
         bands = band1, band2 + 1
 
         # create a dataset
-        array = self.data
-        kwargs = {
-            "no_data_value": float(self.no_data_value),
-            "geo_transform": self.geo_transform,
-            "projection": osr.GetUserInputAsWKT(self.projection),
-        }
-
-        driver = gdal.GetDriverByName("mem")
-        with utils.Dataset(array, **kwargs) as _dataset:
-            dataset = driver.CreateCopy("", _dataset)
-        if self.metadata is not None:
-            for i in range(len(self.metadata)):
-                band = dataset.GetRasterBand(i + 1)
-                band.SetMetadataItem("metadata", self.metadata[i])
+        raster_data = RasterData(
+            array=self.data,
+            metadata=self.metadata,
+            geo_transform=self.geo_transform,
+            no_data_value=float(self.no_data_value),
+            projection=osr.GetUserInputAsWKT(self.projection),
+        )
 
         # set the process kwargs depending on the mode
         if mode == "vals":
             process_kwargs = {
                 "mode": "vals",
-                "dataset": dataset,
+                "raster_data": raster_data,
                 "bbox": request["bbox"],
                 "width": request["width"],
                 "height": request["height"],
@@ -362,7 +380,7 @@ class MemorySource(RasterSourceBase):
             # metadata can't be None at this point
             process_kwargs = {
                 "mode": "meta",
-                "dataset": dataset,
+                "raster_data": raster_data,
                 "bands": bands,
             }
         elif mode == "time":
