@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.5.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix / enable reprojection in raster sources.
 
 
 2.5.0 (2024-08-19)
