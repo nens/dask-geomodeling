@@ -10,7 +10,6 @@ from math import floor, log10
 
 import numpy as np
 import pandas as pd
-from scipy import ndimage
 from dask import config
 
 from osgeo import gdal, ogr, osr, gdal_array
@@ -938,29 +937,6 @@ def snap_start_stop(start, stop, time_first, time_delta, length):
             start = period[0] + time_delta * first_i
             stop = period[0] + time_delta * last_i
     return start, stop, first_i, last_i
-
-
-def zoom_raster(data, no_data_value, height, width):
-    """Zooms a data array to specified height and width
-
-    Deals with no_data by setting these to 0, zooming, and putting back nodata.
-    Edges around nodata will be biased towards 0."""
-    if data.shape[1:] == (height, width):
-        return data
-    factor = 1, height / data.shape[1], width / data.shape[2]
-
-    # first zoom the nodata mask
-    src_mask = data == no_data_value
-    dst_mask = ndimage.zoom(src_mask.astype(float), factor) > 0.5
-
-    # set nodata to 0 and zoom the data
-    data = data.copy()
-    data[src_mask] = 0
-    result = ndimage.zoom(data, factor)
-
-    # set nodata to nodata again using the zoomed mask
-    result[dst_mask] = no_data_value
-    return result
 
 
 def dt_to_ms(dt):

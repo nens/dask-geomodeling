@@ -202,6 +202,13 @@ class GeometryFileSink(BaseSingle):
                 if source.encoding:
                     kwargs["encoding"] = source.encoding
 
+            # fiona 10 "identifies" json which would result in double "dumping"
+            kwargs["schema"]["properties"].update({
+                pname: "str"
+                for pname, ptype in kwargs["schema"]["properties"].items()
+                if ptype == "json"
+            })
+
             with fiona.collection(target, "w", **kwargs) as out:
                 for source_path in source_paths:
                     with fiona.collection(source_path, "r") as source:

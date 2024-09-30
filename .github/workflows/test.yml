@@ -17,20 +17,24 @@ jobs:
         include:
           - os: ubuntu-20.04
             python: 3.8
+            numpy: "==1.24.4"
+            pins: "pygdal==3.0.4.* scipy==1.10.1 dask[delayed]==2023.5.0 pandas==1.5.3 geopandas==0.12.2 fiona==1.9.6"
+          - os: ubuntu-20.04
+            python: 3.8
             numpy: "==1.18.*"
-            pins: "pygdal==3.0.4.* scipy==1.4.* dask[delayed]==2.9.* pandas==1.0.* geopandas==0.8.*"
+            pins: "pygdal==3.0.4.* scipy==1.4.* dask[delayed]==2.9.* pandas==1.0.* geopandas==0.* fiona==1.9.6"
           - os: ubuntu-20.04
             python: 3.9
             numpy: "==1.20.*"
-            pins: "pygdal==3.0.4.* scipy==1.6.* dask[delayed]==2020.* pandas==1.1.* geopandas==0.9.*"
+            pins: "pygdal==3.0.4.* scipy==1.6.* dask[delayed]==2020.* pandas==1.1.* geopandas==0.* fiona==1.9.6"
           - os: ubuntu-20.04
             python: 3.9
             numpy: "==1.21.*"
-            pins: "pygdal==3.0.4.* scipy==1.7.* dask[delayed]==2021.* pandas==1.3.* geopandas==0.10.*"
+            pins: "pygdal==3.0.4.* scipy==1.7.* dask[delayed]==2021.* pandas==1.3.* geopandas==0.* fiona==1.9.6"
           - os: ubuntu-22.04
             python: "3.10"
             numpy: "==1.23.*"
-            pins: "pygdal==3.4.1.* scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.11.*"
+            pins: "pygdal==3.4.1.* scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.*"
           - os: ubuntu-22.04
             python: "3.11"
             numpy: "==1.*"

@@ -23,6 +23,8 @@ Changelog of dask-geomodeling
 2.4.4 (2024-01-17)
 ------------------
 
+- Fixed issue with raster sources returning wrong values.
+
 - Fix Place block.
 
 

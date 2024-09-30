@@ -11,8 +11,9 @@ from dask_geomodeling.raster import MemorySource, RasterFileSource
 from dask_geomodeling.tests.factories import (
     setup_temp_root,
     teardown_temp_root,
-    create_tif,
 )
+
+from osgeo import gdal, osr
 
 
 class TstRasterSourceBase:
@@ -136,7 +137,7 @@ class TstRasterSourceBase:
         )
         self.assertEqual(data["values"].shape, (1, 2, 4))
         n = data["no_data_value"]
-        assert_equal(data["values"], [[[5, 4, n, n], [5, 4, n, n]]])
+        assert_equal(data["values"], [[[5, 5, n, n], [5, 5, n, n]]])
 
     def test_bbox_single_pixel_zoom_in(self):
         data = self.source.get_data(
@@ -234,17 +235,17 @@ class TestGeoTIFFSource(TstRasterSourceBase, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.path = setup_temp_root()
-        cls.single_pixel_tif = os.path.join(cls.path, "test01.tiff")
-        create_tif(
-            cls.single_pixel_tif,
-            bands=2,
-            base_level=5,
-            dtype="u1",
-            no_data_value=255,
-            projection="EPSG:28992",
-            geo_transform=(136700.0, 5.0, 0.0, 455800.0, 0.0, -5.0),
-            shape=(1, 1),
-        )
+        cls.single_pixel_tif = os.path.join(cls.path, "test.tif")
+
+        array = np.array([[[4]], [[5]]], 'u1')
+        kwargs = {
+            "no_data_value": 255,
+            "geo_transform": (136700.0, 5.0, 0.0, 455800.0, 0.0, -5.0),
+            "projection": osr.GetUserInputAsWKT("EPSG:28992"),
+        }
+        driver = gdal.GetDriverByName("GTiff")
+        with utils.Dataset(array, **kwargs) as dataset:
+            driver.CreateCopy(cls.single_pixel_tif, dataset)
 
     @classmethod
     def tearDownClass(cls):

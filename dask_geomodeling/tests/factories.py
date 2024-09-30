@@ -3,7 +3,6 @@ import math
 from scipy import ndimage
 import shutil
 import tempfile
-from osgeo import osr, gdal
 
 import geopandas as gpd
 from shapely.geometry import Polygon
@@ -18,7 +17,6 @@ from dask_geomodeling.utils import (
     get_crs,
     get_epsg_or_wkt,
     shapely_transform,
-    Dataset,
 )
 
 
@@ -295,28 +293,3 @@ def teardown_temp_root(path):
     """ Delete the temporary file root. """
     shutil.rmtree(path)
     config.set({"geomodeling.root": defaults["root"]})
-
-
-def create_tif(
-    path,
-    bands=1,
-    no_data_value=255,
-    base_level=7,
-    dtype="i2",
-    projection="EPSG:28992",
-    geo_transform=None,
-    shape=(16, 16),
-):
-    """ Create a test source dataset at path. """
-
-    kwargs = {
-        "no_data_value": no_data_value,
-        "geo_transform": geo_transform or (-16, 2, 0, 16, 0, -2),
-        "projection": osr.GetUserInputAsWKT(str(projection)),
-    }
-
-    data = np.full(shape, base_level, dtype=dtype)
-
-    array = data[np.newaxis][bands * [0]]
-    with Dataset(array, **kwargs) as dataset:
-        gdal.GetDriverByName(str("gtiff")).CreateCopy(path, dataset)

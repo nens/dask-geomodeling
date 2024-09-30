@@ -1,2 +1,2 @@
-sphinx-rtd-theme
 numpy
+sphinx-rtd-theme
