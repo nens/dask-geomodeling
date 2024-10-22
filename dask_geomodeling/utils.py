@@ -476,6 +476,7 @@ def _geopandas_set_srs(df_or_series, crs):
     except AttributeError:  # geopandas < 0.9
         df_or_series.crs = crs
 
+
 def geoseries_transform(geoseries, src_srs, dst_srs):
     """
     Transform a GeoSeries to a different SRS. Returns a copy.
@@ -948,3 +949,22 @@ def dt_to_ms(dt):
 
 def filter_none(lst):
     return [x for x in lst if x is not None]
+
+
+def find_nearest(array, value):
+    """
+    Return indices to the nearest neighbours of elements.
+
+    Args:
+        array: 1-D array_like, must be sorted in ascending order.
+        values: array_like, values for which to find the nearest neighbour
+    """
+    array = np.asarray(array)
+    value = np.asarray(value)
+
+    if array.size == 1:
+        return np.zeros(value.shape, dtype=int)
+
+    # determine midpoints a way that works for datetimes, too
+    midpoints = array[:-1] + (array[1:] - array[:-1]) / 2
+    return np.searchsorted(midpoints, value)

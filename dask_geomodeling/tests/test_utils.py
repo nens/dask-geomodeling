@@ -1,3 +1,4 @@
+from datetime import datetime as Datetime
 from unittest import mock
 import unittest
 import pytest
@@ -453,3 +454,20 @@ class TestRasterize(unittest.TestCase):
             self.geoseries, values=pd.Series([1.2, 2.4], dtype="category"), **self.box
         )
         self.assertEqual(np.float64, raster["values"].dtype)
+
+
+class TestFindNearest(unittest.TestCase):
+    def test_find_nearest_one_element(self):
+        self.assertEqual(utils.find_nearest([42], [43, 44, 45]).tolist(), [0, 0, 0])
+
+    def test_find_nearest_number(self):
+        array = [2, 5]
+        value = [1, 2, 3, 4, 5, 6]
+        expected = [0, 0, 0, 1, 1, 1]
+        self.assertEqual(utils.find_nearest(array, value).tolist(), expected)
+
+    def test_find_nearest_datetime(self):
+        array = [Datetime(2001, 2, d) for d in (2, 5)]
+        value = [Datetime(2001, 2, d) for d in (1, 2, 3, 4, 5, 6)]
+        expected = [0, 0, 0, 1, 1, 1]
+        self.assertEqual(utils.find_nearest(array, value).tolist(), expected)

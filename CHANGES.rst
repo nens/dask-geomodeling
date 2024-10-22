@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.5.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Make Snap raster block more efficient.
 
 
 2.5.1 (2024-09-30)
