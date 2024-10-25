@@ -198,6 +198,9 @@ class MemorySource(RasterSourceBase):
         metadata=None,
     ):
         data = np.asarray(data)
+        if data.dtype == "i8":
+            # not possible in currently supported gdal version
+            data = data.astype("i4")
         if data.ndim == 2:
             data = data[np.newaxis]
         if data.ndim != 3:
