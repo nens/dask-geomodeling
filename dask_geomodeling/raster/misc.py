@@ -80,25 +80,17 @@ class Clip(BaseSingle):
         if period is None:
             return [(None, None), (None, None)]
 
-        if stop is None:
-            # TODO
-
         start = request.get("start", period[1])
         stop = request.get("stop")
 
-        # restrict start to period
-        request["start"] = min(max(start, period[0]), period[1])
-
-        stop = request.get("stop")
         if stop is not None:
             if stop < period[0] or start > period[1]:
-            # no overlap between request and period
-            return [(None, None), (None, None)]
-            else:
-            
+                # no overlap between request and period
+                return [(None, None), (None, None)]
             # restrict stop to period
             request["stop"] = min(max(stop, period[0]), period[1])
-
+        # restrict stop to period
+        request["start"] = min(max(start, period[0]), period[1])
         return [(source, request) for source in self.args]
 
     @staticmethod
