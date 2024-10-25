@@ -25,7 +25,7 @@ def test_clip_attrs_mask_empty(source, empty_temporal_source):
 
 
 def test_clip_attrs_intersects(source):
-    # create a raster in that only partially overlaps the store
+    # create a raster that only partially overlaps the store
     clipping_mask = MemorySource(
         data=source.data,
         no_data_value=source.no_data_value,
@@ -47,8 +47,8 @@ def test_clip_attrs_intersects(source):
     assert clip.geometry.GetEnvelope() == expected_geometry.GetEnvelope()
 
 
-def test_clip_time_intersects(source):
-    # create a raster in that only partially overlaps the store in time
+def test_clip_time_intersects(source, vals_request):
+    # create a raster that only partially overlaps the store in time
     clipsrc = MemorySource(
         data=np.array([1, 2, 3], dtype="u1").reshape(3, 1, 1),
         no_data_value=255,
@@ -59,6 +59,8 @@ def test_clip_time_intersects(source):
         time_delta=Timedelta(hours=1)
     )
     clip = raster.Clip(source, clipsrc)
+    assert clip.period == (clipsrc.period[0], source.period[1])
+    assert clip.get_data(**vals_request)["values"][:, 0, 0].tolist() == [7, 255]
     result = clip.get_data(mode="time", start=source.period[0])["time"][0]
     assert result == clip.period[0]
     result = clip.get_data(mode="time", start=clipsrc.period[1])["time"][0]
@@ -156,22 +158,6 @@ def test_clip_time_request(source, vals_request, expected_time):
     clip = raster.Clip(source, source)
     vals_request["mode"] = "time"
     assert clip.get_data(**vals_request)["time"] == expected_time
-
-
-def test_clip_partial_temporal_overlap(source, vals_request):
-    # create a clipping mask in that temporally does not overlap the store
-    clipping_mask = MemorySource(
-        data=source.data,
-        no_data_value=source.no_data_value,
-        projection=source.projection,
-        pixel_size=source.pixel_size,
-        pixel_origin=source.pixel_origin,
-        time_first=source.time_first + source.time_delta,
-        time_delta=source.time_delta,
-    )
-    clip = raster.Clip(source, clipping_mask)
-    assert clip.period == (clipping_mask.period[0], source.period[1])
-    assert clip.get_data(**vals_request)["values"][:, 0, 0].tolist() == [7, 255]
 
 
 def test_clip_no_temporal_overlap(source, vals_request):
