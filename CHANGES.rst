@@ -8,6 +8,8 @@ Changelog of dask-geomodeling
 
 - Fix clip block restriction to period.
 
+- Downcast int64 to int32 in MemorySource.
+
 
 2.5.2 (2024-10-22)
 ------------------
