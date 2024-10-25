@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime as Datetime, timedelta as Timedelta
 
 import numpy as np
 import pytest
@@ -8,10 +8,6 @@ from shapely.geometry import box
 from dask_geomodeling import raster
 from dask_geomodeling.utils import shapely_transform, get_sr
 from dask_geomodeling.raster.sources import MemorySource
-from dask_geomodeling.tests.factories import (
-    MockRaster,
-)
-
 
 
 def test_clip_attrs_store_empty(source, empty_temporal_source):
@@ -49,6 +45,32 @@ def test_clip_attrs_intersects(source):
     expected_geometry = source.geometry.Intersection(clipping_mask.geometry)
     assert clip.extent == expected_extent
     assert clip.geometry.GetEnvelope() == expected_geometry.GetEnvelope()
+
+
+def test_clip_time_intersects(source):
+    # create a raster in that only partially overlaps the store in time
+    clipsrc = MemorySource(
+        data=np.array([1, 2, 3], dtype="u1").reshape(3, 1, 1),
+        no_data_value=255,
+        projection="EPSG:28992",
+        pixel_size=0.5,
+        pixel_origin=(135000, 456000),
+        time_first=Datetime(2000, 1, 1, 1),  # an hour later than source
+        time_delta=Timedelta(hours=1)
+    )
+    clip = raster.Clip(source, clipsrc)
+    result = clip.get_data(mode="time", start=source.period[0])["time"][0]
+    assert result == clip.period[0]
+    result = clip.get_data(mode="time", start=clipsrc.period[1])["time"][0]
+    assert result == clip.period[1]
+    result = clip.get_data(
+        mode="time", start=Datetime(2001, 1, 2), stop=Datetime(2001, 1, 2),
+    )
+    assert result is None
+    result = clip.get_data(
+        mode="time", start=Datetime(1999, 1, 2), stop=Datetime(1999, 1, 2),
+    )
+    assert result is None
 
 
 def test_clip_attrs_with_reprojection(source):
@@ -293,5 +315,5 @@ def test_rasterize_wkt_attrs():
         view.extent, shapely_transform(geom, "EPSG:28992", "EPSG:4326").bounds
     )
     assert view.timedelta is None
-    assert view.period == (datetime(1970, 1, 1), datetime(1970, 1, 1))
+    assert view.period == (Datetime(1970, 1, 1), Datetime(1970, 1, 1))
     assert view.temporal is False

@@ -73,17 +73,33 @@ class Clip(BaseSingle):
         return self.args[1]
 
     def get_sources_and_requests(self, **request):
-        start = request.get("start", None)
-        stop = request.get("stop", None)
+        """
+        Request start and stop are limited to self.period so that data is aligned.
+        """
+        period = self.period
+        if period is None:
+            return [(None, None), (None, None)]
 
-        if start is not None and stop is not None:
-            # limit request to self.period so that resulting data is aligned
-            period = self.period
-            if period is not None:
-                request["start"] = max(start, period[0])
-                request["stop"] = min(stop, period[1])
+        if stop is None:
+            # TODO
 
-        return ((source, request) for source in self.args)
+        start = request.get("start", period[1])
+        stop = request.get("stop")
+
+        # restrict start to period
+        request["start"] = min(max(start, period[0]), period[1])
+
+        stop = request.get("stop")
+        if stop is not None:
+            if stop < period[0] or start > period[1]:
+            # no overlap between request and period
+            return [(None, None), (None, None)]
+            else:
+            
+            # restrict stop to period
+            request["stop"] = min(max(stop, period[0]), period[1])
+
+        return [(source, request) for source in self.args]
 
     @staticmethod
     def process(data, source_data):
@@ -581,7 +597,7 @@ class Rasterize(RasterBlock):
     @property
     def timedelta(self):
         return None
-    
+
     @property
     def temporal(self):
         return False
@@ -756,7 +772,7 @@ class RasterizeWKT(RasterBlock):
     @property
     def timedelta(self):
         return None
-    
+
     @property
     def temporal(self):
         return False
