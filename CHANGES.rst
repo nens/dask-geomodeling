@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.5.3 (unreleased)
+2.5.3 (2024-10-28)
 ------------------
 
 - Fix clip block when stop is None.
