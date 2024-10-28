@@ -176,6 +176,14 @@ def test_clip_no_temporal_overlap(source, vals_request):
     assert clip.get_data(**vals_request) is None
 
 
+def test_clip_request_start_is_none(source, point_request):
+    clip = raster.Clip(source, source)
+    point_request["start"] = None
+    point_request["stop"] = None
+    result = clip.get_data(**point_request)["values"].item()
+    assert result == 255
+
+
 def test_reclassify(source, vals_request):
     view = raster.Reclassify(store=source, data=[[7, 1000]])
     data = view.get_data(**vals_request)
