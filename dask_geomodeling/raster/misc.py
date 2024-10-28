@@ -80,7 +80,9 @@ class Clip(BaseSingle):
         if period is None:
             return [(None, None), (None, None)]
 
-        start = request.get("start", period[1])
+        start = request.get("start")
+        if start is None:
+            start = period[1]
         stop = request.get("stop")
 
         if stop is not None:

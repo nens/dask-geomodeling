@@ -4,7 +4,7 @@ Changelog of dask-geomodeling
 2.5.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix clip block when start is None.
 
 
 2.5.3 (2024-10-28)
