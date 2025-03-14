@@ -337,12 +337,7 @@ class MemorySource(RasterSourceBase):
     def get_sources_and_requests(self, **request):
         mode = request["mode"]
 
-        if (
-            mode == "vals"
-            and request.get("projection").upper() != self.projection.upper()
-        ):
-            raise RuntimeError("This source block cannot reproject data")
-        elif mode == "meta" and self.metadata is None:
+        if mode == "meta" and self.metadata is None:
             return [({"mode": "empty_meta"}, None)]
 
         # interpret start and stop request parameters
