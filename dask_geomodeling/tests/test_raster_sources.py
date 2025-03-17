@@ -189,6 +189,19 @@ class TstRasterSourceBase:
             data = self.source.get_data(mode="time", start=start, stop=stop)
             self.assertEqual(data["time"], [datetime(2000, 1, 1), datetime(2000, 1, 2)])
 
+    def test_reproject(self):
+        data = self.source.get_data(
+            mode="vals",
+            projection="EPSG:3857",
+            bbox=(
+                569976.003397613, 6816435.27714811, 569984.154671152, 6816443.38930183,
+            ),
+            width=5,
+            height=5,
+        )
+        self.assertEqual(data["values"].shape, (1, 5, 5))
+        assert_equal(data["values"], 5)
+
 
 class TestMemorySource(TstRasterSourceBase, unittest.TestCase):
     def setUp(self):

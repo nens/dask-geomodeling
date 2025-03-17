@@ -9,34 +9,34 @@ on:
 
 jobs:
   TestConda:
-    name: Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
+    name: Python ${{ matrix.python }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Do not ignore bash profile files. From:
+    # https://github.com/marketplace/actions/setup-miniconda
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-12, windows-latest]
+        os: [ubuntu-latest, macos-13, windows-latest]
         python: ["3.9", "3.12"]
-
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup Conda
-        uses: s-weigand/setup-conda@v1
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-conda: false
-          conda-channels: conda-forge
+          auto-update-conda: true
+          python-version: ${{ matrix.python }}
 
       - name: Setup Environment
-        shell: bash
         run: |
-          conda create --name test python=${{ matrix.python }} pytest numpy=1.* gdal=3.* scipy pytz dask-core toolz "pandas<2.2" geopandas "pyproj>=2" fiona
-          source activate test
+          conda create --quiet --name test python=${{ matrix.python }} pytest numpy=1.* gdal=3.* scipy pytz dask-core toolz "pandas<2.2" "geopandas>=1" "pyproj>=2" fiona
           python -V
           conda info
           conda list
 
       - name: Run tests
-        shell: bash
         run: |
-          source activate test
           pytest dask_geomodeling
