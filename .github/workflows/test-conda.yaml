@@ -29,7 +29,6 @@ jobs:
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python }}
-          auto-activate-base: true
 
       - name: Setup Environment
         run: |
@@ -40,5 +39,4 @@ jobs:
 
       - name: Run tests
         run: |
-          source activate test
           pytest dask_geomodeling
