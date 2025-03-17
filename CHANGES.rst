@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.5.5 (unreleased)
+2.5.5 (2025-03-17)
 ------------------
 
 - Allow raster sources to reproject.
