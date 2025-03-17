@@ -9,7 +9,7 @@ on:
 
 jobs:
   TestConda:
-    name: Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
+    name: Python ${{ matrix.python }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     # Do not ignore bash profile files. From:
     # https://github.com/marketplace/actions/setup-miniconda
@@ -22,13 +22,13 @@ jobs:
         os: [ubuntu-latest, macos-13, windows-latest]
         python: ["3.9", "3.12"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup Conda
-      - uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python }}
           auto-activate-base: true
 
       - name: Setup Environment
