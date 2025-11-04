@@ -72,6 +72,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:focal
+    env:
+      DEBIAN_FRONTEND: noninteractive
 
     steps:
       - uses: actions/checkout@v2
