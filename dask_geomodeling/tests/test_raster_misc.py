@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime as Datetime, timedelta as Timedelta
 
 import numpy as np
 import pytest
@@ -10,22 +10,22 @@ from dask_geomodeling.utils import shapely_transform, get_sr
 from dask_geomodeling.raster.sources import MemorySource
 
 
-def test_clip_attrs_store_empty(source, empty_source):
+def test_clip_attrs_store_empty(source, empty_temporal_source):
     # clip should propagate the (empty) extent of the store
-    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
+    clip = raster.Clip(empty_temporal_source, source)
     assert clip.extent is None
     assert clip.geometry is None
 
 
-def test_clip_attrs_mask_empty(source, empty_source):
+def test_clip_attrs_mask_empty(source, empty_temporal_source):
     # clip should propagate the (empty) extent of the clipping mask
-    clip = raster.Clip(source, raster.Snap(empty_source, source))
+    clip = raster.Clip(source, empty_temporal_source)
     assert clip.extent is None
     assert clip.geometry is None
 
 
-def test_clip_attrs_intersects(source, empty_source):
-    # create a raster in that only partially overlaps the store
+def test_clip_attrs_intersects(source):
+    # create a raster that only partially overlaps the store
     clipping_mask = MemorySource(
         data=source.data,
         no_data_value=source.no_data_value,
@@ -47,7 +47,35 @@ def test_clip_attrs_intersects(source, empty_source):
     assert clip.geometry.GetEnvelope() == expected_geometry.GetEnvelope()
 
 
-def test_clip_attrs_with_reprojection(source, empty_source):
+def test_clip_time_intersects(source, vals_request):
+    # create a raster that only partially overlaps the store in time
+    clipsrc = MemorySource(
+        data=np.array([1, 2, 3], dtype="u1").reshape(3, 1, 1),
+        no_data_value=255,
+        projection="EPSG:28992",
+        pixel_size=0.5,
+        pixel_origin=(135000, 456000),
+        time_first=Datetime(2000, 1, 1, 1),  # an hour later than source
+        time_delta=Timedelta(hours=1)
+    )
+    clip = raster.Clip(source, clipsrc)
+    assert clip.period == (clipsrc.period[0], source.period[1])
+    assert clip.get_data(**vals_request)["values"][:, 0, 0].tolist() == [7, 255]
+    result = clip.get_data(mode="time", start=source.period[0])["time"][0]
+    assert result == clip.period[0]
+    result = clip.get_data(mode="time", start=clipsrc.period[1])["time"][0]
+    assert result == clip.period[1]
+    result = clip.get_data(
+        mode="time", start=Datetime(2001, 1, 2), stop=Datetime(2001, 1, 2),
+    )
+    assert result is None
+    result = clip.get_data(
+        mode="time", start=Datetime(1999, 1, 2), stop=Datetime(1999, 1, 2),
+    )
+    assert result is None
+
+
+def test_clip_attrs_with_reprojection(source):
     # create a raster in WGS84 that contains the store
     clipping_mask = MemorySource(
         data=source.data,
@@ -84,22 +112,22 @@ def test_clip_matching_timedelta(source):
     assert clip.timedelta == source.timedelta
 
 
-def test_clip_unequal_timedelta(source, empty_source):
-    # clip checks for matching timedeltas; test that here
+def test_clip_unequal_temporal(source, empty_source):
+    # clip checks for matching "temporal" attribute; test that here
     # NB: note that `source` is temporal and `empty_source` is not
-    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+    with pytest.raises(ValueError, match=".*Consider using Snap.*"):
         raster.Clip(source, empty_source)
-    with pytest.raises(ValueError, match=".*resolution of the clipping.*"):
+    with pytest.raises(ValueError, match=".*Consider using Snap.*"):
         raster.Clip(empty_source, source)
 
 
-def test_clip_empty_source(source, empty_source, vals_request):
-    clip = raster.Clip(empty_source, raster.Snap(source, empty_source))
+def test_clip_empty_source(source, empty_temporal_source, vals_request):
+    clip = raster.Clip(empty_temporal_source, source)
     assert clip.get_data(**vals_request) is None
 
 
-def test_clip_with_empty_mask(source, empty_source, vals_request):
-    clip = raster.Clip(source, raster.Snap(empty_source, source))
+def test_clip_with_empty_mask(source, empty_temporal_source, vals_request):
+    clip = raster.Clip(source, empty_temporal_source)
     assert clip.get_data(**vals_request) is None
 
 
@@ -132,22 +160,6 @@ def test_clip_time_request(source, vals_request, expected_time):
     assert clip.get_data(**vals_request)["time"] == expected_time
 
 
-def test_clip_partial_temporal_overlap(source, vals_request):
-    # create a clipping mask in that temporally does not overlap the store
-    clipping_mask = MemorySource(
-        data=source.data,
-        no_data_value=source.no_data_value,
-        projection=source.projection,
-        pixel_size=source.pixel_size,
-        pixel_origin=source.pixel_origin,
-        time_first=source.time_first + source.time_delta,
-        time_delta=source.time_delta,
-    )
-    clip = raster.Clip(source, clipping_mask)
-    assert clip.period == (clipping_mask.period[0], source.period[1])
-    assert clip.get_data(**vals_request)["values"][:, 0, 0].tolist() == [7, 255]
-
-
 def test_clip_no_temporal_overlap(source, vals_request):
     # create a clipping mask in that temporally does not overlap the store
     clipping_mask = MemorySource(
@@ -162,6 +174,14 @@ def test_clip_no_temporal_overlap(source, vals_request):
     clip = raster.Clip(source, clipping_mask)
     assert clip.period is None
     assert clip.get_data(**vals_request) is None
+
+
+def test_clip_request_start_is_none(source, point_request):
+    clip = raster.Clip(source, source)
+    point_request["start"] = None
+    point_request["stop"] = None
+    result = clip.get_data(**point_request)["values"].item()
+    assert result == 255
 
 
 def test_reclassify(source, vals_request):
@@ -289,4 +309,5 @@ def test_rasterize_wkt_attrs():
         view.extent, shapely_transform(geom, "EPSG:28992", "EPSG:4326").bounds
     )
     assert view.timedelta is None
-    assert view.period == (datetime(1970, 1, 1), datetime(1970, 1, 1))
+    assert view.period == (Datetime(1970, 1, 1), Datetime(1970, 1, 1))
+    assert view.temporal is False

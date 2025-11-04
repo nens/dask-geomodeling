@@ -1,14 +1,63 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.4.5 (unreleased)
+2.5.6 (unreleased)
 ------------------
 
 - Nothing changed yet.
 
 
+2.5.5 (2025-03-17)
+------------------
+
+- Allow raster sources to reproject.
+
+
+2.5.4 (2024-10-28)
+------------------
+
+- Fix clip block when start is None.
+
+
+2.5.3 (2024-10-28)
+------------------
+
+- Fix clip block when stop is None.
+
+- Fix clip block restriction to period.
+
+- Downcast int64 to int32 in MemorySource.
+
+
+2.5.2 (2024-10-22)
+------------------
+
+- Make Snap raster block more efficient.
+
+
+2.5.1 (2024-09-30)
+------------------
+
+- Fix / enable reprojection in raster sources.
+
+
+2.5.0 (2024-08-19)
+------------------
+
+- Fixed warnings when reprojecting geometries with geopandas >= 0.9.
+
+- Fixed compatbility and solved deprecation warning swith pandas 2.1.
+  Still incompatible with pandas >=2.2.
+
+- Added version constraint showing incompatibility with numpy 2.
+
+- Added mandatory `temporal` attribute for RasterBlock.
+
+
 2.4.4 (2024-01-17)
 ------------------
+
+- Fixed issue with raster sources returning wrong values.
 
 - Fix Place block.
 

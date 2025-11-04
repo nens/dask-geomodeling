@@ -51,8 +51,17 @@ class Clip(BaseSingle):
     def __init__(self, store, source):
         if not isinstance(source, RasterBlock):
             raise TypeError("'{}' object is not allowed".format(type(store)))
-        # timedeltas are required to be equal
-        if store.timedelta != source.timedelta:
+        if store.temporal and not source.temporal:
+            raise ValueError(
+                "The values raster is temporal while the clipping mask is not. "
+                "Consider using Snap."
+            )
+        if not store.temporal and source.temporal:
+            raise ValueError(
+                "The clipping mask is temporal while the values raster is not. "
+                "Consider using Snap."
+            )
+        if store.temporal and (store.timedelta != source.timedelta):
             raise ValueError(
                 "Time resolution of the clipping mask does not match that of "
                 "the values raster. Consider using Snap."
@@ -64,17 +73,27 @@ class Clip(BaseSingle):
         return self.args[1]
 
     def get_sources_and_requests(self, **request):
-        start = request.get("start", None)
-        stop = request.get("stop", None)
+        """
+        Request start and stop are limited to self.period so that data is aligned.
+        """
+        period = self.period
+        if period is None:
+            return [(None, None), (None, None)]
 
-        if start is not None and stop is not None:
-            # limit request to self.period so that resulting data is aligned
-            period = self.period
-            if period is not None:
-                request["start"] = max(start, period[0])
-                request["stop"] = min(stop, period[1])
+        start = request.get("start")
+        if start is None:
+            start = period[1]
+        stop = request.get("stop")
 
-        return ((source, request) for source in self.args)
+        if stop is not None:
+            if stop < period[0] or start > period[1]:
+                # no overlap between request and period
+                return [(None, None), (None, None)]
+            # restrict stop to period
+            request["stop"] = min(max(stop, period[0]), period[1])
+        # restrict stop to period
+        request["start"] = min(max(start, period[0]), period[1])
+        return [(source, request) for source in self.args]
 
     @staticmethod
     def process(data, source_data):
@@ -574,6 +593,10 @@ class Rasterize(RasterBlock):
         return None
 
     @property
+    def temporal(self):
+        return False
+
+    @property
     def geometry(self):
         return None
 
@@ -743,6 +766,10 @@ class RasterizeWKT(RasterBlock):
     @property
     def timedelta(self):
         return None
+
+    @property
+    def temporal(self):
+        return False
 
     @property
     def geometry(self):

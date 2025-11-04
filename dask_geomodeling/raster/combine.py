@@ -62,6 +62,10 @@ class BaseCombine(RasterBlock):
     def timedelta(self):
         """ The period between timesteps in case of equidistant time. """
         return self.get_aligned_timedelta(self.args)
+    
+    @property
+    def temporal(self):
+        return any(x.temporal for x in self.args)
 
     @property
     def period(self):

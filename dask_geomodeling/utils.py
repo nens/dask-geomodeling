@@ -10,7 +10,6 @@ from math import floor, log10
 
 import numpy as np
 import pandas as pd
-from scipy import ndimage
 from dask import config
 
 from osgeo import gdal, ogr, osr, gdal_array
@@ -471,7 +470,14 @@ class WKTReadingError(Exception):
     pass
 
 
-def geoseries_transform(df, src_srs, dst_srs):
+def _geopandas_set_srs(df_or_series, crs):
+    try:
+        df_or_series.set_crs(crs, inplace=True, allow_override=True)
+    except AttributeError:  # geopandas < 0.9
+        df_or_series.crs = crs
+
+
+def geoseries_transform(geoseries, src_srs, dst_srs):
     """
     Transform a GeoSeries to a different SRS. Returns a copy.
 
@@ -482,8 +488,8 @@ def geoseries_transform(df, src_srs, dst_srs):
     Note that we do not use .to_crs() for the transformation, because this is
     much slower than OGR. Also, we ignore the .crs property (but we do set it)
     """
-    result = df.geometry.apply(shapely_transform, args=(src_srs, dst_srs))
-    result.crs = get_crs(dst_srs)
+    result = geoseries.apply(shapely_transform, args=(src_srs, dst_srs))
+    _geopandas_set_srs(result, get_crs(dst_srs))
     return result
 
 
@@ -499,8 +505,8 @@ def geodataframe_transform(df, src_srs, dst_srs):
     much slower than OGR. Also, we ignore the .crs property (but we do set it)
     """
     geoseries = geoseries_transform(df.geometry, src_srs, dst_srs)
-    df.crs = geoseries.crs
     df.set_geometry(geoseries)
+    _geopandas_set_srs(df, geoseries.crs)
     return df
 
 
@@ -934,29 +940,6 @@ def snap_start_stop(start, stop, time_first, time_delta, length):
     return start, stop, first_i, last_i
 
 
-def zoom_raster(data, no_data_value, height, width):
-    """Zooms a data array to specified height and width
-
-    Deals with no_data by setting these to 0, zooming, and putting back nodata.
-    Edges around nodata will be biased towards 0."""
-    if data.shape[1:] == (height, width):
-        return data
-    factor = 1, height / data.shape[1], width / data.shape[2]
-
-    # first zoom the nodata mask
-    src_mask = data == no_data_value
-    dst_mask = ndimage.zoom(src_mask.astype(float), factor) > 0.5
-
-    # set nodata to 0 and zoom the data
-    data = data.copy()
-    data[src_mask] = 0
-    result = ndimage.zoom(data, factor)
-
-    # set nodata to nodata again using the zoomed mask
-    result[dst_mask] = no_data_value
-    return result
-
-
 def dt_to_ms(dt):
     """Converts a datetime to a POSIX timestamp in milliseconds"""
     if dt.tzinfo is None:
@@ -966,3 +949,22 @@ def dt_to_ms(dt):
 
 def filter_none(lst):
     return [x for x in lst if x is not None]
+
+
+def find_nearest(array, value):
+    """
+    Return indices to the nearest neighbours of elements.
+
+    Args:
+        array: 1-D array_like, must be sorted in ascending order.
+        values: array_like, values for which to find the nearest neighbour
+    """
+    array = np.asarray(array)
+    value = np.asarray(value)
+
+    if array.size == 1:
+        return np.zeros(value.shape, dtype=int)
+
+    # determine midpoints a way that works for datetimes, too
+    midpoints = array[:-1] + (array[1:] - array[:-1]) / 2
+    return np.searchsorted(midpoints, value)

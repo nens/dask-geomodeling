@@ -14,6 +14,7 @@ from dask_geomodeling.utils import (
     get_dtype_max,
     parse_percentile_statistic,
     dtype_for_statistic,
+    find_nearest,
 )
 
 from .base import RasterBlock, BaseSingle
@@ -79,6 +80,10 @@ class Snap(RasterBlock):
         return self.index.timedelta
 
     @property
+    def temporal(self):
+        return self.index.temporal
+
+    @property
     def extent(self):
         return self.store.extent
 
@@ -101,74 +106,66 @@ class Snap(RasterBlock):
 
         # if any store is empty, Snap will be empty
         if store_period is None or index_period is None:
-            return [(dict(snap_mode="noop"), None)]
+            return [(None, None)]
 
         # time requests are easy: just pass them to self.index
         if request["mode"] == "time":
-            return [(dict(snap_mode="noop"), None), (self.index, request)]
-
-        start = request.get("start", index_period[1])
-        stop = request.get("stop", None)
+            return [(None, None), (self.index, request)]
 
         # query the index time
+        start = request.get("start")
+        stop = request.get("stop")
         index_result = self.index.get_data(mode="time", start=start, stop=stop)
         if index_result is None:
-            return [(dict(snap_mode="noop"), None)]
+            return [(None, None)]
         index_time = index_result["time"]
 
-        # special case: the store has only one frame. repeat it.
-        if store_period[0] == store_period[1]:
-            # new request only gets the last frame
-            request["start"] = store_period[0]
-            request["stop"] = None
-            return [
-                (dict(snap_mode="repeat", repeats=len(index_time)), None),
-                (self.store, request),
-            ]
+        # for single frame results, query the store with the time from the index
+        if stop is None:
+            request["start"] = index_time[0]
+            return [(None, None), (self.store, request)]
 
-        # Return a list of requests with snapped times. Times that occur more
-        # than once will not be evaluated multiple times due to caching.
-        requests = [(dict(snap_mode="concat"), None)]
-        request["stop"] = None
-        for time in index_time:
-            store_time = self.store.get_data(mode="time", start=time)["time"]
-            _request = request.copy()
-            _request["start"] = store_time[0]
-            requests.append((self.store, _request))
-        return requests
+        # multiband request; knowledge of the time structure of the store near start,
+        # between start and stop, and near stop is required - result frames can be
+        # nearest to store frames outside the requested [start, stop] interval.
+        if store_period[0] == store_period[1]:
+            # there is only one frame in the store
+            store_time = [store_period[0]]
+        else:
+            # obtain time near start, between start and stop, and near stop
+            def get_store_time_set(start=None, stop=None):
+                result = self.store.get_data(mode="time", start=start, stop=stop)
+                if result is None:
+                    return set()
+                return set(result["time"])
+            store_time = sorted(
+                get_store_time_set(start=start)
+                | get_store_time_set(start=start, stop=stop)
+                | get_store_time_set(start=stop)
+            )
+
+        # return a requst to query the store; the actual frames to pick
+        # for the result (`nearest`) are passed via the `process_kwargs`
+        request["start"] = store_time[0]
+        request["stop"] = store_time[-1]
+        nearest = find_nearest(store_time, index_time)
+        process_kwargs = {"nearest": nearest}
+        return [(process_kwargs, None), (self.store, request)]
 
     @staticmethod
-    def process(process_kwargs, *args):
-        if len(args) == 0:
-            return None
+    def process(process_kwargs, data=None):
+        if process_kwargs is None:
+            return data
 
-        snap_mode = process_kwargs["snap_mode"]
+        nearest = process_kwargs["nearest"]
 
-        if snap_mode == "noop":
-            return args[0]
+        if "values" in data:
+            data["values"] = data["values"][nearest]
+            return data
 
-        if snap_mode == "repeat":
-            data = args[0]
-            repeats = process_kwargs["repeats"]
-            if "values" in data:
-                return {
-                    "values": np.repeat(data["values"], repeats, axis=0),
-                    "no_data_value": data["no_data_value"],
-                }
-            elif "meta" in data:
-                return {"meta": data["meta"] * repeats}
-
-        # we have a bunch of single frame results that need to be concatenated
-        if snap_mode == "concat":
-            if any((arg is None for arg in args)):
-                return None
-
-            # combine the args
-            if "values" in args[0]:
-                values = np.concatenate([x["values"] for x in args], 0)
-                return {"values": values, "no_data_value": args[0]["no_data_value"]}
-            elif "meta" in args[0]:
-                return {"meta": [x["meta"][0] for x in args]}
+        if "meta" in data:
+            data["meta"] = [data["meta"][i] for i in nearest]
+            return data
 
 
 class Shift(BaseSingle):
@@ -267,20 +264,20 @@ def _get_bin_label(dt, frequency, closed, label, timezone):
     # while there is only 1 sample here, there might be multiple (empty) bins
     # in some cases (see test_issue_5917)
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    for label, bin in series.resample(frequency, closed=closed, label=label, kind="timestamp"):
+    for label, bin in series.resample(frequency, closed=closed, label=label):
         if len(bin) != 0:
             break
     return _ts_to_dt(label, timezone)
 
 
-def _get_bin_period(dt, frequency, closed, label, timezone):
-    """Returns the label of the bin the input dt belongs to.
+def _get_bin_start(dt, frequency, closed, label, timezone):
+    """Returns the start (left side) of the bin the input dt belongs to.
 
     :type dt: datetime.datetime without timezone.
     """
     # go through resample, this is the only function that supports 'closed'
     series = pd.Series([0], index=[_dt_to_ts(dt, timezone)])
-    resampled = series.resample(frequency, closed=closed, label=label, kind="period")
+    resampled = series.resample(frequency, closed=closed, label="left")
     return resampled.first().index[0]
 
 
@@ -484,6 +481,7 @@ class TemporalAggregate(BaseSingle):
             if not isinstance(frequency, str):
                 raise TypeError("'{}' object is not allowed.".format(type(frequency)))
             frequency = to_offset(frequency).freqstr
+
             if closed not in {None, "left", "right"}:
                 raise ValueError("closed must be None, 'left', or 'right'.")
             if label not in {None, "left", "right"}:
@@ -548,10 +546,16 @@ class TemporalAggregate(BaseSingle):
 
     @property
     def timedelta(self):
+        if self.frequency is None:
+            return None
         try:
-            return to_offset(self.frequency).delta
-        except AttributeError:
+            return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
+        except ValueError:
             return  # e.g. Month is non-equidistant
+
+    @property
+    def temporal(self):
+        return self.frequency is not None
 
     @property
     def dtype(self):
@@ -822,10 +826,8 @@ class Cumulative(BaseSingle):
             request["start"] = self.period[0]
             request["stop"] = stop
         else:
-            start_period = _get_bin_period(start, **kwargs)
-
             # snap request 'start' to the start of the first period
-            request["start"] = _ts_to_dt(start_period.start_time, self.timezone)
+            request["start"] = _ts_to_dt(_get_bin_start(start, **kwargs), self.timezone)
             # snap request 'stop' to the last requested time
             request["stop"] = stop
             if kwargs["closed"] != "left":

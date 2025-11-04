@@ -200,6 +200,11 @@ class TestTemporalAggregate(unittest.TestCase):
         # months are nonequidistant
         self.assertIsNone(self.klass(self.raster, "M").timedelta)
 
+    def test_temporal(self):
+        self.assertTrue(self.klass(self.raster, "D").temporal)  # equidistant
+        self.assertTrue(self.klass(self.raster, "M").temporal)  # non-equidistant
+        self.assertFalse(self.klass(self.raster, None).temporal)  # non-temporal
+
     def test_get_data_time_request(self):
         self.view = self.klass(self.raster, "H", closed="left", label="right")
         self.request["mode"] = "time"

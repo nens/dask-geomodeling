@@ -3,7 +3,6 @@ import math
 from scipy import ndimage
 import shutil
 import tempfile
-from osgeo import osr, gdal
 
 import geopandas as gpd
 from shapely.geometry import Polygon
@@ -18,7 +17,6 @@ from dask_geomodeling.utils import (
     get_crs,
     get_epsg_or_wkt,
     shapely_transform,
-    Dataset,
 )
 
 
@@ -35,13 +33,15 @@ class MockRaster(RasterBlock):
     """
 
     def __init__(
-        self, origin=None, timedelta=None, bands=None, value=1, projection="EPSG:3857"
+        self, origin=None, timedelta=None, bands=None, value=1, projection="EPSG:3857", temporal=None
     ):
         self.origin = origin
         self._timedelta = timedelta
         self.bands = bands
         self.value = value
-        super(MockRaster, self).__init__(origin, timedelta, bands, value, projection)
+        if temporal is None:
+            temporal = timedelta is not None
+        super(MockRaster, self).__init__(origin, timedelta, bands, value, projection, temporal)
 
     @property
     def dtype(self):
@@ -53,13 +53,17 @@ class MockRaster(RasterBlock):
     @property
     def fillvalue(self):
         return get_dtype_max(self.dtype)
+    
+    @property
+    def temporal(self):
+        return self.args[5]
 
     def get_sources_and_requests(self, **request):
         return [(self.args, None), (request, None)]
 
     @staticmethod
     def process(args, request):
-        origin, timedelta, bands, value, src_projection = args
+        origin, timedelta, bands, value, src_projection, temporal = args
         if origin is None or timedelta is None or bands is None:
             return
         td_seconds = timedelta.total_seconds()
@@ -155,6 +159,10 @@ class MockRaster(RasterBlock):
     @property
     def timedelta(self):
         return self._timedelta
+    
+    @property
+    def temporal(self):
+        return self.args[5]
 
     @property
     def extent(self):
@@ -285,28 +293,3 @@ def teardown_temp_root(path):
     """ Delete the temporary file root. """
     shutil.rmtree(path)
     config.set({"geomodeling.root": defaults["root"]})
-
-
-def create_tif(
-    path,
-    bands=1,
-    no_data_value=255,
-    base_level=7,
-    dtype="i2",
-    projection="EPSG:28992",
-    geo_transform=None,
-    shape=(16, 16),
-):
-    """ Create a test source dataset at path. """
-
-    kwargs = {
-        "no_data_value": no_data_value,
-        "geo_transform": geo_transform or (-16, 2, 0, 16, 0, -2),
-        "projection": osr.GetUserInputAsWKT(str(projection)),
-    }
-
-    data = np.full(shape, base_level, dtype=dtype)
-
-    array = data[np.newaxis][bands * [0]]
-    with Dataset(array, **kwargs) as dataset:
-        gdal.GetDriverByName(str("gtiff")).CreateCopy(path, dataset)

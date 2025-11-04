@@ -1,18 +1,18 @@
 from setuptools import setup
 import os
 
-version = '2.4.5.dev0'
+version = '2.5.6.dev0'
 
 long_description = "\n\n".join([open("README.rst").read(), open("CHANGES.rst").read()])
 
 install_requires = (
     [
-        "dask[delayed]>=0.20",
-        "pandas>=0.23",
-        "geopandas>=0.7",
+        "dask[delayed]>=2.9",
+        "pandas>=1.0,<2.2",
+        "geopandas>=0.11",
         "pytz",
-        "numpy>=1.14",
-        "scipy>=1.1",
+        "numpy>=1.18,<2",
+        "scipy>=1.4",
         "fiona"
     ],
 )
@@ -53,7 +53,7 @@ setup(
     zip_safe=False,
     install_requires=install_requires,
     tests_require=tests_require,
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     extras_require={"test": tests_require, "cityhash": ["cityhash"]},
     entry_points={"console_scripts": []},
 )
