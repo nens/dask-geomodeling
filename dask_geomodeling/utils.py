@@ -39,7 +39,10 @@ except ImportError:
 
 
 GDAL3 = gdal.VersionInfo().startswith("3")
-IS_PANDAS_SINCE_2_2 = Version(pd.__version__) >= Version("2.2.0")
+try:
+    IS_PANDAS_SINCE_2_2 = Version(pd.__version__) >= Version("2.2.0")
+except TypeError:  # for doc-build, version is mocked
+    IS_PANDAS_SINCE_2_2 = True
 PANDAS_2_2_NEW_FREQS = {"ME", "BME", "SME", "CBME", "QE", "BQE", "YE", "BYE"}
 
 def get_index(values, no_data_value):
