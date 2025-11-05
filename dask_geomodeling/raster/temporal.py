@@ -1,6 +1,7 @@
 """
 Module containing raster blocks for temporal operations.
 """
+
 from functools import partial
 import pytz
 from datetime import timedelta as Timedelta
@@ -15,6 +16,7 @@ from dask_geomodeling.utils import (
     parse_percentile_statistic,
     dtype_for_statistic,
     find_nearest,
+    normalize_offset,
 )
 
 from .base import RasterBlock, BaseSingle
@@ -22,6 +24,9 @@ from .base import RasterBlock, BaseSingle
 
 __all__ = ["Snap", "Shift", "TemporalSum", "TemporalAggregate", "Cumulative"]
 
+# Copied from pandas 'TimeGrouper.__init__'
+RESAMPLING_END_TYPES = {"M", "A", "Q", "BM", "BA", "BQ", "W"}  # Pandas < 2.2
+RESAMPLING_END_TYPES |= {"ME", "YE", "QE", "BME", "BYE", "BQE", "W"}  # Pandas >= 2.2
 
 MICROSECOND = Timedelta(microseconds=1)
 
@@ -138,6 +143,7 @@ class Snap(RasterBlock):
                 if result is None:
                     return set()
                 return set(result["time"])
+
             store_time = sorted(
                 get_store_time_set(start=start)
                 | get_store_time_set(start=start, stop=stop)
@@ -310,10 +316,9 @@ def _default_closed_label(frequency, closed, label):
     """To make closed & label not-None"""
     if frequency is None:
         return ("right", "right")
-    # Copied from pandas 'TimeGrouper.__init__':
-    end_types = {"M", "A", "Q", "BM", "BA", "BQ", "W"}
+
     rule = to_offset(frequency).rule_code
-    if rule in end_types or ("-" in rule and rule[: rule.find("-")] in end_types):
+    if rule in RESAMPLING_END_TYPES or ("-" in rule and rule[: rule.find("-")] in RESAMPLING_END_TYPES):
         if closed is None:
             closed = "right"
         if label is None:
@@ -480,7 +485,7 @@ class TemporalAggregate(BaseSingle):
         if frequency is not None:
             if not isinstance(frequency, str):
                 raise TypeError("'{}' object is not allowed.".format(type(frequency)))
-            frequency = to_offset(frequency).freqstr
+            frequency = normalize_offset(frequency)
 
             if closed not in {None, "left", "right"}:
                 raise ValueError("closed must be None, 'left', or 'right'.")
@@ -511,7 +516,7 @@ class TemporalAggregate(BaseSingle):
 
     @property
     def frequency(self):
-        return self.args[1]
+        return normalize_offset(self.args[1])
 
     @property
     def statistic(self):
@@ -760,7 +765,7 @@ class Cumulative(BaseSingle):
         if frequency is not None:
             if not isinstance(frequency, str):
                 raise TypeError("'{}' object is not allowed.".format(type(frequency)))
-            frequency = to_offset(frequency).freqstr
+            frequency = normalize_offset(frequency)
             if not isinstance(timezone, str):
                 raise TypeError("'{}' object is not allowed.".format(type(timezone)))
             timezone = pytz.timezone(timezone).zone
@@ -778,7 +783,7 @@ class Cumulative(BaseSingle):
 
     @property
     def frequency(self):
-        return self.args[2]
+        return normalize_offset(self.args[2])
 
     @property
     def timezone(self):

@@ -384,7 +384,7 @@ class TestMath(unittest.TestCase):
 
     def test_divide(self):
         view = self.storage / 10
-        assert_equal(view.get_data(**self.vals_request)["values"], 0.1)
+        assert_equal(view.get_data(**self.vals_request)["values"], np.float32(0.1))
 
     def test_power(self):
         storage7 = self.storage * 7
@@ -1298,7 +1298,7 @@ class TestBase(unittest.TestCase):
         view = raster.Mask(store=self.raster, value=3.14159)
         data = view.get_data(**self.vals_request)
         self.assertEqual(str(view.dtype), "float32")
-        assert_equal(data["values"], 3.14159)
+        assert_equal(data["values"], np.float32(3.14159))
 
     def test_mask_below(self):
         # filled result

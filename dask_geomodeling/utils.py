@@ -5,8 +5,9 @@ import os
 import warnings
 from functools import lru_cache, partial
 from itertools import repeat
-
+from packaging.version import Version
 from math import floor, log10
+from pandas.tseries.frequencies import to_offset
 
 import numpy as np
 import pandas as pd
@@ -38,6 +39,7 @@ except ImportError:
 
 
 GDAL3 = gdal.VersionInfo().startswith("3")
+IS_PANDAS_SINCE_2_2 = Version(pd.__version__) >= Version("2.2.0")
 
 
 def get_index(values, no_data_value):
@@ -968,3 +970,25 @@ def find_nearest(array, value):
     # determine midpoints a way that works for datetimes, too
     midpoints = array[:-1] + (array[1:] - array[:-1]) / 2
     return np.searchsorted(midpoints, value)
+
+def normalize_offset(freq: str | None) -> str | None:
+    """Convert pandas frequency strings if pandas version > 2.2.0.
+
+    Args:
+        freq (str): pandas frequency string
+
+    Returns:
+        str: pandas 2.2.0 compatible frequency string
+
+    See also:
+
+    https://pandas.pydata.org/docs/whatsnew/v2.2.0.html#deprecate-aliases-m-q-y-etc-in-favour-of-me-qe-ye-etc-for-offsets
+    https://github.com/pandas-dev/pandas/issues/9586
+    https://github.com/pandas-dev/pandas/issues/52536
+    """
+    if freq is None:
+        return None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        offset = to_offset(freq)
+    return offset.freqstr
