@@ -30,16 +30,15 @@ jobs:
           - os: ubuntu-22.04
             python: "3.12"
             numpy: "==1.*"
-            pins: "pygdal==3.4.1.* scipy==1.13.*"
-          # Uncomment when numpy 2.* is supported
-          # - os: ubuntu-24.04
-          #   python: "3.13"
-          #   numpy: "==2.1.*"
-          #   pins: "pygdal==3.4.1.* scipy==1.16.*"
-          # - os: ubuntu-24.04
-          #   python: "3.14"
-          #   numpy: "==2.*"
-          #   pins: "pygdal==3.4.1.*"
+            pins: "pygdal==3.4.1.* scipy==1.13.* dask[delayed]==2024.* pandas==2.2.* geopandas==1.0.*"
+          - os: ubuntu-24.04
+            python: "3.13"
+            numpy: "==2.1.*"
+            pins: "pygdal==3.4.1.* scipy==1.16.* dask[delayed]==2025.* pandas==2.3.* geopandas==1.1.*"
+          - os: ubuntu-24.04
+            python: "3.14"
+            numpy: "==2.*"
+            pins: "pygdal==3.4.1.*"
 
     steps:
       - uses: actions/checkout@v2
