@@ -40,7 +40,7 @@ except ImportError:
 
 GDAL3 = gdal.VersionInfo().startswith("3")
 IS_PANDAS_SINCE_2_2 = Version(pd.__version__) >= Version("2.2.0")
-
+PANDAS_2_2_NEW_FREQS = {"ME", "BME", "SME", "CBME", "QE", "BQE", "YE", "BYE"}
 
 def get_index(values, no_data_value):
     """ Return an index to access for data values in values. """
@@ -971,14 +971,14 @@ def find_nearest(array, value):
     midpoints = array[:-1] + (array[1:] - array[:-1]) / 2
     return np.searchsorted(midpoints, value)
 
-def normalize_offset(freq: str | None) -> str | None:
-    """Convert pandas frequency strings if pandas version > 2.2.0.
+def normalize_offset(freq) -> str:
+    """Convert pandas frequency strings to compatible with the current pandas.
 
     Args:
-        freq (str): pandas frequency string
+        freq (str or None): pandas frequency string
 
     Returns:
-        str: pandas 2.2.0 compatible frequency string
+        str or None: current pandas compatible frequency string
 
     See also:
 
@@ -988,7 +988,12 @@ def normalize_offset(freq: str | None) -> str | None:
     """
     if freq is None:
         return None
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
+    if not IS_PANDAS_SINCE_2_2 and any(freq.endswith(x) for x in PANDAS_2_2_NEW_FREQS):
+        return freq[:-1]  # chop off the 'E'
+    elif not IS_PANDAS_SINCE_2_2:
         offset = to_offset(freq)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            offset = to_offset(freq)
     return offset.freqstr

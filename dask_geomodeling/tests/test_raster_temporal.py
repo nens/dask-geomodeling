@@ -47,12 +47,12 @@ dt = Datetime
     ("h", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
     ("h", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
     (None, "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
-    # pandas MonthEnd ("ME") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
-    ("ME", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-    ("ME", "left", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
-    ("ME", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-    ("ME", "right", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
-    ("ME", None, None, "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),  # (right, right)
+    # pandas MonthEnd ("M") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
+    ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ("M", "left", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+    ("M", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ("M", "right", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+    ("M", None, None, "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),  # (right, right)
     # pandas MonthStart ("MS") bin is 2000-01-01 00:00 UTC to 2000-02-01 00:00 UTC
     ("MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
     ("MS", "left", "right", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),

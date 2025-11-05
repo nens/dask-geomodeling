@@ -18,27 +18,32 @@ jobs:
           - os: ubuntu-22.04
             python: "3.9"
             numpy: "==1.21.*"
-            pins: "pygdal==3.4.1.* scipy==1.7.* dask[delayed]==2021.* pandas==1.3.* geopandas==0.* fiona==1.9.6"
+            pygdal: "==3.4.1.*"
+            pins: "scipy==1.7.* dask[delayed]==2021.* pandas==1.3.* geopandas==0.* fiona==1.9.6"
           - os: ubuntu-22.04
             python: "3.10"
             numpy: "==1.23.*"
-            pins: "pygdal==3.4.1.* scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.*"
+            pygdal: "==3.4.1.*"
+            pins: "scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.*"
           - os: ubuntu-22.04
             python: "3.11"
             numpy: "==1.*"
-            pins: "pygdal==3.4.1.* scipy==1.11.* dask[delayed]==2023.* pandas==2.0.* geopandas==0.*"
+            pygdal: "==3.4.1.*"
+            pins: "scipy==1.11.* dask[delayed]==2023.* pandas==2.0.* geopandas==0.*"
           - os: ubuntu-22.04
             python: "3.12"
             numpy: "==1.*"
-            pins: "pygdal==3.4.1.* scipy==1.13.* dask[delayed]==2024.* pandas==2.2.* geopandas==1.0.*"
+            pygdal: "==3.4.1.*"
+            pins: "scipy==1.13.* dask[delayed]==2024.* pandas==2.2.* geopandas==1.0.*"
           - os: ubuntu-24.04
             python: "3.13"
             numpy: "==2.1.*"
-            pins: "gdal==3.8.4 scipy==1.16.* dask[delayed]==2025.* pandas==2.3.* geopandas==1.1.*"
+            pygdal: "==3.8.4.*"
+            pins: "scipy==1.16.* dask[delayed]==2025.* pandas==2.3.* geopandas==1.1.*"
           - os: ubuntu-24.04
             python: "3.14"
             numpy: "==2.*"
-            pins: "gdal==3.8.4"
+            pygdal: "==3.8.4.*"
 
     steps:
       - uses: actions/checkout@v2
@@ -58,6 +63,7 @@ jobs:
         run: |
           pip install --disable-pip-version-check --upgrade pip setuptools wheel uv
           uv pip install --system numpy${{ matrix.numpy }}
+          uv pip install --system pygdal${{ matrix.pygdal }} --no-build-isolation
           uv pip install --system -e .[test,cityhash] ${{ matrix.pins }}
           uv pip list
 
