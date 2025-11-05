@@ -34,11 +34,11 @@ jobs:
           - os: ubuntu-24.04
             python: "3.13"
             numpy: "==2.1.*"
-            pins: "pygdal==3.4.1.* scipy==1.16.* dask[delayed]==2025.* pandas==2.3.* geopandas==1.1.*"
+            pins: "gdal==3.8.4 scipy==1.16.* dask[delayed]==2025.* pandas==2.3.* geopandas==1.1.*"
           - os: ubuntu-24.04
             python: "3.14"
             numpy: "==2.*"
-            pins: "pygdal==3.4.1.*"
+            pins: "gdal==3.8.4"
 
     steps:
       - uses: actions/checkout@v2
