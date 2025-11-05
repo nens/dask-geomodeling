@@ -5,8 +5,9 @@ import os
 import warnings
 from functools import lru_cache, partial
 from itertools import repeat
-
+from packaging.version import Version
 from math import floor, log10
+from pandas.tseries.frequencies import to_offset
 
 import numpy as np
 import pandas as pd
@@ -38,7 +39,11 @@ except ImportError:
 
 
 GDAL3 = gdal.VersionInfo().startswith("3")
-
+try:
+    IS_PANDAS_SINCE_2_2 = Version(pd.__version__) >= Version("2.2.0")
+except TypeError:  # for doc-build, version is mocked
+    IS_PANDAS_SINCE_2_2 = True
+PANDAS_2_2_NEW_FREQS = {"ME", "BME", "SME", "CBME", "QE", "BQE", "YE", "BYE"}
 
 def get_index(values, no_data_value):
     """ Return an index to access for data values in values. """
@@ -968,3 +973,30 @@ def find_nearest(array, value):
     # determine midpoints a way that works for datetimes, too
     midpoints = array[:-1] + (array[1:] - array[:-1]) / 2
     return np.searchsorted(midpoints, value)
+
+def normalize_offset(freq) -> str:
+    """Convert pandas frequency strings to compatible with the current pandas.
+
+    Args:
+        freq (str or None): pandas frequency string
+
+    Returns:
+        str or None: current pandas compatible frequency string
+
+    See also:
+
+    https://pandas.pydata.org/docs/whatsnew/v2.2.0.html#deprecate-aliases-m-q-y-etc-in-favour-of-me-qe-ye-etc-for-offsets
+    https://github.com/pandas-dev/pandas/issues/9586
+    https://github.com/pandas-dev/pandas/issues/52536
+    """
+    if freq is None:
+        return None
+    if not IS_PANDAS_SINCE_2_2 and any(freq.endswith(x) for x in PANDAS_2_2_NEW_FREQS):
+        return freq[:-1]  # chop off the 'E'
+    elif not IS_PANDAS_SINCE_2_2:
+        offset = to_offset(freq)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            offset = to_offset(freq)
+    return offset.freqstr

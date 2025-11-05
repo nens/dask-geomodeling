@@ -15,34 +15,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-            python: 3.8
-            numpy: "==1.24.4"
-            pins: "pygdal==3.0.4.* scipy==1.10.1 dask[delayed]==2023.5.0 pandas==1.5.3 geopandas==0.12.2 fiona==1.9.6"
-          - os: ubuntu-20.04
-            python: 3.8
-            numpy: "==1.18.*"
-            pins: "pygdal==3.0.4.* scipy==1.4.* dask[delayed]==2.9.* pandas==1.0.* geopandas==0.* fiona==1.9.6"
-          - os: ubuntu-20.04
-            python: 3.9
-            numpy: "==1.20.*"
-            pins: "pygdal==3.0.4.* scipy==1.6.* dask[delayed]==2020.* pandas==1.1.* geopandas==0.* fiona==1.9.6"
-          - os: ubuntu-20.04
-            python: 3.9
+          - os: ubuntu-22.04
+            python: "3.9"
             numpy: "==1.21.*"
-            pins: "pygdal==3.0.4.* scipy==1.7.* dask[delayed]==2021.* pandas==1.3.* geopandas==0.* fiona==1.9.6"
+            gdal: "pygdal==3.4.1.*"
+            pins: "scipy==1.7.* dask[delayed]==2021.* pandas==1.3.* geopandas==0.* fiona==1.9.6"
           - os: ubuntu-22.04
             python: "3.10"
             numpy: "==1.23.*"
-            pins: "pygdal==3.4.1.* scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.*"
+            gdal: "pygdal==3.4.1.*"
+            pins: "scipy==1.9.* dask[delayed]==2021.7.* pandas==1.4.* geopandas==0.*"
           - os: ubuntu-22.04
             python: "3.11"
             numpy: "==1.*"
-            pins: "pygdal==3.4.1.* scipy==1.11.* dask[delayed]==2023.* pandas==2.0.* geopandas==0.*"
+            gdal: "pygdal==3.4.1.*"
+            pins: "scipy==1.11.* dask[delayed]==2023.* pandas==2.0.* geopandas==0.*"
           - os: ubuntu-22.04
             python: "3.12"
             numpy: "==1.*"
-            pins: "pygdal==3.4.1.*"
+            gdal: "pygdal==3.4.1.*"
+            pins: "scipy==1.13.* dask[delayed]==2024.* pandas==2.2.* geopandas==1.0.*"
+          - os: ubuntu-24.04
+            python: "3.13"
+            numpy: "==2.1.*"
+            gdal: "gdal==3.8.4.*"
+            pins: "scipy==1.16.* dask[delayed]==2025.* pandas==2.3.* geopandas==1.1.*"
+          - os: ubuntu-24.04
+            python: "3.14"
+            numpy: "==2.*"
+            gdal: "gdal==3.8.4.*"
 
     steps:
       - uses: actions/checkout@v2
@@ -60,12 +61,44 @@ jobs:
         shell: bash
         # NumPy is installed first because the pygdal build needs it.
         run: |
-          pip install --disable-pip-version-check --upgrade pip setuptools wheel
-          pip install numpy${{ matrix.numpy }}
-          pip install -e .[test,cityhash] ${{ matrix.pins }}
-          pip list
+          pip install --disable-pip-version-check --upgrade pip setuptools wheel uv
+          uv pip install --system numpy${{ matrix.numpy }}
+          uv pip install --system ${{ matrix.gdal }} --no-build-isolation
+          uv pip install --system -e .[test,cityhash] ${{ matrix.pins }}
+          uv pip list
 
       - name: Run tests
         shell: bash
         run: |
-          pytest dask_geomodeling
+          uv run pytest dask_geomodeling
+
+  TestDockerFocal:
+    name: Docker ubuntu:focal tests
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:focal
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install --yes --no-install-recommends \
+            build-essential \
+            python3-dev \
+            python3-pip \
+            libgdal-dev
+
+      - name: Install python dependencies
+        shell: bash
+        run: |
+          pip3 install --disable-pip-version-check --upgrade pip setuptools wheel uv
+          uv pip install --system -e .[test,cityhash] numpy==1.24.4 pygdal==3.0.4.11 scipy==1.10.1 dask[delayed]==2023.5.0 pandas==2.0.3 geopandas==0.13.2 fiona==1.9.6
+          uv pip list
+
+      - name: Run tests
+        shell: bash
+        run: |
+          uv run pytest dask_geomodeling

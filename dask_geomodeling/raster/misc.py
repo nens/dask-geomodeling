@@ -508,7 +508,7 @@ class Reclassify(BaseSingle):
             result = values.astype(dtype)  # makes a copy
 
         # find all values in the source data that are to be mapped
-        mask = np.in1d(values.ravel(), source)
+        mask = np.isin(values.ravel(), source)
         mask.shape = values.shape
         # place the target values (this also maps nodata values)
         result[mask] = target[np.searchsorted(source, values[mask])]

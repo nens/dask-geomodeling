@@ -4,8 +4,11 @@ Changelog of dask-geomodeling
 2.5.6 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add support for current python (3.14), numpy (2.2) and pandas (2.3).
 
+- Removed support for dask versions below 2021, pandas versions below 1.3,
+  geopandas versions below 0.13, numpy versions below 1.21, and scipy versions
+  below 1.7.
 
 2.5.5 (2025-03-17)
 ------------------

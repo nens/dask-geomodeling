@@ -37,15 +37,15 @@ dt = Datetime
     # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
     # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
     ("D", "left", "left", "America/New_York", (dt(1999, 12, 31, 5), dt(2000, 1, 2, 5))),
-    ("H", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
-    ("H", "left", "right", "UTC", (dt(2000, 1, 1, 1), dt(2000, 1, 3, 1))),
-    ("H", "right", "left", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
-    ("H", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    ("h", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
+    ("h", "left", "right", "UTC", (dt(2000, 1, 1, 1), dt(2000, 1, 3, 1))),
+    ("h", "right", "left", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
+    ("h", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
     # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
     # the 2000-01-01 01:00 bin corresponds to 2000-01-01 00:00 UTC
     # you don't notice the timezone here
-    ("H", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
-    ("H", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    ("h", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
+    ("h", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
     (None, "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
     # pandas MonthEnd ("M") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
     ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
@@ -65,6 +65,9 @@ dt = Datetime
     # closed=right moves "monday" into the weekend because it is on 00:00
     ("B", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
     ("B", "right", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
+    # Aliases deprecated since pandas 2.2 still work
+    ("H", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
+    ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
 ])
 def test_period(raster, freq, closed, label, timezone, expected):
     view = TemporalAggregate(raster, freq, closed=closed, label=label, timezone=timezone)
@@ -80,7 +83,7 @@ def test_period(raster, freq, closed, label, timezone, expected):
     (None, None, "D", "right", "left", "UTC", (dt(2000, 1, 2), None)),
     (None, None, "D", "right", "right", "UTC", (dt(2000, 1, 3), None)),
     (None, None, "D", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 2, 23), None)),
-    (None, None, "H", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
+    (None, None, "h", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
     # (start, None) means 'nearest'; expected are the labels of the nearest bins
     # left out-of-bounds
     (dt(1999, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
