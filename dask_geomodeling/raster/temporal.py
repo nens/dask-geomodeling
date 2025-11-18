@@ -287,10 +287,11 @@ def _get_bin_start(dt, frequency, closed, label, timezone):
     return resampled.first().index[0]
 
 
-def _get_closest_label(dt, frequency, closed, label, timezone, side="both"):
+def _get_closest_label(dt, frequency, closed, label, timezone, side="both", offset=0):
     """Get the label that is closest to dt
 
     Optionally only include labels to the left or to the right using `side`.
+    Optionally add an offset, to return the nths label left or right of the closest.
     """
     ts = _dt_to_ts(dt, timezone)
     # first get the bin label that dt belongs to
@@ -309,6 +310,8 @@ def _get_closest_label(dt, frequency, closed, label, timezone, side="both"):
     elif side == "left":
         differences = differences[differences <= pd.Timedelta(0)]
     result = differences.abs().idxmin()
+    if offset != 0:
+        result += offset * freq
     return _ts_to_dt(result, timezone)
 
 
@@ -318,7 +321,9 @@ def _default_closed_label(frequency, closed, label):
         return ("right", "right")
 
     rule = to_offset(frequency).rule_code
-    if rule in RESAMPLING_END_TYPES or ("-" in rule and rule[: rule.find("-")] in RESAMPLING_END_TYPES):
+    if rule in RESAMPLING_END_TYPES or (
+        "-" in rule and rule[: rule.find("-")] in RESAMPLING_END_TYPES
+    ):
         if closed is None:
             closed = "right"
         if label is None:
@@ -427,7 +432,7 @@ def count_not_nan(x, *args, **kwargs):
 
 class TemporalAggregate(BaseSingle):
     """
-    Resample a raster in time.
+    Aggregate a raster in time.
 
     This operation performs temporal aggregation of rasters, for example a
     hourly average of data that has a 5 minute resolution.. The timedelta of
@@ -947,5 +952,260 @@ class Cumulative(BaseSingle):
             accumulated[no_data_mask] = fillvalue
             indices_in_result = np.array(indices_in_bin)[mask] - output_offset
             result[indices_in_result] = accumulated
+
+        return {"values": result, "no_data_value": get_dtype_max(dtype)}
+
+
+class Resample(BaseSingle):
+    """
+    Resample a raster in time.
+
+    This operation performs temporal aggregation of rasters, for example a
+    hourly average of data that has a 5 minute resolution.. The timedelta of
+    the resulting raster is determined by the 'frequency' parameter.
+
+    Args:
+      source (RasterBlock): The input raster whose timesteps are aggregated
+      frequency (string): The frequency to resample to, as pandas
+        offset string (see the references below).
+      direction (string): The direction to use when resampling. Can be
+        ``"nearest"``, ``"backward"``, or ``"forward"``. Defaults to
+        ``"nearest"``.
+      timezone (string): Timezone to perform the resampling in, defaults to
+        ``"UTC"``.
+
+    Returns:
+      RasterBlock with temporally aggregated data.
+
+    See also:
+      https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.resample.html
+      https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
+    """
+
+    def __init__(
+        self,
+        source,
+        frequency,
+        direction="nearest",
+        timezone="UTC",
+    ):
+        if not isinstance(source, RasterBlock):
+            raise TypeError("'{}' object is not allowed.".format(type(source)))
+        if not isinstance(frequency, str):
+            raise TypeError("'{}' object is not allowed.".format(type(frequency)))
+        frequency = normalize_offset(frequency)
+
+        if not isinstance(timezone, str):
+            raise TypeError("'{}' object is not allowed.".format(type(timezone)))
+        timezone = pytz.timezone(timezone).zone
+        if not isinstance(direction, str):
+            raise TypeError("'{}' object is not allowed.".format(type(direction)))
+        if direction not in {"nearest"}:  # TODO implement forward/backward
+            raise ValueError(
+                "direction must be one of 'nearest', 'backward', or 'forward'."
+            )
+        super(Resample, self).__init__(source, frequency, direction, timezone)
+
+    @property
+    def source(self):
+        return self.args[0]
+
+    @property
+    def frequency(self):
+        return normalize_offset(self.args[1])
+
+    @property
+    def direction(self):
+        return self.args[2]
+
+    @property
+    def timezone(self):
+        return self.args[3]
+
+    @property
+    def period(self):
+        # What bounds a resampled raster?
+        # Forwards resampling:
+        # - start: the first label inside source period - 1
+        # - end: the last label inside source period
+        # Backwards resampling:
+        # - start: the first label inside source period
+        # - end: the last label inside source period + 1
+        # Nearest resampling:
+        # - start: the first label inside source period - 0.5
+        # - end: the last label inside source period + 0.5
+        source_period = self.source.period
+        kwargs = {
+            "frequency": self.frequency,
+            "closed": "left",
+            "label": "left",
+            "timezone": self.timezone,
+        }
+        if self.direction in {"forwards", "nearest"}:
+            forwards_period = (
+                _get_closest_label(source_period[0], side="right", offset=-1, **kwargs),
+                _get_closest_label(source_period[1], side="left", **kwargs),
+            )
+        if self.direction in {"backwards", "nearest"}:
+            backwards_period = (
+                _get_closest_label(source_period[0], side="right", **kwargs),
+                _get_closest_label(source_period[1], side="left", offset=1, **kwargs),
+            )
+        if self.direction == "forwards":
+            return forwards_period
+        elif self.direction == "backwards":
+            return backwards_period
+        elif self.direction == "nearest":
+            return tuple(
+                f + (b - f) / 2 for (f, b) in zip(forwards_period, backwards_period)
+            )
+
+    @property
+    def timedelta(self):
+        if self.frequency is None:
+            return None
+        try:
+            return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
+        except ValueError:
+            return  # e.g. Month is non-equidistant
+
+    def get_sources_and_requests(self, **request):
+        kwargs = self._snap_kwargs
+        start = request.get("start")
+        stop = request.get("stop")
+        mode = request["mode"]
+
+        start_label, stop_label = _snap_to_resampled_labels(
+            self.source.period, start, stop, **kwargs
+        )
+        if start_label is None:
+            return [({"empty": True, "mode": mode}, None)]
+
+        # a time request does not involve a request to self.source
+        if mode == "time":
+            kwargs["mode"] = "time"
+            kwargs["start"] = start_label
+            kwargs["stop"] = stop_label
+            return [(kwargs, None)]
+
+        # vals or source requests do need a request to self.source
+        # no need to snap to bin edges,
+        request["start"] = start_label
+
+        request["stop"] = _labels_to_start_stop(start_label, stop_label, **kwargs)
+
+        # return sources and requests depending on the mode
+        kwargs["mode"] = request["mode"]
+        kwargs["start"] = start_label
+        kwargs["stop"] = stop_label
+        if mode == "vals":
+            kwargs["dtype"] = np.dtype(self.dtype).str
+            kwargs["statistic"] = self.statistic
+
+        time_request = {
+            "mode": "time",
+            "start": request["start"],
+            "stop": request["stop"],
+        }
+
+        # In case the data request dictates a temporal resolution,
+        # also set this in temporal request
+        if "time_resolution" in request:
+            time_request["time_resolution"] = request["time_resolution"]
+
+        return [(kwargs, None), (self.source, time_request), (self.source, request)]
+
+    @staticmethod
+    def process(process_kwargs, time_data=None, data=None):
+        mode = process_kwargs["mode"]
+        # handle empty data
+        if process_kwargs.get("empty"):
+            return None if mode == "vals" else {mode: []}
+        start = process_kwargs["start"]
+        stop = process_kwargs["stop"]
+        frequency = process_kwargs["frequency"]
+        if frequency is None:
+            labels = pd.DatetimeIndex([start])
+        else:
+            labels = pd.date_range(start, stop or start, freq=frequency)
+        if mode == "time":
+            return {"time": labels.to_pydatetime().tolist()}
+
+        if time_data is None or not time_data.get("time"):
+            return None if mode == "vals" else {mode: []}
+
+        timezone = process_kwargs["timezone"]
+        closed = process_kwargs["closed"]
+        label = process_kwargs["label"]
+        times = time_data["time"]
+
+        # convert times to a pandas series
+        series = (
+            pd.Series(index=times, dtype=float).tz_localize("UTC").tz_convert(timezone)
+        )
+
+        # localize the labels so we can use it as an index
+        labels = labels.tz_localize("UTC").tz_convert(timezone)
+
+        if frequency is None:
+            # the first (and only label) will be the statistic of all frames
+            indices = {labels[0]: range(len(times))}
+        else:
+            # construct a pandas Resampler object to map labels to frames
+            resampler = series.resample(frequency, closed=closed, label=label)
+            # get the frame indices belonging to each bin
+            indices = resampler.indices
+
+        if mode == "meta":
+            if data is None or "meta" not in data:
+                return {"meta": []}
+            meta = data["meta"]
+            return {"meta": [[meta[i] for i in indices[ts]] for ts in labels]}
+
+        # mode == 'vals'
+        if data is None or "values" not in data:
+            return
+
+        values = data["values"]
+        if values.shape[0] != len(times):
+            raise RuntimeError("Shape of raster does not match number of timestamps")
+        statistic, percentile = parse_percentile_statistic(process_kwargs["statistic"])
+        if percentile:
+            extensive = False
+            agg_func = partial(np.nanpercentile, q=percentile)
+        else:
+            extensive = TemporalAggregate.STATISTICS[statistic]["extensive"]
+            agg_func = TemporalAggregate.STATISTICS[statistic]["func"]
+
+        dtype = process_kwargs["dtype"]
+        fillvalue = 0 if extensive else get_dtype_max(dtype)
+
+        # cast to at least float32 so that we can fit in NaN (and make copy)
+        values = values.astype(np.result_type(np.float32, dtype))
+        # put NaN for no data
+        values[data["values"] == data["no_data_value"]] = np.nan
+
+        result = np.full(
+            shape=(len(labels), values.shape[1], values.shape[2]),
+            fill_value=fillvalue,
+            dtype=dtype,
+        )
+
+        for i, timestamp in enumerate(labels):
+            inds = indices[timestamp]
+            if len(inds) == 0:
+                continue
+            with warnings.catch_warnings():
+                # the agg_func could give use 'All-NaN slice encountered'
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                aggregated = agg_func(values[inds], axis=0)
+            # keep track of NaN or inf values before casting to target dtype
+            no_data_mask = ~np.isfinite(aggregated)
+            # cast to target dtype
+            if dtype != aggregated.dtype:
+                aggregated = aggregated.astype(dtype)
+            # set fillvalue to NaN values
+            aggregated[no_data_mask] = fillvalue
+            result[i] = aggregated
 
         return {"values": result, "no_data_value": get_dtype_max(dtype)}
