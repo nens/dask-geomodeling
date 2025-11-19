@@ -1110,6 +1110,7 @@ class Resample(BaseSingle):
         
         if stop_label is None:
             # query the time structure of the store to find the time index to request
+            
 
 
 
