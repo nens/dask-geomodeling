@@ -4,8 +4,12 @@ import unittest
 import numpy as np
 from numpy.testing import assert_equal
 
-from dask_geomodeling.raster import TemporalAggregate, Cumulative
-from dask_geomodeling.raster.temporal import _snap_to_resampled_labels, _labels_to_start_stop, _get_closest_label
+from dask_geomodeling.raster import TemporalAggregate, Cumulative, Resample
+from dask_geomodeling.raster.temporal import (
+    _snap_to_resampled_labels,
+    _labels_to_start_stop,
+    _get_closest_label,
+)
 from dask_geomodeling.tests.factories import MockRaster
 
 import pytest
@@ -24,94 +28,162 @@ def raster():
 dt = Datetime
 
 
-@pytest.mark.parametrize("freq,closed,label,timezone,expected", [
-    ("D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
-    ("D", "left", "right", "UTC", (dt(2000, 1, 2), dt(2000, 1, 4))),
-    ("D", "right", "left", "UTC", (dt(1999, 12, 31), dt(2000, 1, 2))),
-    ("D", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
-    # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
-    # 2000-01-01 01:00 falls in the 2000-01-01 bin (still Amsterdam)
-    # the 2000-01-01 bin corresponds to 1999-12-31 23:00 UTC
-    ("D", "left", "left", "Europe/Amsterdam", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
-    # 2000-01-01 00:00 UTC is 1999-12-31 19:00 in New York
-    # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
-    # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
-    ("D", "left", "left", "America/New_York", (dt(1999, 12, 31, 5), dt(2000, 1, 2, 5))),
-    ("h", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
-    ("h", "left", "right", "UTC", (dt(2000, 1, 1, 1), dt(2000, 1, 3, 1))),
-    ("h", "right", "left", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
-    ("h", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
-    # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
-    # the 2000-01-01 01:00 bin corresponds to 2000-01-01 00:00 UTC
-    # you don't notice the timezone here
-    ("h", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
-    ("h", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
-    (None, "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
-    # pandas MonthEnd ("M") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
-    ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-    ("M", "left", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
-    ("M", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-    ("M", "right", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
-    ("M", None, None, "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),  # (right, right)
-    # pandas MonthStart ("MS") bin is 2000-01-01 00:00 UTC to 2000-02-01 00:00 UTC
-    ("MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
-    ("MS", "left", "right", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),
-    ("MS", "right", "left", "UTC", (dt(1999, 12, 1), dt(2000, 1, 1))),
-    ("MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
-    ("MS", None, None, "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),  # (left, left)
-    # businessday (our sample dataset is Saturday, Sunday, Monday); Sat + Sun belong to Friday
-    ("B", "left", "left", "UTC", (dt(1999, 12, 31), dt(2000, 1, 3))),
-    ("B", "left", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 4))),
-    # closed=right moves "monday" into the weekend because it is on 00:00
-    ("B", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-    ("B", "right", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
-    # Aliases deprecated since pandas 2.2 still work
-    ("H", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
-    ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-])
+@pytest.mark.parametrize(
+    "freq,closed,label,timezone,expected",
+    [
+        ("D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+        ("D", "left", "right", "UTC", (dt(2000, 1, 2), dt(2000, 1, 4))),
+        ("D", "right", "left", "UTC", (dt(1999, 12, 31), dt(2000, 1, 2))),
+        ("D", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+        # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
+        # 2000-01-01 01:00 falls in the 2000-01-01 bin (still Amsterdam)
+        # the 2000-01-01 bin corresponds to 1999-12-31 23:00 UTC
+        (
+            "D",
+            "left",
+            "left",
+            "Europe/Amsterdam",
+            (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23)),
+        ),
+        # 2000-01-01 00:00 UTC is 1999-12-31 19:00 in New York
+        # 1999-12-31 19:00 falls in the 1999-12-31 bin (still New York)
+        # the 1999-12-31 bin corresponds to 1999-12-31 5:00 UTC
+        (
+            "D",
+            "left",
+            "left",
+            "America/New_York",
+            (dt(1999, 12, 31, 5), dt(2000, 1, 2, 5)),
+        ),
+        ("h", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
+        ("h", "left", "right", "UTC", (dt(2000, 1, 1, 1), dt(2000, 1, 3, 1))),
+        ("h", "right", "left", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 2, 23))),
+        ("h", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 3))),
+        # 2000-01-01 00:00 UTC is 2000-01-01 01:00 in Amsterdam
+        # the 2000-01-01 01:00 bin corresponds to 2000-01-01 00:00 UTC
+        # you don't notice the timezone here
+        ("h", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
+        ("h", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
+        (None, "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
+        # pandas MonthEnd ("M") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
+        ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+        ("M", "left", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+        ("M", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+        ("M", "right", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+        ("M", None, None, "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),  # (right, right)
+        # pandas MonthStart ("MS") bin is 2000-01-01 00:00 UTC to 2000-02-01 00:00 UTC
+        ("MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
+        ("MS", "left", "right", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),
+        ("MS", "right", "left", "UTC", (dt(1999, 12, 1), dt(2000, 1, 1))),
+        ("MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
+        ("MS", None, None, "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),  # (left, left)
+        # businessday (our sample dataset is Saturday, Sunday, Monday); Sat + Sun belong to Friday
+        ("B", "left", "left", "UTC", (dt(1999, 12, 31), dt(2000, 1, 3))),
+        ("B", "left", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 4))),
+        # closed=right moves "monday" into the weekend because it is on 00:00
+        ("B", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+        ("B", "right", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
+        # Aliases deprecated since pandas 2.2 still work
+        ("H", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
+        ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ],
+)
 def test_period(raster, freq, closed, label, timezone, expected):
-    view = TemporalAggregate(raster, freq, closed=closed, label=label, timezone=timezone)
+    view = TemporalAggregate(
+        raster, freq, closed=closed, label=label, timezone=timezone
+    )
     actual = view.period
 
     assert actual == expected
 
 
-@pytest.mark.parametrize("start,stop,freq,closed,label,timezone,expected", [
-    # (None, None) means 'latest'; expected are the labels of the latest bins
-    (None, None, "D", "left", "left", "UTC", (dt(2000, 1, 3), None)),
-    (None, None, "D", "left", "right", "UTC", (dt(2000, 1, 4), None)),
-    (None, None, "D", "right", "left", "UTC", (dt(2000, 1, 2), None)),
-    (None, None, "D", "right", "right", "UTC", (dt(2000, 1, 3), None)),
-    (None, None, "D", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 2, 23), None)),
-    (None, None, "h", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
-    # (start, None) means 'nearest'; expected are the labels of the nearest bins
-    # left out-of-bounds
-    (dt(1999, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
-    (dt(1999, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
-    (dt(1999, 5, 6), None, "MS", "right", "left", "UTC", (dt(1999, 12, 1), None)),
-    (dt(1999, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
-    # right out-of-bounds (equals 'latest')
-    (dt(2001, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
-    (dt(2001, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
-    (dt(2001, 5, 6), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1), None)),
-    (dt(2001, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
-    # in bounds, snap to nearest (in a situation with 2 bins: 2000-01-01 and 2000-02-01)
-    (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
-    (dt(2000, 1, 16), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
-    (dt(2000, 1, 17), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
-    (dt(2000, 2, 1), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
-    # (start, stop) means a two-sided closed interval
-    (dt(2000, 1, 1), dt(2000, 2, 1), "MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
-    (dt(1999, 5, 6), dt(2001, 5, 6), "MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
-    (dt(2000, 1, 1), dt(2000, 1, 31), "MS", "right", "right", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
-    (dt(2000, 1, 2), dt(2000, 2, 1), "MS", "right", "right", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),
-    (dt(2000, 1, 2), dt(2000, 1, 31), "MS", "right", "right", "UTC", (None, None)),  # no frames
-    # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
-    (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
-    (dt(2000, 1, 2), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
-    (dt(2000, 1, 1), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
-    (dt(1999, 12, 31), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
-])
+@pytest.mark.parametrize(
+    "start,stop,freq,closed,label,timezone,expected",
+    [
+        # (None, None) means 'latest'; expected are the labels of the latest bins
+        (None, None, "D", "left", "left", "UTC", (dt(2000, 1, 3), None)),
+        (None, None, "D", "left", "right", "UTC", (dt(2000, 1, 4), None)),
+        (None, None, "D", "right", "left", "UTC", (dt(2000, 1, 2), None)),
+        (None, None, "D", "right", "right", "UTC", (dt(2000, 1, 3), None)),
+        (
+            None,
+            None,
+            "D",
+            "left",
+            "left",
+            "Europe/Amsterdam",
+            (dt(2000, 1, 2, 23), None),
+        ),
+        (None, None, "h", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
+        # (start, None) means 'nearest'; expected are the labels of the nearest bins
+        # left out-of-bounds
+        (dt(1999, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
+        (dt(1999, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
+        (dt(1999, 5, 6), None, "MS", "right", "left", "UTC", (dt(1999, 12, 1), None)),
+        (dt(1999, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+        # right out-of-bounds (equals 'latest')
+        (dt(2001, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
+        (dt(2001, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
+        (dt(2001, 5, 6), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1), None)),
+        (dt(2001, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+        # in bounds, snap to nearest (in a situation with 2 bins: 2000-01-01 and 2000-02-01)
+        (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+        (dt(2000, 1, 16), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+        (dt(2000, 1, 17), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+        (dt(2000, 2, 1), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+        # (start, stop) means a two-sided closed interval
+        (
+            dt(2000, 1, 1),
+            dt(2000, 2, 1),
+            "MS",
+            "right",
+            "right",
+            "UTC",
+            (dt(2000, 1, 1), dt(2000, 2, 1)),
+        ),
+        (
+            dt(1999, 5, 6),
+            dt(2001, 5, 6),
+            "MS",
+            "right",
+            "right",
+            "UTC",
+            (dt(2000, 1, 1), dt(2000, 2, 1)),
+        ),
+        (
+            dt(2000, 1, 1),
+            dt(2000, 1, 31),
+            "MS",
+            "right",
+            "right",
+            "UTC",
+            (dt(2000, 1, 1), dt(2000, 1, 1)),
+        ),
+        (
+            dt(2000, 1, 2),
+            dt(2000, 2, 1),
+            "MS",
+            "right",
+            "right",
+            "UTC",
+            (dt(2000, 2, 1), dt(2000, 2, 1)),
+        ),
+        (
+            dt(2000, 1, 2),
+            dt(2000, 1, 31),
+            "MS",
+            "right",
+            "right",
+            "UTC",
+            (None, None),
+        ),  # no frames
+        # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
+        (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
+        (dt(2000, 1, 2), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
+        (dt(2000, 1, 1), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
+        (dt(1999, 12, 31), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
+    ],
+)
 def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, expected):
     actual = _snap_to_resampled_labels(
         (dt(2000, 1, 1), dt(2000, 1, 3)), start, stop, freq, closed, label, timezone
@@ -119,35 +191,167 @@ def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, ex
     assert actual == expected
 
 
-def test_issue_5917():
-    actual = _get_closest_label(
-        dt(2020, 1, 1, 22), "MS", "right", "left", "UTC", side="right"
-    )
-    assert actual == dt(2020, 2, 1)
+@pytest.mark.parametrize(
+    "dt_input,freq,timezone,side,offset,expected",
+    [
+        # 'side' parameter
+        (dt(2020, 1, 1, 12), "D", "UTC", "both", 0, dt(2020, 1, 1)),
+        (dt(2020, 1, 1, 12, microsecond=1), "D", "UTC", "both", 0, dt(2020, 1, 2)),
+        (dt(2020, 1, 1, 12), "D", "UTC", "left", 0, dt(2020, 1, 1)),
+        (dt(2020, 1, 1, 12), "D", "UTC", "right", 0, dt(2020, 1, 2)),
+        # 'offset' parameter
+        (dt(2020, 1, 1, 12), "D", "UTC", "both", 1, dt(2020, 1, 2)),
+        (dt(2020, 1, 1, 12), "D", "UTC", "both", -1, dt(2019, 12, 31)),
+        (dt(2020, 1, 1, 12), "MS", "UTC", "both", 1, dt(2020, 2, 1)),
+    ],
+)
+def test_get_closest_label(dt_input, freq, timezone, side, offset, expected):
+    actual = _get_closest_label(dt_input, freq, timezone, side=side, offset=offset)
+    assert actual == expected
+
 
 us = Timedelta(microseconds=1)
 
 
-@pytest.mark.parametrize("start_label,stop_label,freq,closed,label,timezone,expected", [
-    (dt(2000, 1, 1), None, "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2) - us)),
-    (dt(2000, 1, 1), None, "D", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1) - us)),
-    (dt(2000, 1, 1), None, "D", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 1, 2))),
-    (dt(2000, 1, 1), None, "D", "right", "right", "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 1))),
-    (dt(2000, 1, 1), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1) - us)),
-    (dt(2000, 1, 1), None, "MS", "left", "right", "UTC", (dt(1999, 12, 1), dt(2000, 1, 1) - us)),
-    (dt(2000, 1, 1), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 2, 1))),
-    (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(1999, 12, 1) + us, dt(2000, 1, 1))),
-    # with a 'stop_label' it is just more of the same ...
-    (dt(2000, 1, 1), dt(2000, 1, 10), "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 11) - us)),
-    (dt(2000, 1, 1), dt(2000, 10, 1), "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 11, 1) - us)),
-    # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
-    (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 4) - us)),
-    (dt(2000, 1, 3), None, "B", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 3) - us)),
-    (dt(2000, 1, 3), None, "B", "right", "left", "UTC", (dt(2000, 1, 3) + us, dt(2000, 1, 4))),
-    (dt(2000, 1, 3), None, "B", "right", "right", "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 3))),
-])
-def test_labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone, expected):
-    actual = _labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone)
+@pytest.mark.parametrize(
+    "start_label,stop_label,freq,closed,label,timezone,expected",
+    [
+        (
+            dt(2000, 1, 1),
+            None,
+            "D",
+            "left",
+            "left",
+            "UTC",
+            (dt(2000, 1, 1), dt(2000, 1, 2) - us),
+        ),
+        (
+            dt(2000, 1, 1),
+            None,
+            "D",
+            "left",
+            "right",
+            "UTC",
+            (dt(1999, 12, 31), dt(2000, 1, 1) - us),
+        ),
+        (
+            dt(2000, 1, 1),
+            None,
+            "D",
+            "right",
+            "left",
+            "UTC",
+            (dt(2000, 1, 1) + us, dt(2000, 1, 2)),
+        ),
+        (
+            dt(2000, 1, 1),
+            None,
+            "D",
+            "right",
+            "right",
+            "UTC",
+            (dt(1999, 12, 31) + us, dt(2000, 1, 1)),
+        ),
+        (
+            dt(2000, 1, 1),
+            None,
+            "MS",
+            "left",
+            "left",
+            "UTC",
+            (dt(2000, 1, 1), dt(2000, 2, 1) - us),
+        ),
+        (
+            dt(2000, 1, 1),
+            None,
+            "MS",
+            "left",
+            "right",
+            "UTC",
+            (dt(1999, 12, 1), dt(2000, 1, 1) - us),
+        ),
+        (
+            dt(2000, 1, 1),
+            None,
+            "MS",
+            "right",
+            "left",
+            "UTC",
+            (dt(2000, 1, 1) + us, dt(2000, 2, 1)),
+        ),
+        (
+            dt(2000, 1, 1),
+            None,
+            "MS",
+            "right",
+            "right",
+            "UTC",
+            (dt(1999, 12, 1) + us, dt(2000, 1, 1)),
+        ),
+        # with a 'stop_label' it is just more of the same ...
+        (
+            dt(2000, 1, 1),
+            dt(2000, 1, 10),
+            "D",
+            "left",
+            "left",
+            "UTC",
+            (dt(2000, 1, 1), dt(2000, 1, 11) - us),
+        ),
+        (
+            dt(2000, 1, 1),
+            dt(2000, 10, 1),
+            "MS",
+            "left",
+            "left",
+            "UTC",
+            (dt(2000, 1, 1), dt(2000, 11, 1) - us),
+        ),
+        # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
+        (
+            dt(2000, 1, 3),
+            None,
+            "B",
+            "left",
+            "left",
+            "UTC",
+            (dt(2000, 1, 3), dt(2000, 1, 4) - us),
+        ),
+        (
+            dt(2000, 1, 3),
+            None,
+            "B",
+            "left",
+            "right",
+            "UTC",
+            (dt(1999, 12, 31), dt(2000, 1, 3) - us),
+        ),
+        (
+            dt(2000, 1, 3),
+            None,
+            "B",
+            "right",
+            "left",
+            "UTC",
+            (dt(2000, 1, 3) + us, dt(2000, 1, 4)),
+        ),
+        (
+            dt(2000, 1, 3),
+            None,
+            "B",
+            "right",
+            "right",
+            "UTC",
+            (dt(1999, 12, 31) + us, dt(2000, 1, 3)),
+        ),
+    ],
+)
+def test_labels_to_start_stop(
+    start_label, stop_label, freq, closed, label, timezone, expected
+):
+    actual = _labels_to_start_stop(
+        start_label, stop_label, freq, closed, label, timezone
+    )
     assert actual == expected
 
 
@@ -541,3 +745,24 @@ class TestCumulative(unittest.TestCase):
         view = self.klass(self.raster, frequency="D", statistic="sum")
         self.request_empty["mode"] = "meta"
         assert view.get_data(**self.request_empty) == {"meta": []}
+
+
+@pytest.mark.parametrize(
+    "freq,direction,timezone,expected",
+    [
+        ("H", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 3))),
+        ("H", "forward", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 1, 2))),
+        ("D", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2))),
+        ("D", "forward", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1))),
+        # Source period in Azores (GMT -1) timezone is [1999-12-31 23:00, 2000-01-01 01:00]
+        # this affects the binning for daily frequency. With backwards direction, the period
+        # will be [2000-01-01, 2000-01-02] Azores midnight.
+        ("H", "backward", "Atlantic/Azores", (dt(2000, 1, 1), dt(2000, 1, 1, 3))),
+        ("D", "backward", "Atlantic/Azores", (dt(2000, 1, 1, 1), dt(2000, 1, 2, 1))),
+    ],
+)
+def test_resample_period(freq, direction, timezone, expected, source):
+    # Source period is [2000-01-01 00:00, 2000-01-01 02:00], inclusive on both sides
+    #  in Europe/Amsterdam timezone this is [1999-12-31 23:00, 2000-01-01 01:00]
+    view = Resample(source, freq, direction, timezone)
+    assert view.period == expected

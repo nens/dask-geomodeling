@@ -22,7 +22,7 @@ from dask_geomodeling.utils import (
 from .base import RasterBlock, BaseSingle
 
 
-__all__ = ["Snap", "Shift", "TemporalSum", "TemporalAggregate", "Cumulative"]
+__all__ = ["Snap", "Shift", "TemporalSum", "TemporalAggregate", "Cumulative", "Resample"]
 
 # Copied from pandas 'TimeGrouper.__init__'
 RESAMPLING_END_TYPES = {"M", "A", "Q", "BM", "BA", "BQ", "W"}  # Pandas < 2.2
@@ -287,16 +287,21 @@ def _get_bin_start(dt, frequency, closed, label, timezone):
     return resampled.first().index[0]
 
 
-def _get_closest_label(dt, frequency, closed, label, timezone, side="both", offset=0):
+def _get_closest_label(dt, frequency, timezone, side="both", offset=0):
     """Get the label that is closest to dt
 
     Optionally only include labels to the left or to the right using `side`.
     Optionally add an offset, to return the nths label left or right of the closest.
+
+    Note that we do not use ts.round / ceil / floor methods as they do not support
+    non-fixed time frequencies like month.
     """
     ts = _dt_to_ts(dt, timezone)
     # first get the bin label that dt belongs to
+    # NB: label and closed parameters are arbitrary here, as we are looking for the closest
+    # one here.
     candidate = _dt_to_ts(
-        _get_bin_label(dt, frequency, closed, label, timezone), timezone
+        _get_bin_label(dt, frequency, "left", "left", timezone), timezone
     )
     # some custom logic that finds the closest label
     freq = to_offset(frequency)
@@ -388,7 +393,7 @@ def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, tim
             start = period[1]
         else:
             start = _get_closest_label(
-                start, frequency, closed, label, timezone, side="both"
+                start, frequency, timezone, side="both"
             )
     else:
         # snap start to a label right from it
@@ -398,7 +403,7 @@ def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, tim
             return None, None
         else:
             start = _get_closest_label(
-                start, frequency, closed, label, timezone, side="right"
+                start, frequency, timezone, side="right"
             )
         # snap stop to a label left from it
         if stop >= period[1]:
@@ -407,7 +412,7 @@ def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, tim
             return None, None
         else:
             stop = _get_closest_label(
-                stop, frequency, closed, label, timezone, side="left"
+                stop, frequency, timezone, side="left"
             )
 
         if start > stop:
@@ -1000,7 +1005,7 @@ class Resample(BaseSingle):
         timezone = pytz.timezone(timezone).zone
         if not isinstance(direction, str):
             raise TypeError("'{}' object is not allowed.".format(type(direction)))
-        if direction not in {"nearest"}:  # TODO implement forward/backward
+        if direction not in {"nearest", "backward", "forward"}:
             raise ValueError(
                 "direction must be one of 'nearest', 'backward', or 'forward'."
             )
@@ -1024,36 +1029,30 @@ class Resample(BaseSingle):
 
     @property
     def period(self):
-        # What bounds a resampled raster?
-        # Forwards resampling:
-        # - start: the first label inside source period - 1
-        # - end: the last label inside source period
-        # Backwards resampling:
-        # - start: the first label inside source period
-        # - end: the last label inside source period + 1
-        # Nearest resampling:
-        # - start: the first label inside source period - 0.5
-        # - end: the last label inside source period + 0.5
+        # What bounds a resampled raster? It depends on the resampling direction.
+        # When resampling forwards, there is nothing to resample to after the
+        # last label that is inside the source period (largest label for
+        # which label < source.period[1]). We can do similar reasoning for backwards
+        # resampling. For nearest resampling, we have to take into account the
+        # middle point between two labels.
         source_period = self.source.period
         kwargs = {
             "frequency": self.frequency,
-            "closed": "left",
-            "label": "left",
             "timezone": self.timezone,
         }
-        if self.direction in {"forwards", "nearest"}:
+        if self.direction in {"forward", "nearest"}:
             forwards_period = (
                 _get_closest_label(source_period[0], side="right", offset=-1, **kwargs),
                 _get_closest_label(source_period[1], side="left", **kwargs),
             )
-        if self.direction in {"backwards", "nearest"}:
+        if self.direction in {"backward", "nearest"}:
             backwards_period = (
                 _get_closest_label(source_period[0], side="right", **kwargs),
                 _get_closest_label(source_period[1], side="left", offset=1, **kwargs),
             )
-        if self.direction == "forwards":
+        if self.direction == "forward":
             return forwards_period
-        elif self.direction == "backwards":
+        elif self.direction == "backward":
             return backwards_period
         elif self.direction == "nearest":
             return tuple(
