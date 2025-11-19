@@ -1036,6 +1036,8 @@ class Resample(BaseSingle):
         # resampling. For nearest resampling, we have to take into account the
         # middle point between two labels.
         source_period = self.source.period
+        if source_period is None:
+            return None
         kwargs = {
             "frequency": self.frequency,
             "timezone": self.timezone,

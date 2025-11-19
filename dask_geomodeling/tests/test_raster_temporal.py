@@ -750,10 +750,13 @@ class TestCumulative(unittest.TestCase):
 @pytest.mark.parametrize(
     "freq,direction,timezone,expected",
     [
+        # Source period is [2000-01-01 00:00, 2000-01-01 02:00], inclusive on both sides
         ("H", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 3))),
         ("H", "forward", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 1, 2))),
+        ("H", "nearest", "UTC", (dt(1999, 12, 31, 23, 30), dt(2000, 1, 1, 2, 30))),
         ("D", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2))),
         ("D", "forward", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1))),
+        ("D", "nearest", "UTC", (dt(1999, 12, 31, 12), dt(2000, 1, 1, 12))),
         # Source period in Azores (GMT -1) timezone is [1999-12-31 23:00, 2000-01-01 01:00]
         # this affects the binning for daily frequency. With backwards direction, the period
         # will be [2000-01-01, 2000-01-02] Azores midnight.
@@ -762,7 +765,27 @@ class TestCumulative(unittest.TestCase):
     ],
 )
 def test_resample_period(freq, direction, timezone, expected, source):
-    # Source period is [2000-01-01 00:00, 2000-01-01 02:00], inclusive on both sides
-    #  in Europe/Amsterdam timezone this is [1999-12-31 23:00, 2000-01-01 01:00]
     view = Resample(source, freq, direction, timezone)
     assert view.period == expected
+
+
+def test_resample_period_empty(empty_source):
+    view = Resample(empty_source, "D")
+    assert view.period is None
+
+
+@pytest.mark.parametrize(
+    "freq,expected,",
+    [
+        ("H", Timedelta(hours=1)),
+        ("D", Timedelta(days=1)),
+        ("15T", Timedelta(minutes=15)),
+        ("S", Timedelta(seconds=1)),
+        ("MS", None),
+        ("M", None),
+        ("A", None),
+    ],
+)
+def test_resample_timedelta(freq, expected, source):
+    view = Resample(source, freq)
+    assert view.timedelta == expected
