@@ -140,30 +140,26 @@ def test_snap_to_resampled_labels_none():
     assert actual == (None, None)
 
 @pytest.mark.parametrize(
-    "dt_input,freq,timezone,side,offset,expected",
+    "dt_input,freq,timezone,side,expected",
     [
         # 'side' parameter
-        (dt(2020, 1, 1, 12), "D", "UTC", "both", 0, dt(2020, 1, 1)),
+        (dt(2020, 1, 1, 12), "D", "UTC", "both", dt(2020, 1, 1)),
         (dt(2020, 1, 1, 12, microsecond=1), "D", "UTC", "both", 0, dt(2020, 1, 2)),
-        (dt(2020, 1, 1, 12), "D", "UTC", "left", 0, dt(2020, 1, 1)),
-        (dt(2020, 1, 1, 12), "D", "UTC", "right", 0, dt(2020, 1, 2)),
-        # 'offset' parameter
-        (dt(2020, 1, 1, 12), "D", "UTC", "both", 1, dt(2020, 1, 2)),
-        (dt(2020, 1, 1, 12), "D", "UTC", "both", -1, dt(2019, 12, 31)),
-        (dt(2020, 1, 1, 12), "MS", "UTC", "both", 1, dt(2020, 2, 1)),
+        (dt(2020, 1, 1, 12), "D", "UTC", "left", dt(2020, 1, 1)),
+        (dt(2020, 1, 1, 12), "D", "UTC", "right", dt(2020, 1, 2)),
         # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
         # 2000-1-3 00:00 (Monday) snaps to itself
-        (dt(2000, 1, 3), "B", "UTC", "both", 0, dt(2000, 1, 3)),
+        (dt(2000, 1, 3), "B", "UTC", "both", dt(2000, 1, 3)),
         # 2000-1-2 (Sunday) snaps forward to Monday
-        (dt(2000, 1, 2), "B", "UTC", "both", 0, dt(2000, 1, 3)),
+        (dt(2000, 1, 2), "B", "UTC", "both", dt(2000, 1, 3)),
         # 2000-1-1 (Saturday) snaps backward to Friday
-        (dt(2000, 1, 1), "B", "UTC", "both", 0, dt(1999, 12, 31)),
+        (dt(2000, 1, 1), "B", "UTC", "both", dt(1999, 12, 31)),
         # 1999-12-31 (Friday) snaps to itself
-        (dt(1999, 12, 31), "B", "UTC", "both", 0, dt(1999, 12, 31)),
+        (dt(1999, 12, 31), "B", "UTC", "both", dt(1999, 12, 31)),
     ],
 )
-def test_get_closest_label(dt_input, freq, timezone, side, offset, expected):
-    actual = _get_closest_label(dt_input, freq, timezone, side=side, offset=offset)
+def test_get_closest_label(dt_input, freq, timezone, side, expected):
+    actual = _get_closest_label(dt_input, freq, timezone, side=side)
     assert actual == expected
 
 

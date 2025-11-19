@@ -287,7 +287,25 @@ def _get_bin_start(dt, frequency, closed, label, timezone):
     return resampled.first().index[0]
 
 
-def _get_closest_label(dt, frequency, timezone, side="both", offset=0):
+def _shift_bin_label(dt, frequency, timezone, n):
+    """Shift the bin label that dt belongs to by n bins.
+
+    :type dt: datetime.datetime without timezone.
+    """
+    ts = _dt_to_ts(dt, timezone)
+    freq = to_offset(frequency)
+
+    fractional_shift = n % 1.0
+    if abs(n) < 1e-7:
+        ts_1 = ts + freq * (n // 1.0)
+        ts_2 = ts + freq * (n // 1.0 + 1)
+        ts = ts + (ts_2 - ts_1) * fractional_shift
+    else:
+        ts = ts + n * freq
+    return _ts_to_dt(ts, timezone)
+
+
+def _get_closest_label(dt, frequency, timezone, side="both"):
     """Get the label that is closest to dt
 
     Optionally only include labels to the left or to the right using `side`.
@@ -315,8 +333,6 @@ def _get_closest_label(dt, frequency, timezone, side="both", offset=0):
     elif side == "left":
         differences = differences[differences <= pd.Timedelta(0)]
     result = differences.abs().idxmin()
-    if offset != 0:
-        result += offset * freq
     return _ts_to_dt(result, timezone)
 
 
@@ -596,7 +612,7 @@ class TemporalAggregate(BaseSingle):
         start_label, stop_label = _snap_to_resampled_labels(
             period, start, stop, frequency=self.frequency, timezone=self.timezone,
         )
-        if start_label is None:  # return early for an empty source
+        if start_label is None:   # return early for no labels in range
             return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source
@@ -1045,27 +1061,24 @@ class Resample(BaseSingle):
         source_period = self.source.period
         if source_period is None:
             return None
-        kwargs = {
-            "frequency": self.frequency,
-            "timezone": self.timezone,
-        }
-        if self.direction in {"forward", "nearest"}:
-            forwards_period = (
-                _get_closest_label(source_period[0], side="right", offset=-1, **kwargs),
-                _get_closest_label(source_period[1], side="left", **kwargs),
-            )
-        if self.direction in {"backward", "nearest"}:
-            backwards_period = (
-                _get_closest_label(source_period[0], side="right", **kwargs),
-                _get_closest_label(source_period[1], side="left", offset=1, **kwargs),
+        period =  (
+                _get_closest_label(source_period[0], side="right", frequency=self.frequency, timezone=self.timezone),
+                _get_closest_label(source_period[1], side="left", frequency=self.frequency, timezone=self.timezone),
             )
         if self.direction == "forward":
-            return forwards_period
+            return (
+                _shift_bin_label(period[0], self.frequency, self.timezone, -1),
+                period[1],
+            )
         elif self.direction == "backward":
-            return backwards_period
+            return (
+                period[0],
+                _shift_bin_label(period[1], self.frequency, self.timezone, 1),
+            )
         elif self.direction == "nearest":
-            return tuple(
-                f + (b - f) / 2 for (f, b) in zip(forwards_period, backwards_period)
+            return (
+                _shift_bin_label(period[0], self.frequency, self.timezone, -0.5),
+                _shift_bin_label(period[1], self.frequency, self.timezone, 0.5),
             )
 
     @property
@@ -1085,7 +1098,7 @@ class Resample(BaseSingle):
         start_label, stop_label = _snap_to_resampled_labels(
             period, start, stop, frequency=self.frequency, timezone=self.timezone,
         )
-        if start_label is None:  # return early for an empty source
+        if start_label is None:  # return early for no labels in range
             return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source
@@ -1094,8 +1107,28 @@ class Resample(BaseSingle):
             kwargs["start"] = start_label
             kwargs["stop"] = stop_label
             return [(kwargs, None)]
+        
+        if stop_label is None:
+            # query the time structure of the store to find the time index to request
 
-        # vals or source requests do need a request to self.source
+
+
+
+
+
+        result = self.store.get_data(mode="time", start=start, stop=stop)
+        if result is None:
+            return set()
+        return set(result["time"])
+
+        store_time = sorted(
+            get_store_time_set(start=start)
+            | get_store_time_set(start=start, stop=stop)
+            | get_store_time_set(start=stop)
+        )
+
+
+
         # no need to snap to bin edges,
         request["start"] = start_label
 
