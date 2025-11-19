@@ -372,14 +372,20 @@ def _resampled_period(period, frequency, closed, label, timezone):
     return tuple(_get_bin_label(x, frequency, closed, label, timezone) for x in period)
 
 
-def _snap_to_resampled_labels(period, start, stop, frequency, closed, label, timezone):
+def _snap_to_resampled_labels(period, start, stop, frequency, timezone):
     """Snap start and stop to the bin labels (so timeframes of a resampled raster).
+
+    Args:
+        period (tuple or None): The (start, stop) period of the resampled raster.
+        start (datetime or None): The requested start time.
+        stop (datetime or None): The requested stop time.
+        frequency (string): The resampling frequency as pandas offset string.
+        timezone (string): The timezone to perform the snapping in.
 
     The result are 2 labels: a start and a stop label, as python datetimes.
     If the stop label is None, start == stop. If both are None, there is no label in range.
     """
-    period = _resampled_period(period, frequency, closed, label, timezone)
-    if period is None:  # return early for an empty source
+    if period is None:
         return None, None
 
     if start is None:  # start is None means: return the latest
@@ -585,11 +591,12 @@ class TemporalAggregate(BaseSingle):
         start = request.get("start")
         stop = request.get("stop")
         mode = request["mode"]
+        period = self.period
 
         start_label, stop_label = _snap_to_resampled_labels(
-            self.source.period, start, stop, **kwargs
+            period, start, stop, frequency=self.frequency, timezone=self.timezone,
         )
-        if start_label is None:
+        if start_label is None:  # return early for an empty source
             return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source
@@ -1063,23 +1070,22 @@ class Resample(BaseSingle):
 
     @property
     def timedelta(self):
-        if self.frequency is None:
-            return None
         try:
             return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
         except ValueError:
             return  # e.g. Month is non-equidistant
 
     def get_sources_and_requests(self, **request):
-        kwargs = self._snap_kwargs
+        kwargs = {"frequency": self.frequency, "direction": self.direction, "timezone": self.timezone}
         start = request.get("start")
         stop = request.get("stop")
         mode = request["mode"]
+        period = self.period
 
         start_label, stop_label = _snap_to_resampled_labels(
-            self.source.period, start, stop, **kwargs
+            period, start, stop, frequency=self.frequency, timezone=self.timezone,
         )
-        if start_label is None:
+        if start_label is None:  # return early for an empty source
             return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source

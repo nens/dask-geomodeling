@@ -98,98 +98,46 @@ def test_period(raster, freq, closed, label, timezone, expected):
 
 
 @pytest.mark.parametrize(
-    "start,stop,freq,closed,label,timezone,expected",
+    "start,stop,freq,timezone,expected",
     [
-        # (None, None) means 'latest'; expected are the labels of the latest bins
-        (None, None, "D", "left", "left", "UTC", (dt(2000, 1, 3), None)),
-        (None, None, "D", "left", "right", "UTC", (dt(2000, 1, 4), None)),
-        (None, None, "D", "right", "left", "UTC", (dt(2000, 1, 2), None)),
-        (None, None, "D", "right", "right", "UTC", (dt(2000, 1, 3), None)),
-        (
-            None,
-            None,
-            "D",
-            "left",
-            "left",
-            "Europe/Amsterdam",
-            (dt(2000, 1, 2, 23), None),
-        ),
-        (None, None, "h", "right", "left", "UTC", (dt(2000, 1, 2, 23), None)),
+        # (None, None) means 'latest'; expected is period[1] always
+        (None, None, "X", "Y", (dt(2000, 2, 1), None)),
         # (start, None) means 'nearest'; expected are the labels of the nearest bins
         # left out-of-bounds
-        (dt(1999, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
-        (dt(1999, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
-        (dt(1999, 5, 6), None, "MS", "right", "left", "UTC", (dt(1999, 12, 1), None)),
-        (dt(1999, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
+        (dt(1999, 5, 6), None, "MS", "UTC", (dt(2000, 1, 1), None)),
         # right out-of-bounds (equals 'latest')
-        (dt(2001, 5, 6), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), None)),
-        (dt(2001, 5, 6), None, "MS", "left", "right", "UTC", (dt(2000, 2, 1), None)),
-        (dt(2001, 5, 6), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1), None)),
-        (dt(2001, 5, 6), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+        (dt(2001, 5, 6), None, "MS", "UTC", (dt(2000, 2, 1), None)),
         # in bounds, snap to nearest (in a situation with 2 bins: 2000-01-01 and 2000-02-01)
-        (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
-        (dt(2000, 1, 16), None, "MS", "right", "right", "UTC", (dt(2000, 1, 1), None)),
-        (dt(2000, 1, 17), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
-        (dt(2000, 2, 1), None, "MS", "right", "right", "UTC", (dt(2000, 2, 1), None)),
+        (dt(2000, 1, 1), None, "MS", "UTC", (dt(2000, 1, 1), None)),
+        (dt(2000, 1, 16), None, "MS", "UTC", (dt(2000, 1, 1), None)),
+        (dt(2000, 1, 17), None, "MS", "UTC", (dt(2000, 2, 1), None)),
+        (dt(2000, 2, 1), None, "MS", "UTC", (dt(2000, 2, 1), None)),
         # (start, stop) means a two-sided closed interval
-        (
-            dt(2000, 1, 1),
-            dt(2000, 2, 1),
-            "MS",
-            "right",
-            "right",
-            "UTC",
-            (dt(2000, 1, 1), dt(2000, 2, 1)),
-        ),
-        (
-            dt(1999, 5, 6),
-            dt(2001, 5, 6),
-            "MS",
-            "right",
-            "right",
-            "UTC",
-            (dt(2000, 1, 1), dt(2000, 2, 1)),
-        ),
+        (dt(2000, 1, 1), dt(2000, 2, 1), "MS", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
+        (dt(1999, 5, 6), dt(2001, 5, 6), "MS", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1))),
         (
             dt(2000, 1, 1),
             dt(2000, 1, 31),
             "MS",
-            "right",
-            "right",
             "UTC",
             (dt(2000, 1, 1), dt(2000, 1, 1)),
         ),
-        (
-            dt(2000, 1, 2),
-            dt(2000, 2, 1),
-            "MS",
-            "right",
-            "right",
-            "UTC",
-            (dt(2000, 2, 1), dt(2000, 2, 1)),
-        ),
-        (
-            dt(2000, 1, 2),
-            dt(2000, 1, 31),
-            "MS",
-            "right",
-            "right",
-            "UTC",
-            (None, None),
-        ),  # no frames
-        # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
-        (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
-        (dt(2000, 1, 2), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), None)),
-        (dt(2000, 1, 1), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
-        (dt(1999, 12, 31), None, "B", "left", "left", "UTC", (dt(1999, 12, 31), None)),
+        (dt(2000, 1, 2), dt(2000, 2, 1), "MS", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),
+        (dt(2000, 1, 2), dt(2000, 1, 31), "MS", "UTC", (None, None)),  # no frames
     ],
 )
-def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, expected):
+def test_snap_to_resampled_labels(start, stop, freq, timezone, expected):
     actual = _snap_to_resampled_labels(
-        (dt(2000, 1, 1), dt(2000, 1, 3)), start, stop, freq, closed, label, timezone
+        (dt(2000, 1, 1), dt(2000, 2, 1)), start, stop, freq, timezone
     )
     assert actual == expected
 
+
+def test_snap_to_resampled_labels_none():
+    actual = _snap_to_resampled_labels(
+        None, dt(2000, 1, 1), dt(2000, 2, 1), "X", "Y"
+    )
+    assert actual == (None, None)
 
 @pytest.mark.parametrize(
     "dt_input,freq,timezone,side,offset,expected",
@@ -203,6 +151,15 @@ def test_snap_to_resampled_labels(start, stop, freq, closed, label, timezone, ex
         (dt(2020, 1, 1, 12), "D", "UTC", "both", 1, dt(2020, 1, 2)),
         (dt(2020, 1, 1, 12), "D", "UTC", "both", -1, dt(2019, 12, 31)),
         (dt(2020, 1, 1, 12), "MS", "UTC", "both", 1, dt(2020, 2, 1)),
+        # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
+        # 2000-1-3 00:00 (Monday) snaps to itself
+        (dt(2000, 1, 3), "B", "UTC", "both", 0, dt(2000, 1, 3)),
+        # 2000-1-2 (Sunday) snaps forward to Monday
+        (dt(2000, 1, 2), "B", "UTC", "both", 0, dt(2000, 1, 3)),
+        # 2000-1-1 (Saturday) snaps backward to Friday
+        (dt(2000, 1, 1), "B", "UTC", "both", 0, dt(1999, 12, 31)),
+        # 1999-12-31 (Friday) snaps to itself
+        (dt(1999, 12, 31), "B", "UTC", "both", 0, dt(1999, 12, 31)),
     ],
 )
 def test_get_closest_label(dt_input, freq, timezone, side, offset, expected):
