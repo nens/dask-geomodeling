@@ -182,146 +182,28 @@ def test_shift_bin_label(n, expected):
 us = Timedelta(microseconds=1)
 
 
-@pytest.mark.parametrize(
-    "start_label,stop_label,freq,closed,label,timezone,expected",
-    [
-        (
-            dt(2000, 1, 1),
-            None,
-            "D",
-            "left",
-            "left",
-            "UTC",
-            (dt(2000, 1, 1), dt(2000, 1, 2) - us),
-        ),
-        (
-            dt(2000, 1, 1),
-            None,
-            "D",
-            "left",
-            "right",
-            "UTC",
-            (dt(1999, 12, 31), dt(2000, 1, 1) - us),
-        ),
-        (
-            dt(2000, 1, 1),
-            None,
-            "D",
-            "right",
-            "left",
-            "UTC",
-            (dt(2000, 1, 1) + us, dt(2000, 1, 2)),
-        ),
-        (
-            dt(2000, 1, 1),
-            None,
-            "D",
-            "right",
-            "right",
-            "UTC",
-            (dt(1999, 12, 31) + us, dt(2000, 1, 1)),
-        ),
-        (
-            dt(2000, 1, 1),
-            None,
-            "MS",
-            "left",
-            "left",
-            "UTC",
-            (dt(2000, 1, 1), dt(2000, 2, 1) - us),
-        ),
-        (
-            dt(2000, 1, 1),
-            None,
-            "MS",
-            "left",
-            "right",
-            "UTC",
-            (dt(1999, 12, 1), dt(2000, 1, 1) - us),
-        ),
-        (
-            dt(2000, 1, 1),
-            None,
-            "MS",
-            "right",
-            "left",
-            "UTC",
-            (dt(2000, 1, 1) + us, dt(2000, 2, 1)),
-        ),
-        (
-            dt(2000, 1, 1),
-            None,
-            "MS",
-            "right",
-            "right",
-            "UTC",
-            (dt(1999, 12, 1) + us, dt(2000, 1, 1)),
-        ),
-        # with a 'stop_label' it is just more of the same ...
-        (
-            dt(2000, 1, 1),
-            dt(2000, 1, 10),
-            "D",
-            "left",
-            "left",
-            "UTC",
-            (dt(2000, 1, 1), dt(2000, 1, 11) - us),
-        ),
-        (
-            dt(2000, 1, 1),
-            dt(2000, 10, 1),
-            "MS",
-            "left",
-            "left",
-            "UTC",
-            (dt(2000, 1, 1), dt(2000, 11, 1) - us),
-        ),
-        # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
-        (
-            dt(2000, 1, 3),
-            None,
-            "B",
-            "left",
-            "left",
-            "UTC",
-            (dt(2000, 1, 3), dt(2000, 1, 4) - us),
-        ),
-        (
-            dt(2000, 1, 3),
-            None,
-            "B",
-            "left",
-            "right",
-            "UTC",
-            (dt(1999, 12, 31), dt(2000, 1, 3) - us),
-        ),
-        (
-            dt(2000, 1, 3),
-            None,
-            "B",
-            "right",
-            "left",
-            "UTC",
-            (dt(2000, 1, 3) + us, dt(2000, 1, 4)),
-        ),
-        (
-            dt(2000, 1, 3),
-            None,
-            "B",
-            "right",
-            "right",
-            "UTC",
-            (dt(1999, 12, 31) + us, dt(2000, 1, 3)),
-        ),
-    ],
-)
-def test_labels_to_start_stop(
-    start_label, stop_label, freq, closed, label, timezone, expected
-):
-    actual = _labels_to_start_stop(
-        start_label, stop_label, freq, closed, label, timezone
-    )
+@pytest.mark.parametrize("start_label,stop_label,freq,closed,label,timezone,expected", [
+    (dt(2000, 1, 1), None, "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2) - us)),
+    (dt(2000, 1, 1), None, "D", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1) - us)),
+    (dt(2000, 1, 1), None, "D", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 1, 2))),
+    (dt(2000, 1, 1), None, "D", "right", "right", "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 1))),
+    (dt(2000, 1, 1), None, "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 2, 1) - us)),
+    (dt(2000, 1, 1), None, "MS", "left", "right", "UTC", (dt(1999, 12, 1), dt(2000, 1, 1) - us)),
+    (dt(2000, 1, 1), None, "MS", "right", "left", "UTC", (dt(2000, 1, 1) + us, dt(2000, 2, 1))),
+    (dt(2000, 1, 1), None, "MS", "right", "right", "UTC", (dt(1999, 12, 1) + us, dt(2000, 1, 1))),
+    # with a 'stop_label' it is just more of the same ...
+    (dt(2000, 1, 1), dt(2000, 1, 10), "D", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 11) - us)),
+    (dt(2000, 1, 1), dt(2000, 10, 1), "MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 11, 1) - us)),
+    # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
+    (dt(2000, 1, 3), None, "B", "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 4) - us)),
+    (dt(2000, 1, 3), None, "B", "left", "right", "UTC", (dt(1999, 12, 31), dt(2000, 1, 3) - us)),
+    (dt(2000, 1, 3), None, "B", "right", "left", "UTC", (dt(2000, 1, 3) + us, dt(2000, 1, 4))),
+    (dt(2000, 1, 3), None, "B", "right", "right", "UTC", (dt(1999, 12, 31) + us, dt(2000, 1, 3))),
+])
+def test_labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone, expected):
+    actual = _labels_to_start_stop(start_label, stop_label, freq, closed, label, timezone)
     assert actual == expected
+
 
 
 class TestTemporalAggregate(unittest.TestCase):

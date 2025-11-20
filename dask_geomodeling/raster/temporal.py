@@ -3,7 +3,6 @@ Module containing raster blocks for temporal operations.
 """
 
 from functools import partial
-from tracemalloc import stop
 import pytz
 from datetime import timedelta as Timedelta
 from pandas.tseries.frequencies import to_offset
@@ -319,7 +318,6 @@ def _get_closest_label(dt, frequency, timezone, side="both"):
     """Get the label that is closest to dt
 
     Optionally only include labels to the left or to the right using `side`.
-    Optionally add an offset, to return the nths label left or right of the closest.
 
     Note that we do not use ts.round / ceil / floor methods as they do not support
     non-fixed time frequencies like month.
@@ -327,7 +325,7 @@ def _get_closest_label(dt, frequency, timezone, side="both"):
     ts = _dt_to_ts(dt, timezone)
     # first get the bin label that dt belongs to
     # NB: label and closed parameters are arbitrary here, as we are looking for the closest
-    # one here.
+    # label here.
     candidate = _dt_to_ts(
         _get_bin_label(dt, frequency, "left", "left", timezone), timezone
     )
@@ -1005,7 +1003,7 @@ class Cumulative(BaseSingle):
 class Resample(BaseSingle):
     """Resample a raster in time.
 
-    This operation performs temporal rearrangement of raster frames. Each frame
+    This operation performs a temporal rearrangement of raster frames. Each frame
     in the resulting raster is snapped to the first frame forwards / backwards,
     or the nearest frame.
 
@@ -1020,7 +1018,7 @@ class Resample(BaseSingle):
         ``"UTC"``.
 
     Returns:
-      RasterBlock with temporally aggregated data.
+      RasterBlock with temporally resampled data.
 
     See also:
       https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.resample.html
