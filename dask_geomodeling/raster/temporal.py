@@ -15,14 +15,21 @@ from dask_geomodeling.utils import (
     get_dtype_max,
     parse_percentile_statistic,
     dtype_for_statistic,
-    find_nearest,
+    find_neigbours,
     normalize_offset,
 )
 
 from .base import RasterBlock, BaseSingle
 
 
-__all__ = ["Snap", "Shift", "TemporalSum", "TemporalAggregate", "Cumulative", "Resample"]
+__all__ = [
+    "Snap",
+    "Shift",
+    "TemporalSum",
+    "TemporalAggregate",
+    "Cumulative",
+    "Resample",
+]
 
 # Copied from pandas 'TimeGrouper.__init__'
 RESAMPLING_END_TYPES = {"M", "A", "Q", "BM", "BA", "BQ", "W"}  # Pandas < 2.2
@@ -154,7 +161,7 @@ class Snap(RasterBlock):
         # for the result (`nearest`) are passed via the `process_kwargs`
         request["start"] = store_time[0]
         request["stop"] = store_time[-1]
-        nearest = find_nearest(store_time, index_time)
+        nearest = find_neigbours(store_time, index_time)
         process_kwargs = {"nearest": nearest}
         return [(process_kwargs, None), (self.store, request)]
 
@@ -292,13 +299,15 @@ def _shift_bin_label(dt, frequency, timezone, n):
 
     :type dt: datetime.datetime without timezone.
     """
+    if n == 0:
+        return dt
     ts = _dt_to_ts(dt, timezone)
     freq = to_offset(frequency)
 
-    fractional_shift = n % 1.0
-    if abs(n) < 1e-7:
+    if isinstance(n, float):
         ts_1 = ts + freq * (n // 1.0)
         ts_2 = ts + freq * (n // 1.0 + 1)
+        fractional_shift = n % 1.0 if n > 0 else (-(n % 1.0))
         ts = ts + (ts_2 - ts_1) * fractional_shift
     else:
         ts = ts + n * freq
@@ -414,9 +423,7 @@ def _snap_to_resampled_labels(period, start, stop, frequency, timezone):
         elif start >= period[1]:
             start = period[1]
         else:
-            start = _get_closest_label(
-                start, frequency, timezone, side="both"
-            )
+            start = _get_closest_label(start, frequency, timezone, side="both")
     else:
         # snap start to a label right from it
         if start <= period[0]:
@@ -424,18 +431,14 @@ def _snap_to_resampled_labels(period, start, stop, frequency, timezone):
         elif start > period[1]:
             return None, None
         else:
-            start = _get_closest_label(
-                start, frequency, timezone, side="right"
-            )
+            start = _get_closest_label(start, frequency, timezone, side="right")
         # snap stop to a label left from it
         if stop >= period[1]:
             stop = period[1]
         elif stop < period[0]:
             return None, None
         else:
-            stop = _get_closest_label(
-                stop, frequency, timezone, side="left"
-            )
+            stop = _get_closest_label(stop, frequency, timezone, side="left")
 
         if start > stop:
             return None, None
@@ -451,6 +454,16 @@ def _labels_to_start_stop(start_label, stop_label, frequency, closed, label, tim
         stop_label or start_label, frequency, closed, label, timezone
     )
     return start, stop
+
+
+def _get_label_range(start_label, stop_label, frequency, timezone):
+    """Get all labels between start_label and stop_label inclusive."""
+    labels = pd.date_range(
+        start=_dt_to_ts(start_label, timezone),
+        end=_dt_to_ts(stop_label, timezone),
+        freq=to_offset(frequency),
+    )
+    return [_ts_to_dt(ts, timezone) for ts in labels]
 
 
 def count_not_nan(x, *args, **kwargs):
@@ -610,9 +623,13 @@ class TemporalAggregate(BaseSingle):
         period = self.period
 
         start_label, stop_label = _snap_to_resampled_labels(
-            period, start, stop, frequency=self.frequency, timezone=self.timezone,
+            period,
+            start,
+            stop,
+            frequency=self.frequency,
+            timezone=self.timezone,
         )
-        if start_label is None:   # return early for no labels in range
+        if start_label is None:  # return early for no labels in range
             return [({"empty": True, "mode": mode}, None)]
 
         # a time request does not involve a request to self.source
@@ -1052,34 +1069,52 @@ class Resample(BaseSingle):
 
     @property
     def period(self):
-        # What bounds a resampled raster? It depends on the resampling direction.
-        # When resampling forwards, there is nothing to resample to after the
-        # last label that is inside the source period (largest label for
-        # which label < source.period[1]). We can do similar reasoning for backwards
-        # resampling. For nearest resampling, we have to take into account the
-        # middle point between two labels.
+        """For the resampled raster, compute the (start, stop) period.
+
+        Given resampled frame `t` and resampling period `p`, we may snap to source
+        frames in the range:
+
+        - forward: [t, t + p)
+        - backward: (t - p, t]
+        - nearest: [t - p / 2, t + p / 2)
+
+        Now, given a source frame `x`, we need to compute what `t` will snap to `x`
+        and take the min (for start) and max (for stop) of those `t`.
+
+        - forward: take the first label left of `x`. For period[1], this label may
+                   not actually snap to `x`, but it is the last label with any value.
+        - backward: take the first label right of `x`. For period[0], this label may
+                    not actually snap to `x`, but it is the last label with any value.
+        - nearest: nearest means finding the closest `x` for given `t`. We need to
+                   invert this problem. We do this by fetching the first label to the
+                   left and right, and for each of them evaluate if `x` is the closest.
+        """
         source_period = self.source.period
         if source_period is None:
             return None
-        period =  (
-                _get_closest_label(source_period[0], side="right", frequency=self.frequency, timezone=self.timezone),
-                _get_closest_label(source_period[1], side="left", frequency=self.frequency, timezone=self.timezone),
-            )
-        if self.direction == "forward":
+        kwargs = {
+            "frequency": self.frequency,
+            "timezone": self.timezone,
+        }
+        if self.direction in {"forward", "backward"}:
+            kwargs["side"] = "left" if self.direction == "forward" else "right"
             return (
-                _shift_bin_label(period[0], self.frequency, self.timezone, -1),
-                period[1],
+                _get_closest_label(source_period[0], **kwargs),
+                _get_closest_label(source_period[1], **kwargs),
             )
-        elif self.direction == "backward":
-            return (
-                period[0],
-                _shift_bin_label(period[1], self.frequency, self.timezone, 1),
-            )
-        elif self.direction == "nearest":
-            return (
-                _shift_bin_label(period[0], self.frequency, self.timezone, -0.5),
-                _shift_bin_label(period[1], self.frequency, self.timezone, 0.5),
-            )
+        # For direction=nearest, logic is complicated. For clarity, this is written out
+        # per period side.
+        period_start = _get_closest_label(source_period[0], side="left", **kwargs)
+        # Check if this label can be snapped to source_period[0], if not the "right" label
+        # must be the start
+        if source_period[0] >= _shift_bin_label(period_start, n=0.5, **kwargs):
+            period_start = _get_closest_label(source_period[0], side="right", **kwargs)
+        period_end = _get_closest_label(source_period[1], side="right", **kwargs)
+        # Check if this label can be snapped to source_period[1], if not the "left" label
+        # must be the end
+        if source_period[1] < _shift_bin_label(period_end, n=-0.5, **kwargs):
+            period_end = _get_closest_label(source_period[1], side="left", **kwargs)
+        return (period_start, period_end)
 
     @property
     def timedelta(self):
@@ -1089,164 +1124,87 @@ class Resample(BaseSingle):
             return  # e.g. Month is non-equidistant
 
     def get_sources_and_requests(self, **request):
-        kwargs = {"frequency": self.frequency, "direction": self.direction, "timezone": self.timezone}
-        start = request.get("start")
-        stop = request.get("stop")
-        mode = request["mode"]
-        period = self.period
-
-        start_label, stop_label = _snap_to_resampled_labels(
-            period, start, stop, frequency=self.frequency, timezone=self.timezone,
-        )
-        if start_label is None:  # return early for no labels in range
-            return [({"empty": True, "mode": mode}, None)]
-
-        # a time request does not involve a request to self.source
-        if mode == "time":
-            kwargs["mode"] = "time"
-            kwargs["start"] = start_label
-            kwargs["stop"] = stop_label
-            return [(kwargs, None)]
-        
-        if stop_label is None:
-            # query the time structure of the store to find the time index to request
-            
-
-
-
-
-
-
-        result = self.store.get_data(mode="time", start=start, stop=stop)
-        if result is None:
-            return set()
-        return set(result["time"])
-
-        store_time = sorted(
-            get_store_time_set(start=start)
-            | get_store_time_set(start=start, stop=stop)
-            | get_store_time_set(start=stop)
-        )
-
-
-
-        # no need to snap to bin edges,
-        request["start"] = start_label
-
-        request["stop"] = _labels_to_start_stop(start_label, stop_label, **kwargs)
-
-        # return sources and requests depending on the mode
-        kwargs["mode"] = request["mode"]
-        kwargs["start"] = start_label
-        kwargs["stop"] = stop_label
-        if mode == "vals":
-            kwargs["dtype"] = np.dtype(self.dtype).str
-            kwargs["statistic"] = self.statistic
-
-        time_request = {
-            "mode": "time",
-            "start": request["start"],
-            "stop": request["stop"],
+        kwargs = {
+            "mode": request["mode"],
+            "frequency": self.frequency,
+            "direction": self.direction,
+            "timezone": self.timezone,
         }
 
-        # In case the data request dictates a temporal resolution,
-        # also set this in temporal request
-        if "time_resolution" in request:
-            time_request["time_resolution"] = request["time_resolution"]
+        # Start determining what time labels will be produced
+        #  requested start/stop will snap to *resampled* time labels
+        kwargs["start"], kwargs["stop"] = _snap_to_resampled_labels(
+            self.period,
+            request.get("start"),
+            request.get("stop"),
+            frequency=self.frequency,
+            timezone=self.timezone,
+        )
+        if kwargs["start"] is None:  # return early for no labels in range
+            return [({"empty": True, "mode": kwargs["mode"]}, None)]
 
-        return [(kwargs, None), (self.source, time_request), (self.source, request)]
+        # a time request does not involve a request to self.source
+        if kwargs["mode"] == "time":
+            return [(kwargs, None)]
+
+        # Now determine what time labels are needed from source
+        index_time = _get_label_range(
+            kwargs["start"],
+            kwargs["stop"] or kwargs["start"],
+            frequency=self.frequency,
+            timezone=self.timezone,
+        )
+        # Determine the source time range that can be snapped to
+        # See explanation in self.period
+        if self.direction == "forward":
+            shift = 0
+        elif self.direction == "backward":
+            shift = -1
+        else:  # nearest
+            shift = -0.5
+        store_time = self.store.get_data(
+            mode="time",
+            start=_shift_bin_label(
+                kwargs["start"],
+                frequency=self.frequency,
+                timezone=self.timezone,
+                shift=shift,
+            ),
+            stop=_shift_bin_label(
+                kwargs["stop"],
+                frequency=self.frequency,
+                timezone=self.timezone,
+                shift=shift + 1,
+            ),
+        )["time"]
+        # return a requst to query the store; the actual frames to pick
+        # for the result (`nearest`) are passed via the `process_kwargs`
+        request["start"] = store_time[0]
+        request["stop"] = store_time[-1]
+        kwargs["nearest"] = find_neigbours(store_time, index_time, self.direction)
+        return [(kwargs, None), (self.store, request)]
 
     @staticmethod
     def process(process_kwargs, time_data=None, data=None):
         mode = process_kwargs["mode"]
-        # handle empty data
+        # Handle empty data
         if process_kwargs.get("empty"):
             return None if mode == "vals" else {mode: []}
-        start = process_kwargs["start"]
-        stop = process_kwargs["stop"]
-        frequency = process_kwargs["frequency"]
-        if frequency is None:
-            labels = pd.DatetimeIndex([start])
-        else:
-            labels = pd.date_range(start, stop or start, freq=frequency)
+        labels = _get_label_range(
+            process_kwargs["start"],
+            process_kwargs["stop"],
+            frequency=process_kwargs["frequency"],
+            timezone=process_kwargs["timezone"],
+        )
         if mode == "time":
-            return {"time": labels.to_pydatetime().tolist()}
+            return {"time": labels}
 
-        if time_data is None or not time_data.get("time"):
-            return None if mode == "vals" else {mode: []}
+        nearest = process_kwargs["nearest"]
 
-        timezone = process_kwargs["timezone"]
-        closed = process_kwargs["closed"]
-        label = process_kwargs["label"]
-        times = time_data["time"]
+        if "values" in data:
+            data["values"] = data["values"][nearest]
+            return data
 
-        # convert times to a pandas series
-        series = (
-            pd.Series(index=times, dtype=float).tz_localize("UTC").tz_convert(timezone)
-        )
-
-        # localize the labels so we can use it as an index
-        labels = labels.tz_localize("UTC").tz_convert(timezone)
-
-        if frequency is None:
-            # the first (and only label) will be the statistic of all frames
-            indices = {labels[0]: range(len(times))}
-        else:
-            # construct a pandas Resampler object to map labels to frames
-            resampler = series.resample(frequency, closed=closed, label=label)
-            # get the frame indices belonging to each bin
-            indices = resampler.indices
-
-        if mode == "meta":
-            if data is None or "meta" not in data:
-                return {"meta": []}
-            meta = data["meta"]
-            return {"meta": [[meta[i] for i in indices[ts]] for ts in labels]}
-
-        # mode == 'vals'
-        if data is None or "values" not in data:
-            return
-
-        values = data["values"]
-        if values.shape[0] != len(times):
-            raise RuntimeError("Shape of raster does not match number of timestamps")
-        statistic, percentile = parse_percentile_statistic(process_kwargs["statistic"])
-        if percentile:
-            extensive = False
-            agg_func = partial(np.nanpercentile, q=percentile)
-        else:
-            extensive = TemporalAggregate.STATISTICS[statistic]["extensive"]
-            agg_func = TemporalAggregate.STATISTICS[statistic]["func"]
-
-        dtype = process_kwargs["dtype"]
-        fillvalue = 0 if extensive else get_dtype_max(dtype)
-
-        # cast to at least float32 so that we can fit in NaN (and make copy)
-        values = values.astype(np.result_type(np.float32, dtype))
-        # put NaN for no data
-        values[data["values"] == data["no_data_value"]] = np.nan
-
-        result = np.full(
-            shape=(len(labels), values.shape[1], values.shape[2]),
-            fill_value=fillvalue,
-            dtype=dtype,
-        )
-
-        for i, timestamp in enumerate(labels):
-            inds = indices[timestamp]
-            if len(inds) == 0:
-                continue
-            with warnings.catch_warnings():
-                # the agg_func could give use 'All-NaN slice encountered'
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                aggregated = agg_func(values[inds], axis=0)
-            # keep track of NaN or inf values before casting to target dtype
-            no_data_mask = ~np.isfinite(aggregated)
-            # cast to target dtype
-            if dtype != aggregated.dtype:
-                aggregated = aggregated.astype(dtype)
-            # set fillvalue to NaN values
-            aggregated[no_data_mask] = fillvalue
-            result[i] = aggregated
-
-        return {"values": result, "no_data_value": get_dtype_max(dtype)}
+        if "meta" in data:
+            data["meta"] = [data["meta"][i] for i in nearest]
+            return data

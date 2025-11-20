@@ -6,6 +6,7 @@ from numpy.testing import assert_equal
 
 from dask_geomodeling.raster import TemporalAggregate, Cumulative, Resample
 from dask_geomodeling.raster.temporal import (
+    _shift_bin_label,
     _snap_to_resampled_labels,
     _labels_to_start_stop,
     _get_closest_label,
@@ -26,6 +27,7 @@ def raster():
 
 
 dt = Datetime
+td = Timedelta
 
 
 @pytest.mark.parametrize(
@@ -134,17 +136,16 @@ def test_snap_to_resampled_labels(start, stop, freq, timezone, expected):
 
 
 def test_snap_to_resampled_labels_none():
-    actual = _snap_to_resampled_labels(
-        None, dt(2000, 1, 1), dt(2000, 2, 1), "X", "Y"
-    )
+    actual = _snap_to_resampled_labels(None, dt(2000, 1, 1), dt(2000, 2, 1), "X", "Y")
     assert actual == (None, None)
+
 
 @pytest.mark.parametrize(
     "dt_input,freq,timezone,side,expected",
     [
         # 'side' parameter
         (dt(2020, 1, 1, 12), "D", "UTC", "both", dt(2020, 1, 1)),
-        (dt(2020, 1, 1, 12, microsecond=1), "D", "UTC", "both", 0, dt(2020, 1, 2)),
+        (dt(2020, 1, 1, 12, microsecond=1), "D", "UTC", "both", dt(2020, 1, 2)),
         (dt(2020, 1, 1, 12), "D", "UTC", "left", dt(2020, 1, 1)),
         (dt(2020, 1, 1, 12), "D", "UTC", "right", dt(2020, 1, 2)),
         # businessday: 2000-1-3 is a Monday (and Fri-Sun is 1 bin)
@@ -161,6 +162,21 @@ def test_snap_to_resampled_labels_none():
 def test_get_closest_label(dt_input, freq, timezone, side, expected):
     actual = _get_closest_label(dt_input, freq, timezone, side=side)
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "n,expected",
+    [
+        (0, dt(2000, 1, 1)),
+        (1, dt(2000, 1, 1, 1)),
+        (2, dt(2000, 1, 1, 2)),
+        (-1, dt(1999, 12, 31, 23)),
+        (0.5, dt(2000, 1, 1, 0, 30)),
+        (-0.5, dt(1999, 12, 31, 23, 30)),
+    ],
+)
+def test_shift_bin_label(n, expected):
+    assert _shift_bin_label(dt(2000, 1, 1), "h", "UTC", n) == expected
 
 
 us = Timedelta(microseconds=1)
@@ -704,16 +720,19 @@ class TestCumulative(unittest.TestCase):
     "freq,direction,timezone,expected",
     [
         # Source period is [2000-01-01 00:00, 2000-01-01 02:00], inclusive on both sides
-        ("H", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 3))),
-        ("H", "forward", "UTC", (dt(1999, 12, 31, 23), dt(2000, 1, 1, 2))),
-        ("H", "nearest", "UTC", (dt(1999, 12, 31, 23, 30), dt(2000, 1, 1, 2, 30))),
+        ("90min", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 3))),
+        ("90min", "forward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 1, 30))),
+        ("90min", "nearest", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 1, 30))),
+        ("75min", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 2, 30))),
+        ("75min", "forward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 1, 15))),
+        ("75min", "nearest", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 2, 30))),
         ("D", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 2))),
-        ("D", "forward", "UTC", (dt(1999, 12, 31), dt(2000, 1, 1))),
-        ("D", "nearest", "UTC", (dt(1999, 12, 31, 12), dt(2000, 1, 1, 12))),
+        ("D", "forward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
+        ("D", "nearest", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
         # Source period in Azores (GMT -1) timezone is [1999-12-31 23:00, 2000-01-01 01:00]
         # this affects the binning for daily frequency. With backwards direction, the period
-        # will be [2000-01-01, 2000-01-02] Azores midnight.
-        ("H", "backward", "Atlantic/Azores", (dt(2000, 1, 1), dt(2000, 1, 1, 3))),
+        # will be [2000-01-01, 2000-01-02] Azores midnight. We add one hour to convert to UTC.
+        ("H", "backward", "Atlantic/Azores", (dt(2000, 1, 1), dt(2000, 1, 1, 2))),
         ("D", "backward", "Atlantic/Azores", (dt(2000, 1, 1, 1), dt(2000, 1, 2, 1))),
     ],
 )
@@ -742,3 +761,38 @@ def test_resample_period_empty(empty_source):
 def test_resample_timedelta(freq, expected, source):
     view = Resample(source, freq)
     assert view.timedelta == expected
+
+
+# Source period is [2000-01-01 00:00, 2000-01-01 02:00], inclusive on both sides
+# we take 90minute frequency for testing the get_data methods
+
+
+@pytest.mark.parametrize(
+    "frequency,direction,expected",
+    [
+        (
+            "90min",
+            "backward",
+            [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30), dt(2000, 1, 1, 3)],
+        ),
+        ("90min", "forward", [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)]),
+        ("90min", "nearest", [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)]),
+        (
+            "75min",
+            "backward",
+            [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15), dt(2000, 1, 1, 2, 30)],
+        ),
+        ("75min", "forward", [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15)]),
+        (
+            "75min",
+            "nearest",
+            [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15), dt(2000, 1, 1, 2, 30)],
+        ),
+    ],
+)
+def test_resample_get_complete_time(source, frequency, direction, expected):
+    view = Resample(source, frequency, direction=direction)
+    result = view.get_data(
+        mode="time", start=Datetime(1970, 1, 1), stop=Datetime(2020, 1, 1)
+    )
+    assert result["time"] == expected
