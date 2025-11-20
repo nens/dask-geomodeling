@@ -3,6 +3,7 @@ Module containing raster blocks for temporal operations.
 """
 
 from functools import partial
+from tracemalloc import stop
 import pytz
 from datetime import timedelta as Timedelta
 from pandas.tseries.frequencies import to_offset
@@ -1002,12 +1003,11 @@ class Cumulative(BaseSingle):
 
 
 class Resample(BaseSingle):
-    """
-    Resample a raster in time.
+    """Resample a raster in time.
 
-    This operation performs temporal aggregation of rasters, for example a
-    hourly average of data that has a 5 minute resolution.. The timedelta of
-    the resulting raster is determined by the 'frequency' parameter.
+    This operation performs temporal rearrangement of raster frames. Each frame
+    in the resulting raster is snapped to the first frame forwards / backwards,
+    or the nearest frame.
 
     Args:
       source (RasterBlock): The input raster whose timesteps are aggregated
@@ -1067,6 +1067,12 @@ class Resample(BaseSingle):
     def timezone(self):
         return self.args[3]
 
+    def _snap_kwargs(self):
+        return {
+            "frequency": self.frequency,
+            "timezone": self.timezone,
+        }
+
     @property
     def period(self):
         """For the resampled raster, compute the (start, stop) period.
@@ -1092,10 +1098,7 @@ class Resample(BaseSingle):
         source_period = self.source.period
         if source_period is None:
             return None
-        kwargs = {
-            "frequency": self.frequency,
-            "timezone": self.timezone,
-        }
+        kwargs = self._snap_kwargs()
         if self.direction in {"forward", "backward"}:
             kwargs["side"] = "left" if self.direction == "forward" else "right"
             return (
@@ -1126,9 +1129,8 @@ class Resample(BaseSingle):
     def get_sources_and_requests(self, **request):
         kwargs = {
             "mode": request["mode"],
-            "frequency": self.frequency,
             "direction": self.direction,
-            "timezone": self.timezone,
+            **self._snap_kwargs(),
         }
 
         # Start determining what time labels will be produced
@@ -1137,8 +1139,7 @@ class Resample(BaseSingle):
             self.period,
             request.get("start"),
             request.get("stop"),
-            frequency=self.frequency,
-            timezone=self.timezone,
+            **self._snap_kwargs(),
         )
         if kwargs["start"] is None:  # return early for no labels in range
             return [({"empty": True, "mode": kwargs["mode"]}, None)]
@@ -1149,10 +1150,7 @@ class Resample(BaseSingle):
 
         # Now determine what time labels are needed from source
         index_time = _get_label_range(
-            kwargs["start"],
-            kwargs["stop"] or kwargs["start"],
-            frequency=self.frequency,
-            timezone=self.timezone,
+            kwargs["start"], kwargs["stop"] or kwargs["start"], **self._snap_kwargs()
         )
         # Determine the source time range that can be snapped to
         # See explanation in self.period
@@ -1162,30 +1160,35 @@ class Resample(BaseSingle):
             shift = -1
         else:  # nearest
             shift = -0.5
-        store_time = self.store.get_data(
-            mode="time",
-            start=_shift_bin_label(
-                kwargs["start"],
-                frequency=self.frequency,
-                timezone=self.timezone,
-                shift=shift,
-            ),
-            stop=_shift_bin_label(
-                kwargs["stop"],
-                frequency=self.frequency,
-                timezone=self.timezone,
-                shift=shift + 1,
-            ),
-        )["time"]
-        # return a requst to query the store; the actual frames to pick
+        index_start = _shift_bin_label(kwargs["start"], n=shift, **self._snap_kwargs())
+        index_stop = _shift_bin_label(
+            kwargs["stop"], n=shift + 1, **self._snap_kwargs()
+        )
+        # obtain time near start, between start and stop, and near stop
+        def get_store_time_set(start=None, stop=None):
+            result = self.store.get_data(mode="time", start=start, stop=stop)
+            if result is None:
+                return set()
+            return set(result["time"])
+
+        store_time = sorted(
+            get_store_time_set(start=index_start)
+            | get_store_time_set(start=index_start, stop=index_stop)
+            | get_store_time_set(start=index_stop)
+        )
+        if not store_time:
+            return [({"empty": True, "mode": kwargs["mode"]}, None)]
+        # return a request to query the store; the actual frames to pick
         # for the result (`nearest`) are passed via the `process_kwargs`
-        request["start"] = store_time[0]
-        request["stop"] = store_time[-1]
-        kwargs["nearest"] = find_neigbours(store_time, index_time, self.direction)
+        nearest = find_neigbours(store_time, index_time, self.direction)
+        # reduce request start and stop to only what is needed
+        request["start"] = store_time[nearest.min()]
+        request["stop"] = store_time[nearest.max()]
+        kwargs["nearest"] = nearest - nearest.min()
         return [(kwargs, None), (self.store, request)]
 
     @staticmethod
-    def process(process_kwargs, time_data=None, data=None):
+    def process(process_kwargs, data=None):
         mode = process_kwargs["mode"]
         # Handle empty data
         if process_kwargs.get("empty"):

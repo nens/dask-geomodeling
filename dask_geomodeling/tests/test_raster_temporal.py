@@ -763,36 +763,54 @@ def test_resample_timedelta(freq, expected, source):
     assert view.timedelta == expected
 
 
-# Source period is [2000-01-01 00:00, 2000-01-01 02:00], inclusive on both sides
-# we take 90minute frequency for testing the get_data methods
-
 
 @pytest.mark.parametrize(
-    "frequency,direction,expected",
+    "frequency,direction,start,stop,expected_time,expected_values",
     [
-        (
-            "90min",
-            "backward",
-            [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30), dt(2000, 1, 1, 3)],
-        ),
-        ("90min", "forward", [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)]),
-        ("90min", "nearest", [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)]),
-        (
-            "75min",
-            "backward",
-            [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15), dt(2000, 1, 1, 2, 30)],
-        ),
-        ("75min", "forward", [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15)]),
-        (
-            "75min",
-            "nearest",
-            [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15), dt(2000, 1, 1, 2, 30)],
-        ),
+        # Source period is [2000-01-01 00:00, 2000-01-01 02:00], inclusive on both sides
+        #  90min and 75min test different behaviours around directions
+        ("90min", "backward", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30), dt(2000, 1, 1, 3)], [0, 1, 2]),
+        ("90min", "forward", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)], [0, 2]),
+        ("90min", "nearest", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)], [0, 1]),
+        ("75min", "backward", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15), dt(2000, 1, 1, 2, 30)], [0, 1, 2]),
+        ("75min", "forward", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15)], [0, 2]),
+        ("75min", "nearest", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15), dt(2000, 1, 1, 2, 30)], [0, 1, 2]),
+        ("D", "backward", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1), dt(2000, 1, 2)], [0, 2]),
+        ("D", "forward", dt(1970, 1, 1), dt(2020, 1, 1), [dt(2000, 1, 1)], [0]),
+        # Partial requests
+        ("90min", "backward", dt(2000, 1, 1), dt(2000, 1, 1, 2), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)], [0, 1]),
+        ("90min", "forward", dt(2000, 1, 1), dt(2000, 1, 1, 2), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)], [0, 2]),
+        ("90min", "nearest", dt(2000, 1, 1), dt(2000, 1, 1, 2), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 30)], [0, 1]),
+        ("75min", "backward", dt(2000, 1, 1), dt(2000, 1, 1, 2), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15)], [0, 1]),
+        ("75min", "forward", dt(2000, 1, 1), dt(2000, 1, 1, 2), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15)], [0, 2]),
+        ("75min", "nearest", dt(2000, 1, 1), dt(2000, 1, 1, 2), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15)], [0, 1]),
+        # Oversampling
+        ("1min", "nearest", dt(2000, 1, 1, 0, 29), dt(2000, 1, 1, 0, 31), [dt(2000, 1, 1, 0, 29), dt(2000, 1, 1, 0, 30), dt(2000, 1, 1, 0, 31)], [0, 0, 1]),
     ],
 )
-def test_resample_get_complete_time(source, frequency, direction, expected):
+def test_resample_get_data(source,point_request, frequency, direction, start, stop, expected_time, expected_values):
     view = Resample(source, frequency, direction=direction)
+
+    # Time
     result = view.get_data(
-        mode="time", start=Datetime(1970, 1, 1), stop=Datetime(2020, 1, 1)
+        mode="time", start=start, stop=stop
     )
-    assert result["time"] == expected
+    assert result["time"] == expected_time
+
+    # Meta (same logic as Data; easier to debug)
+    result = view.get_data(
+        mode="meta", start=start, stop=stop
+    )
+    assert result["meta"] == ["Testmeta for band {}".format(i) for i in expected_values]
+
+    # Data
+    DATA_MAPPING = [1, 7, 255]
+    point_request.update({"start": start, "stop": stop})
+    result = view.get_data(**point_request)
+    if expected_values:
+        assert_equal(
+          result["values"],
+          np.array([[[DATA_MAPPING[x]]] for x in expected_values]),
+        )
+    else:
+        assert result is None
