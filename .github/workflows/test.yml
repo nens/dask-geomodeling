@@ -71,8 +71,7 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: |
-          uv run pytest dask_geomodeling
+        run: pytest dask_geomodeling
 
   TestDockerFocal:
     name: Docker ubuntu:focal tests
@@ -102,5 +101,4 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: |
-          uv run pytest dask_geomodeling
+        run: pytest dask_geomodeling
