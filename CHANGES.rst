@@ -12,6 +12,9 @@ Changelog of dask-geomodeling
 
 - Added `raster.Resample` block for resampling rasters to different resolutions.
 
+- Fixed error in the period of `RasterFileSource`.
+
+
 2.5.5 (2025-03-17)
 ------------------
 

@@ -18,26 +18,36 @@ from osgeo import gdal, osr
 
 class TstRasterSourceBase:
     def test_period(self):
-        self.assertEqual(datetime(2000, 1, 1), self.source.period[0])
-        self.assertEqual(datetime(2000, 1, 2), self.source.period[1])
+        self.assertEqual(datetime(2000, 1, 1), self.source_temporal.period[0])
+        self.assertEqual(datetime(2000, 1, 2), self.source_temporal.period[1])
+
+    def test_period_nontemporal(self):
+        self.assertEqual(datetime(1970, 1, 1), self.source.period[0])
+        self.assertEqual(datetime(1970, 1, 1), self.source.period[1])
 
     def test_timedelta(self):
-        self.assertEqual(timedelta(days=1), self.source.timedelta)
+        self.assertEqual(timedelta(days=1), self.source_temporal.timedelta)
+
+    def test_timedelta_nontemporal(self):
+        self.assertIsNone(self.source.timedelta)
 
     def test_temporal(self):
-        self.assertTrue(self.source.temporal)
+        self.assertTrue(self.source_temporal.temporal)
+
+    def test_nontemporal(self):
+        self.assertFalse(self.source.temporal)
 
     def test_len(self):
-        self.assertEqual(2, len(self.source))
+        self.assertEqual(2, len(self.source_temporal))
 
     def test_projection(self):
-        self.assertEqual("EPSG:28992", self.source.projection)
+        self.assertEqual("EPSG:28992", self.source_temporal.projection)
 
     def test_dtype(self):
-        self.assertEqual(np.uint8, self.source.dtype)
+        self.assertEqual(np.uint8, self.source_temporal.dtype)
 
     def test_fillvalue(self):
-        self.assertEqual(np.uint8(255), self.source.fillvalue)
+        self.assertEqual(np.uint8(255), self.source_temporal.fillvalue)
 
     def test_extent(self):
         expected = (
@@ -45,7 +55,7 @@ class TstRasterSourceBase:
             .transformed("EPSG:4326")
             .bbox
         )
-        assert_allclose(self.source.extent, expected, atol=1e-10)
+        assert_allclose(self.source_temporal.extent, expected, atol=1e-10)
 
     def test_geometry(self):
         expected = (
@@ -53,7 +63,7 @@ class TstRasterSourceBase:
             .as_geometry()
             .ExportToWkt()
         )
-        self.assertEqual(expected, self.source.geometry.ExportToWkt())
+        self.assertEqual(expected, self.source_temporal.geometry.ExportToWkt())
 
     def test_point_single_pixel(self):
         # data is defined at [136700, 136705) and (455795, 455800]
@@ -151,8 +161,8 @@ class TstRasterSourceBase:
         assert_equal(data["values"], 5)
 
     def test_get_time_last(self):
-        data = self.source.get_data(mode="time")
-        self.assertEqual(data["time"], [self.source.period[1]])
+        data = self.source_temporal.get_data(mode="time")
+        self.assertEqual(data["time"], [self.source_temporal.period[1]])
 
     def test_get_time_nearest(self):
         for start, expected in [
@@ -163,7 +173,7 @@ class TstRasterSourceBase:
             (datetime(2000, 1, 2), datetime(2000, 1, 2)),
             (datetime(2018, 1, 1), datetime(2000, 1, 2)),
         ]:
-            data = self.source.get_data(mode="time", start=start)
+            data = self.source_temporal.get_data(mode="time", start=start)
             self.assertEqual(data["time"], [expected])
 
     def test_get_time_range(self):
@@ -171,7 +181,7 @@ class TstRasterSourceBase:
             (datetime(1970, 1, 1), datetime(1999, 12, 31, 12, 59)),
             (datetime(2000, 1, 2, 0, 1), datetime(2018, 1, 1)),
         ]:
-            data = self.source.get_data(mode="time", start=start, stop=stop)
+            data = self.source_temporal.get_data(mode="time", start=start, stop=stop)
             self.assertEqual(data["time"], [])
 
         for start, stop in [
@@ -179,14 +189,14 @@ class TstRasterSourceBase:
             (datetime(2000, 1, 1), datetime(2000, 1, 1)),
             (datetime(2000, 1, 1), datetime(2000, 1, 1, 23, 59)),
         ]:
-            data = self.source.get_data(mode="time", start=start, stop=stop)
+            data = self.source_temporal.get_data(mode="time", start=start, stop=stop)
             self.assertEqual(data["time"], [datetime(2000, 1, 1)])
 
         for start, stop in [
             (datetime(1970, 1, 1), datetime(2010, 1, 1)),
             (datetime(2000, 1, 1), datetime(2000, 1, 2)),
         ]:
-            data = self.source.get_data(mode="time", start=start, stop=stop)
+            data = self.source_temporal.get_data(mode="time", start=start, stop=stop)
             self.assertEqual(data["time"], [datetime(2000, 1, 1), datetime(2000, 1, 2)])
 
     def test_reproject(self):
@@ -206,6 +216,13 @@ class TstRasterSourceBase:
 class TestMemorySource(TstRasterSourceBase, unittest.TestCase):
     def setUp(self):
         self.source = MemorySource(
+            data=np.array([[[5]]], dtype=np.uint8),
+            no_data_value=255,
+            projection="EPSG:28992",
+            pixel_size=5,
+            pixel_origin=(136700, 455800),
+        ) 
+        self.source_temporal = MemorySource(
             data=np.array([[[4]], [[5]]], dtype=np.uint8),
             no_data_value=255,
             projection="EPSG:28992",
@@ -218,26 +235,26 @@ class TestMemorySource(TstRasterSourceBase, unittest.TestCase):
 
     def test_get_meta_last(self):
         self.assertListEqual(
-            self.source.get_data(mode="meta")["meta"], self.source.metadata[1:]
+            self.source_temporal.get_data(mode="meta")["meta"], self.source_temporal.metadata[1:]
         )
 
     def test_get_meta_first(self):
         self.assertListEqual(
-            self.source.get_data(mode="meta", start=datetime(1970, 1, 1))["meta"],
-            self.source.metadata[:1],
+            self.source_temporal.get_data(mode="meta", start=datetime(1970, 1, 1))["meta"],
+            self.source_temporal.metadata[:1],
         )
 
     def test_get_meta_all(self):
         self.assertListEqual(
-            self.source.get_data(
+            self.source_temporal.get_data(
                 mode="meta", start=datetime(1970, 1, 1), stop=datetime(2010, 1, 1)
             )["meta"],
-            self.source.metadata,
+            self.source_temporal.metadata,
         )
 
     def test_get_meta_empty(self):
         self.assertListEqual(
-            self.source.get_data(
+            self.source_temporal.get_data(
                 mode="meta", start=datetime(1970, 1, 1), stop=datetime(1971, 1, 1)
             )["meta"],
             [],
@@ -248,7 +265,18 @@ class TestGeoTIFFSource(TstRasterSourceBase, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.path = setup_temp_root()
-        cls.single_pixel_tif = os.path.join(cls.path, "test.tif")
+        cls.single_pixel_tif = os.path.join(cls.path, "single_pixel.tif")
+        array = np.array([[[5]]], 'u1')
+        kwargs = {
+            "no_data_value": 255,
+            "geo_transform": (136700.0, 5.0, 0.0, 455800.0, 0.0, -5.0),
+            "projection": osr.GetUserInputAsWKT("EPSG:28992"),
+        }
+        driver = gdal.GetDriverByName("GTiff")
+        with utils.Dataset(array, **kwargs) as dataset:
+            driver.CreateCopy(cls.single_pixel_tif, dataset)        
+        
+        cls.temporal_tif = os.path.join(cls.path, "test_temporal.tif")
 
         array = np.array([[[4]], [[5]]], 'u1')
         kwargs = {
@@ -258,18 +286,19 @@ class TestGeoTIFFSource(TstRasterSourceBase, unittest.TestCase):
         }
         driver = gdal.GetDriverByName("GTiff")
         with utils.Dataset(array, **kwargs) as dataset:
-            driver.CreateCopy(cls.single_pixel_tif, dataset)
+            driver.CreateCopy(cls.temporal_tif, dataset)
 
     @classmethod
     def tearDownClass(cls):
         teardown_temp_root(cls.path)
 
     def setUp(self):
-        self.source = RasterFileSource(
-            url=self.single_pixel_tif,
+        self.source = RasterFileSource(url=self.single_pixel_tif)
+        self.source_temporal = RasterFileSource(
+            url=self.temporal_tif,
             time_first=datetime(2000, 1, 1),
             time_delta=timedelta(days=1),
         )
 
     def tearDown(self):
-        self.source.close_dataset()  # needed for the tearDownClass
+        self.source_temporal.close_dataset()  # needed for the tearDownClass
