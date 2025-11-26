@@ -62,11 +62,12 @@ jobs:
 
       - name: Install python dependencies
         shell: bash
-        # NumPy is installed first because the pygdal build needs it.
+        # NumPy and setuptools are installed first because the pygdal build needs them.
         run: |
           uv venv
-          uv pip install -e .[test,cityhash] setuptools numpy${{ matrix.numpy }} ${{ matrix.pins }}
+          uv pip install setuptools numpy${{ matrix.numpy }}
           uv pip install ${{ matrix.gdal }} --no-build-isolation
+          uv pip install -e .[test,cityhash] ${{ matrix.pins }}
           uv pip list
 
       - name: Run tests
@@ -97,7 +98,9 @@ jobs:
         shell: bash
         run: |
           pip3 install --disable-pip-version-check --upgrade pip setuptools wheel uv
-          uv pip install --system -e .[test,cityhash] numpy==1.24.4 pygdal==3.0.4.11 scipy==1.10.1 dask[delayed]==2023.5.0 pandas==2.0.3 geopandas==0.13.2 fiona==1.9.6
+          uv pip install --system setuptools numpy==1.24.4
+          uv pip install --system pygdal==3.0.4.11 --no-build-isolation
+          uv pip install --system -e .[test,cityhash] scipy==1.10.1 dask[delayed]==2023.5.0 pandas==2.0.3 geopandas==0.13.2 fiona==1.9.6
           uv pip list
 
       - name: Run tests
