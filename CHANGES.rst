@@ -10,6 +10,8 @@ Changelog of dask-geomodeling
   geopandas versions below 0.13, numpy versions below 1.21, and scipy versions
   below 1.7.
 
+- Added `raster.Resample` block for resampling rasters to different resolutions.
+
 2.5.5 (2025-03-17)
 ------------------
 

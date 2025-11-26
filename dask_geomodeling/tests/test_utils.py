@@ -456,18 +456,33 @@ class TestRasterize(unittest.TestCase):
         self.assertEqual(np.float64, raster["values"].dtype)
 
 
-class TestFindNearest(unittest.TestCase):
-    def test_find_nearest_one_element(self):
-        self.assertEqual(utils.find_nearest([42], [43, 44, 45]).tolist(), [0, 0, 0])
+class TestFindNeighbours(unittest.TestCase):
+    def test_find_neigbours_one_element(self):
+        self.assertEqual(utils.find_neigbours([42], [43, 44, 45]).tolist(), [0, 0, 0])
 
-    def test_find_nearest_number(self):
+    def test_find_neigbours_number(self):
         array = [2, 5]
         value = [1, 2, 3, 4, 5, 6]
-        expected = [0, 0, 0, 1, 1, 1]
-        self.assertEqual(utils.find_nearest(array, value).tolist(), expected)
+        expected = [0, 0, 0, 1, 1, 1]   
+        self.assertEqual(utils.find_neigbours(array, value).tolist(), expected)
 
-    def test_find_nearest_datetime(self):
+    def test_find_neigbours_datetime(self):
         array = [Datetime(2001, 2, d) for d in (2, 5)]
         value = [Datetime(2001, 2, d) for d in (1, 2, 3, 4, 5, 6)]
         expected = [0, 0, 0, 1, 1, 1]
-        self.assertEqual(utils.find_nearest(array, value).tolist(), expected)
+        self.assertEqual(utils.find_neigbours(array, value).tolist(), expected)
+
+    def test_find_neigbours_forward(self):
+        array = [2, 5]
+        value = [1, 2, 3, 4, 5, 6]
+        expected = [0, 0, 1, 1, 1, 1]
+        self.assertEqual(utils.find_neigbours(array, value, direction="forward").tolist(), expected)
+
+    def test_find_neigbours_backward(self):
+        array = [2, 5]
+        value = [1, 2, 3, 4, 5, 6]
+        expected = [0, 0, 0, 0, 1, 1]
+        self.assertEqual(utils.find_neigbours(array, value, direction="backward").tolist(), expected)
+
+    def test_find_neigbours_exactly_halfway(self):
+        self.assertEqual(utils.find_neigbours([2, 4], [3]).tolist(), [0])
