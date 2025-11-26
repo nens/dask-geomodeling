@@ -38,12 +38,12 @@ jobs:
           - os: ubuntu-24.04
             python: "3.13"
             numpy: "==2.1.*"
-            gdal: "gdal==3.8.4.*"
+            gdal: "GDAL[numpy]==3.8.4.*"
             pins: "scipy==1.16.* dask[delayed]==2025.* pandas==2.3.* geopandas==1.1.*"
           - os: ubuntu-24.04
             python: "3.14"
             numpy: "==2.*"
-            gdal: "gdal==3.8.4.*"
+            gdal: "GDAL[numpy]==3.8.4.*"
 
     steps:
       - uses: actions/checkout@v2
@@ -65,8 +65,10 @@ jobs:
         # NumPy and setuptools are installed first because the pygdal build needs them.
         run: |
           uv venv
-          uv pip install setuptools numpy${{ matrix.numpy }}
-          uv pip install ${{ matrix.gdal }} --no-build-isolation
+          uv pip install setuptools wheel numpy${{ matrix.numpy }}
+          # Build pygdal with pip (not uv) to ensure proper build isolation handling
+          source .venv/bin/activate
+          pip install ${{ matrix.gdal }} --no-build-isolation
           uv pip install -e .[test,cityhash] ${{ matrix.pins }}
           uv pip list
 
@@ -98,8 +100,9 @@ jobs:
         shell: bash
         run: |
           pip3 install --disable-pip-version-check --upgrade pip setuptools wheel uv
-          uv pip install --system setuptools numpy==1.24.4
-          uv pip install --system pygdal==3.0.4.11 --no-build-isolation
+          uv pip install --system setuptools wheel numpy==1.24.4
+          # Build pygdal with pip (not uv) to ensure proper build isolation handling
+          pip3 install pygdal==3.0.4.11 --no-build-isolation
           uv pip install --system -e .[test,cityhash] scipy==1.10.1 dask[delayed]==2023.5.0 pandas==2.0.3 geopandas==0.13.2 fiona==1.9.6
           uv pip list
 

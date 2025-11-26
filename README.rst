@@ -37,7 +37,8 @@ system. On Ubuntu, you can install them with:
 
 Then, installation of the GDAL python module is done as follows:
 
-    uv pip install GDAL[numpy]==$(gdal-config --version) --no-build-isolation
+    source .venv/bin/activate
+    pip install GDAL[numpy]==$(gdal-config --version) --no-build-isolation
 
 Then run the tests:
 
