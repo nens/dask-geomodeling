@@ -501,7 +501,7 @@ class RasterFileSource(RasterSourceBase):
         if len(self) == 0:
             return
         elif len(self) == 1:
-            return (utc_from_ms_timestamp(self.time_first)) * 2
+            return (utc_from_ms_timestamp(self.time_first),) * 2
         else:
             first = utc_from_ms_timestamp(self.time_first)
             last = first + (len(self) - 1) * self.timedelta
