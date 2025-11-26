@@ -23,3 +23,24 @@ method that fetches the data in one go, as well as a ``get_compute_graph``
 method that creates a graph to compute the data later.
 
 `Read the docs <https://dask-geomodeling.readthedocs.org/>`_ for further information.
+
+## Development on this project itself
+
+The standard command to setup your project using [`uv`](https://docs.astral.sh/uv/) is:
+
+    uv sync --dev       # 'uv.lock' is git-ignored, because this is a library
+
+This project uses GDAL, which requires additional system packages to be available on your
+system. On Ubuntu, you can install them with:
+
+    sudo apt-get install gdal-bin libgdal-dev
+
+Then, installation of the GDAL python module is done as follows:
+
+    uv pip install GDAL[numpy]==$(gdal-config --version) --no-build-isolation
+
+Then run the tests:
+
+    uv run pytest
+
+The tests are also run automatically [on "github actions"](https://github.com/nens/dask-geomodeling/actions) for "master" and for pull requests. So don't just make a branch, but turn it into a pull request right away. On your pull request page, you also automatically get the feedback from the automated tests.
