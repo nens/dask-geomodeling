@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dask-geomodeling"
+version = "2.5.6.dev0"
+description = "On-the-fly operations on geographical maps."
+readme = "README.rst"
+requires-python = ">=3.8"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+keywords = ["dask"]
+authors = [
+    {name = "Nelen & Schuurmans", email = "info@nelen-schuurmans.nl"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "dask[delayed]>=2021",
+    "pandas>=1.3",
+    "geopandas>=0.13",
+    "pytz",
+    "numpy>=1.21",
+    "scipy>=1.7",
+    "fiona",
+    "packaging",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+cityhash = ["cityhash"]
+
+[project.urls]
+Homepage = "https://github.com/nens/dask-geomodeling"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dask_geomodeling"]
+
+[tool.pytest.ini_options]
+junit_family = "xunit1"
+filterwarnings = [
+    "error:::dask_geomodeling[.*]",
+    "error:::numpy[.*]",
+    "error:::scipy[.*]",
+    "error:::pandas[.*]",
+    "error:::dask[.*]",
+    "ignore:distutils Version classes are deprecated. Use packaging.version instead.::",
+]
+
+[tool.flake8]
+ignore = ["E203", "E266", "E501", "W503"]

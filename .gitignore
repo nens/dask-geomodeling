@@ -47,3 +47,6 @@ docs/_*
 
 notebooks
 *.ipynb
+
+# UV lockfile (as this is a library, not an application)
+uv.lock
