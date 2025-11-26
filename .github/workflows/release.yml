@@ -4,7 +4,7 @@ name: Build and publish
 on:
   push:
     branches:
-      - main  # just build the sdist skip release
+      - master  # just build the sdist skip release
     tags:
       - "*"
   pull_request:  # also build on PRs touching some files
