@@ -6,7 +6,7 @@ from numpy.testing import assert_equal
 
 from dask_geomodeling.raster import TemporalAggregate, Cumulative, Resample
 from dask_geomodeling.raster.temporal import (
-    _shift_bin_label,
+    _shift_datetime,
     _snap_to_resampled_labels,
     _labels_to_start_stop,
     _get_closest_label,
@@ -158,8 +158,25 @@ def test_get_closest_label(dt_input, freq, timezone, side, expected):
         (-0.5, dt(1999, 12, 31, 23, 30)),
     ],
 )
-def test_shift_bin_label(n, expected):
-    assert _shift_bin_label(dt(2000, 1, 1), "h", "UTC", n) == expected
+def test_shift_datetime(n, expected):
+    assert _shift_datetime(dt(2000, 1, 1), "h", "UTC", n) == expected
+
+
+
+
+@pytest.mark.parametrize(
+    "n,expected",
+    [
+        (0, dt(2000, 2, 1)),
+        (1, dt(2000, 3, 1)),
+        (-1, dt(2000, 1, 1)),
+        (0.5, dt(2000, 2, 15, 12)),  # + 14.5 days
+        (-0.5, dt(2000, 1, 16, 12)),  # - 15.5 days
+    ],
+)
+def test_shift_datetime_irregular_bins(n, expected):
+    assert _shift_datetime(dt(2000, 2, 1), "MS", "UTC", n) == expected
+
 
 
 us = Timedelta(microseconds=1)

@@ -294,8 +294,10 @@ def _get_bin_start(dt, frequency, closed, label, timezone):
     return resampled.first().index[0]
 
 
-def _shift_bin_label(dt, frequency, timezone, n):
-    """Shift the bin label that dt belongs to by n bins.
+def _shift_datetime(dt, frequency, timezone, n):
+    """Shift a datetime with a number of (pandas) frequency offsets.
+      
+    This function supports fractional n as well.
 
     :type dt: datetime.datetime without timezone.
     """
@@ -305,8 +307,10 @@ def _shift_bin_label(dt, frequency, timezone, n):
     freq = to_offset(frequency)
 
     if isinstance(n, float):
-        ts_1 = ts + freq * (n // 1.0)
-        ts_2 = ts + freq * (n // 1.0 + 1)
+        # If frequency is not fixed (e.g. month), we need to do some interpolation,
+        # because pandas does not support fractional offsets for those frequencies.
+        ts_1 = ts + freq * int(n // 1.0)
+        ts_2 = ts + freq * (int(n // 1.0) + 1)
         fractional_shift = n % 1.0 if n > 0 else (-(n % 1.0))
         ts = ts + (ts_2 - ts_1) * fractional_shift
     else:
@@ -1108,12 +1112,12 @@ class Resample(BaseSingle):
         period_start = _get_closest_label(source_period[0], side="left", **kwargs)
         # Check if this label can be snapped to source_period[0], if not the "right" label
         # must be the start
-        if source_period[0] >= _shift_bin_label(period_start, n=0.5, **kwargs):
+        if source_period[0] >= _shift_datetime(period_start, n=0.5, **kwargs):
             period_start = _get_closest_label(source_period[0], side="right", **kwargs)
         period_end = _get_closest_label(source_period[1], side="right", **kwargs)
         # Check if this label can be snapped to source_period[1], if not the "left" label
         # must be the end
-        if source_period[1] < _shift_bin_label(period_end, n=-0.5, **kwargs):
+        if source_period[1] < _shift_datetime(period_end, n=-0.5, **kwargs):
             period_end = _get_closest_label(source_period[1], side="left", **kwargs)
         return (period_start, period_end)
 
@@ -1158,8 +1162,8 @@ class Resample(BaseSingle):
             shift = -1
         else:  # nearest
             shift = -0.5
-        index_start = _shift_bin_label(kwargs["start"], n=shift, **self._snap_kwargs())
-        index_stop = _shift_bin_label(
+        index_start = _shift_datetime(kwargs["start"], n=shift, **self._snap_kwargs())
+        index_stop = _shift_datetime(
             kwargs["stop"], n=shift + 1, **self._snap_kwargs()
         )
         # obtain time near start, between start and stop, and near stop
