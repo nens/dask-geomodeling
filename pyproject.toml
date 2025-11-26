@@ -47,6 +47,11 @@ Homepage = "https://github.com/nens/dask-geomodeling"
 [tool.hatch.build.targets.wheel]
 packages = ["dask_geomodeling"]
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/docs",
+]
+
 [tool.pytest.ini_options]
 junit_family = "xunit1"
 filterwarnings = [

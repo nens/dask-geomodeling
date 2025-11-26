@@ -9,7 +9,7 @@ on:
 
 jobs:
   TestLinux:
-    name: Python ${{ matrix.python }} ${{ matrix.display_name }} (${{ matrix.os }})
+    name: Python ${{ matrix.python }} (${{ matrix.gdal }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -74,7 +74,7 @@ jobs:
         run: pytest dask_geomodeling
 
   TestDockerFocal:
-    name: Docker ubuntu:focal tests
+    name: Ubuntu 20.04 (GDAL 3.0) tests
     runs-on: ubuntu-latest
     container:
       image: ubuntu:focal
