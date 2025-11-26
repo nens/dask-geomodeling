@@ -35,6 +35,12 @@ dependencies = [
 test = ["pytest"]
 cityhash = ["cityhash"]
 
+[dependency-groups]
+dev = [
+    "pytest",
+    "zest.releaser",
+]
+
 [project.urls]
 Homepage = "https://github.com/nens/dask-geomodeling"
 
