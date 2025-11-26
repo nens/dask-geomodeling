@@ -65,7 +65,7 @@ jobs:
         # NumPy is installed first because the pygdal build needs it.
         run: |
           uv venv
-          uv pip install -e .[test,cityhash] numpy${{ matrix.numpy }} ${{ matrix.pins }}
+          uv pip install -e .[test,cityhash] setuptools numpy${{ matrix.numpy }} ${{ matrix.pins }}
           uv pip install ${{ matrix.gdal }} --no-build-isolation
           uv pip list
 
