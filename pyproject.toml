@@ -65,3 +65,6 @@ filterwarnings = [
 
 [tool.flake8]
 ignore = ["E203", "E266", "E501", "W503"]
+
+[tool.zest-releaser]
+release = false

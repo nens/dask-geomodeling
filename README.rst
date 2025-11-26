@@ -45,3 +45,12 @@ Then run the tests:
     uv run pytest
 
 The tests are also run automatically [on "github actions"](https://github.com/nens/dask-geomodeling/actions) for "master" and for pull requests. So don't just make a branch, but turn it into a pull request right away. On your pull request page, you also automatically get the feedback from the automated tests.
+
+
+## Release
+
+Make sure you have [zest.releaser](https://zestreleaser.readthedocs.io/en/latest/) installed.
+
+    uv run fullrelease
+
+When you created a tag, it will be uploaded automatically [to pypi](https://pypi.org/project/rana-process-sdk/) by a Github Action.
