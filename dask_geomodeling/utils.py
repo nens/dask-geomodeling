@@ -956,13 +956,18 @@ def filter_none(lst):
     return [x for x in lst if x is not None]
 
 
-def find_nearest(array, value):
+def find_neigbours(array, value, direction="nearest"):
     """
     Return indices to the nearest neighbours of elements.
 
     Args:
         array: 1-D array_like, must be sorted in ascending order.
         values: array_like, values for which to find the nearest neighbour
+        direction: 'nearest', 'forward', 'backward'
+
+    Note that this will never return out of bounds values; also when doing
+    forwards or backwards interpolation, the first or last index will be
+    returned when the value is out of bounds.
     """
     array = np.asarray(array)
     value = np.asarray(value)
@@ -970,9 +975,17 @@ def find_nearest(array, value):
     if array.size == 1:
         return np.zeros(value.shape, dtype=int)
 
-    # determine midpoints a way that works for datetimes, too
-    midpoints = array[:-1] + (array[1:] - array[:-1]) / 2
-    return np.searchsorted(midpoints, value)
+    if direction == "nearest":
+        midpoints = array[:-1] + (array[1:] - array[:-1]) / 2
+        indices = np.searchsorted(midpoints, value)
+    elif direction == "forward":
+        indices = np.searchsorted(array, value, side='left')
+    elif direction == "backward":
+        indices = np.searchsorted(array, value, side='right') - 1
+    else:
+        raise ValueError("Unknown direction: {}".format(direction))
+    
+    return np.clip(indices, 0, array.size - 1)
 
 def normalize_offset(freq) -> str:
     """Convert pandas frequency strings to compatible with the current pandas.
