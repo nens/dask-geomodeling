@@ -54,3 +54,7 @@ Make sure you have [zest.releaser](https://zestreleaser.readthedocs.io/en/latest
     uv run fullrelease
 
 When you created a tag, it will be uploaded automatically [to pypi](https://pypi.org/project/rana-process-sdk/) by a Github Action.
+
+This project is also available on [conda-forge](https://anaconda.org/conda-forge/dask-geomodeling).
+After a release on PyPI is made, a Pull Request is automatically created on https://github.com/conda-forge/dask-geomodeling-feedstock. Merge this
+to publish the new version on conda-forge.
