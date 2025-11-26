@@ -1009,7 +1009,7 @@ class Resample(BaseSingle):
 
     This operation performs a temporal rearrangement of raster frames. Each frame
     in the resulting raster is snapped to the first frame forwards / backwards,
-    or the nearest frame.
+    or the nearest frame of the source raster.
 
     Args:
       source (RasterBlock): The input raster whose timesteps are aggregated
@@ -1092,10 +1092,12 @@ class Resample(BaseSingle):
         - forward: take the first label left of `x`. For period[1], this label may
                    not actually snap to `x`, but it is the last label with any value.
         - backward: take the first label right of `x`. For period[0], this label may
-                    not actually snap to `x`, but it is the last label with any value.
+                    not actually snap to `x`, but it is the first label with any value.
         - nearest: nearest means finding the closest `x` for given `t`. We need to
                    invert this problem. We do this by fetching the first label to the
                    left and right, and for each of them evaluate if `x` is the closest.
+                   This `t` may not actually snap to `x`, but it is the first/last label
+                   with any value.
         """
         source_period = self.source.period
         if source_period is None:
@@ -1129,7 +1131,7 @@ class Resample(BaseSingle):
             return  # e.g. Month is non-equidistant
 
     def get_sources_and_requests(self, **request):
-        kwargs = {
+        process_kwargs = {
             "mode": request["mode"],
             "direction": self.direction,
             **self._snap_kwargs(),
@@ -1137,22 +1139,22 @@ class Resample(BaseSingle):
 
         # Start determining what time labels will be produced
         #  requested start/stop will snap to *resampled* time labels
-        kwargs["start"], kwargs["stop"] = _snap_to_resampled_labels(
+        process_kwargs["start"], process_kwargs["stop"] = _snap_to_resampled_labels(
             self.period,
             request.get("start"),
             request.get("stop"),
             **self._snap_kwargs(),
         )
-        if kwargs["start"] is None:  # return early for no labels in range
-            return [({"empty": True, "mode": kwargs["mode"]}, None)]
+        if process_kwargs["start"] is None:  # return early for no labels in range
+            return [({"empty": True, "mode": process_kwargs["mode"]}, None)]
 
         # a time request does not involve a request to self.source
-        if kwargs["mode"] == "time":
-            return [(kwargs, None)]
+        if process_kwargs["mode"] == "time":
+            return [(process_kwargs, None)]
 
         # Now determine what time labels are needed from source
         index_time = _get_label_range(
-            kwargs["start"], kwargs["stop"] or kwargs["start"], **self._snap_kwargs()
+            process_kwargs["start"], process_kwargs["stop"] or process_kwargs["start"], **self._snap_kwargs()
         )
         # Determine the source time range that can be snapped to
         # See explanation in self.period
@@ -1162,9 +1164,9 @@ class Resample(BaseSingle):
             shift = -1
         else:  # nearest
             shift = -0.5
-        index_start = _shift_datetime(kwargs["start"], n=shift, **self._snap_kwargs())
+        index_start = _shift_datetime(process_kwargs["start"], n=shift, **self._snap_kwargs())
         index_stop = _shift_datetime(
-            kwargs["stop"], n=shift + 1, **self._snap_kwargs()
+            process_kwargs["stop"], n=shift + 1, **self._snap_kwargs()
         )
         # obtain time near start, between start and stop, and near stop
         def get_store_time_set(start=None, stop=None):
@@ -1179,15 +1181,15 @@ class Resample(BaseSingle):
             | get_store_time_set(start=index_stop)
         )
         if not store_time:
-            return [({"empty": True, "mode": kwargs["mode"]}, None)]
+            return [({"empty": True, "mode": process_kwargs["mode"]}, None)]
         # return a request to query the store; the actual frames to pick
         # for the result (`nearest`) are passed via the `process_kwargs`
         nearest = find_neigbours(store_time, index_time, self.direction)
         # reduce request start and stop to only what is needed
         request["start"] = store_time[nearest.min()]
         request["stop"] = store_time[nearest.max()]
-        kwargs["nearest"] = nearest - nearest.min()
-        return [(kwargs, None), (self.store, request)]
+        process_kwargs["nearest"] = nearest - nearest.min()
+        return [(process_kwargs, None), (self.store, request)]
 
     @staticmethod
     def process(process_kwargs, data=None):
