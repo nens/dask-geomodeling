@@ -1,0 +1,65 @@
+name: Build and publish
+
+# Run on PR requests. And on master itself.
+on:
+  push:
+    branches:
+      - master  # just build the sdist skip release
+    tags:
+      - "*"
+  pull_request:  # also build on PRs touching some files
+    paths:
+      - ".github/workflows/release.yml"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build a source tarball
+        run: uv build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: ./dist/*
+          retention-days: 5
+
+  publish:
+    name: Publish on GitHub and PyPI
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/dask-geomodeling
+    permissions:
+      id-token: write
+      contents: write  # to create releases
+
+    # release on every tag
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: artifact
+          path: dist
+
+      - name: Upload Github release
+        id: upload-release-asset
+        uses: softprops/action-gh-release@v2
+
+      - name: Upload Release Assets to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
