@@ -668,6 +668,17 @@ def test_resample_timedelta(freq, expected, source):
         ("75min", "nearest", dt(2000, 1, 1), dt(2000, 1, 1, 2), [dt(2000, 1, 1), dt(2000, 1, 1, 1, 15)], [0, 1]),
         # Oversampling
         ("1min", "nearest", dt(2000, 1, 1, 0, 29), dt(2000, 1, 1, 0, 31), [dt(2000, 1, 1, 0, 29), dt(2000, 1, 1, 0, 30), dt(2000, 1, 1, 0, 31)], [0, 0, 1]),
+        # Single time request (stop = None, should return time index nearest to start, which snaps to some source frame)
+        ("90min", "backward", dt(2000, 1, 1, 1, 30), None, [dt(2000, 1, 1, 1, 30)], [1]),
+        ("90min", "backward", dt(2000, 1, 1, 0, 46), None, [dt(2000, 1, 1, 1, 30)], [1]),
+        ("90min", "backward", dt(2000, 1, 1, 2, 15), None, [dt(2000, 1, 1, 1, 30)], [1]),
+        ("90min", "forward", dt(2000, 1, 1, 1, 30), None, [dt(2000, 1, 1, 1, 30)], [2]),
+        ("90min", "forward", dt(2000, 1, 1, 0, 46), None, [dt(2000, 1, 1, 1, 30)], [2]),
+        ("90min", "forward", dt(2000, 1, 1, 2, 15), None, [dt(2000, 1, 1, 1, 30)], [2]),
+        # Latest time request (both start and stop None, should return latest time index)
+        ("90min", "backward", None, None, [dt(2000, 1, 1, 3)], [2]),
+        ("90min", "forward", None, None, [dt(2000, 1, 1, 1, 30)], [2]),
+        ("90min", "nearest", None, None, [dt(2000, 1, 1, 1, 30)], [1]),
     ],
 )
 def test_resample_get_data(source,point_request, frequency, direction, start, stop, expected_time, expected_values):
