@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.6.1 (unreleased)
+2.6.1 (2025-12-01)
 ------------------
 
 - Fixed `raster.Resample` block not handling single time step requests.
