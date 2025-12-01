@@ -459,8 +459,11 @@ def _labels_to_start_stop(start_label, stop_label, frequency, closed, label, tim
     return start, stop
 
 
-def _get_label_range(start_label, stop_label, frequency, timezone):
+def _get_label_range(start_label, stop_label, frequency: str, timezone: str):
     """Get all labels between start_label and stop_label inclusive."""
+    assert start_label is not None
+    if stop_label is None:
+        return [start_label]
     labels = pd.date_range(
         start=_dt_to_ts(start_label, timezone),
         end=_dt_to_ts(stop_label, timezone),
@@ -1154,7 +1157,7 @@ class Resample(BaseSingle):
 
         # Now determine what time labels are needed from source
         index_time = _get_label_range(
-            process_kwargs["start"], process_kwargs["stop"] or process_kwargs["start"], **self._snap_kwargs()
+            process_kwargs["start"], process_kwargs["stop"], **self._snap_kwargs()
         )
         # Determine the source time range that can be snapped to
         # See explanation in self.period
@@ -1166,7 +1169,7 @@ class Resample(BaseSingle):
             shift = -0.5
         index_start = _shift_datetime(process_kwargs["start"], n=shift, **self._snap_kwargs())
         index_stop = _shift_datetime(
-            process_kwargs["stop"], n=shift + 1, **self._snap_kwargs()
+            process_kwargs["stop"] or process_kwargs["start"], n=shift + 1, **self._snap_kwargs()
         )
         # obtain time near start, between start and stop, and near stop
         def get_store_time_set(start=None, stop=None):
