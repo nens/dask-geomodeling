@@ -47,7 +47,7 @@ def create_vector_file(abspath, polygons, projection="EPSG:4326", driver="GeoJSO
     field_definition = ogr.FieldDefn("name", ogr.OFTString)
     layer.CreateField(field_definition)
     if id_field:
-        field_definition = ogr.FieldDefn("id", ogr.OFTInteger)
+        field_definition = ogr.FieldDefn(id_field, ogr.OFTInteger)
         layer.CreateField(field_definition)
     layer_definition = layer.GetLayerDefn()
 
@@ -284,6 +284,22 @@ class TestGeometryFileSourceGeoJSON(TstGeometryFileSourceBase, unittest.TestCase
         self.extension = ".geojson"
         super().setUp()
 
+    def test_custom_id_field(self):
+        path = os.path.join(self.root, "test_custom_id_field" + self.extension)
+        create_vector_file(
+            path, self.polygons, projection=self.projection, driver=self.driver, id_field="custom"
+        )
+        source = geometry.GeometryFileSource(path, id_field="custom")
+
+        # id_field attr should be same
+        assert source.id_field == "custom"
+
+        # returned data index should be correct
+        result = source.get_data(
+            geometry=box(*self.bbox), projection="EPSG:4326", limit=1
+        )
+        self.assertEqual(10, result["features"].index[0])
+        self.assertEqual("custom", result["features"].index.name)
 
 
 class TestGeometryFileSourceGPKG(TstGeometryFileSourceBase, unittest.TestCase):
