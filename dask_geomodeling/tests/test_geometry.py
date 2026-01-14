@@ -150,10 +150,7 @@ class TstGeometryFileSourceBase:
         result = self.source.get_data(geometry=box(*bbox3857), projection="EPSG:3857")
         self.assertEqual("EPSG:3857", result["projection"])
         actual = result["features"].crs
-        if isinstance(actual, dict):  # pre-geopandas 0.7
-            self.assertEqual("epsg:3857", actual["init"])
-        else:  # geopandas >=0.7
-            self.assertEqual("EPSG:3857", actual.to_string())
+        self.assertEqual("EPSG:3857", actual.to_string())
         self.assertEqual(10, len(result["features"]))
 
     def test_limit(self):
@@ -266,16 +263,24 @@ class TstGeometryFileSourceBase:
 
         # extent matches the one obtained from the normal 'intersects' request
         result = self.source.get_data(
-            mode="extent", geometry=box(*self.bbox), projection="EPSG:4326"
+            mode="extent", projection="EPSG:4326"
         )
         self.assertEqual("EPSG:4326", result["projection"])
         self.assertTupleEqual(expected_extent, result["extent"])
 
         # limit does not influence the extent
         result = self.source.get_data(
-            mode="extent", geometry=box(*self.bbox), projection="EPSG:4326", limit=1
+            mode="extent", projection="EPSG:4326", limit=1
         )
         self.assertTupleEqual(expected_extent, result["extent"])
+
+    def test_extend_mode_reproject(self):
+        result = self.source.get_data(mode="extent", projection="EPSG:3857")
+
+        self.assertEqual("EPSG:3857", result["projection"])
+        # Because of the random polygons, just check the extent looks like webmercator
+        assert result["extent"][2] > 10000.0
+        assert result["extent"][3] > 10000.0
 
 
 class TestGeometryFileSourceGeoJSON(TstGeometryFileSourceBase, unittest.TestCase):

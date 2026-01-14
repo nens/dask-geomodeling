@@ -4,7 +4,13 @@ Changelog of dask-geomodeling
 2.6.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- GeometryFileSource now uses GDAL's own detection of id columns (for GeoJSON)
+  and the (always present) FID for shapefiles and geopackages. You can still use
+  a custom id column by specifying the `id_field` parameter.
+
+- GeometryFileSource now doesn't require the 'geometry' key in requests, which is
+  especially useful for 'extent' mode requests (you can now get the complete extent
+  of the file in any projection).
 
 
 2.6.1 (2025-12-01)

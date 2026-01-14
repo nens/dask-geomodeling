@@ -87,7 +87,7 @@ class GeometryFileSource(GeometryBlock):
         crs = utils.get_crs(request["projection"])
 
         # convert the requested shapely geometry object to a GeoSeries
-        if "geometry" in request:
+        if request.get("geometry") is not None:
             filt_geom = gpd.GeoSeries([request["geometry"]], crs=crs)
         else:
             filt_geom = None
@@ -121,7 +121,7 @@ class GeometryFileSource(GeometryBlock):
             f = f[mask]
 
         # convert the data to the requested crs
-        utils.geodataframe_transform(f, utils.crs_to_srs(f.crs), request["projection"])
+        f.to_crs(request["projection"], inplace=True)
 
         # compute the bounds of each geometry and filter on min_size
         min_size = request.get("min_size")
@@ -132,12 +132,13 @@ class GeometryFileSource(GeometryBlock):
             f = f[(widths > min_size) | (heights > min_size)]
 
         # only return geometries that truly intersect the requested geometry
-        if request["mode"] == "centroid":
-            with warnings.catch_warnings():  # geopandas warns if in WGS84
-                warnings.simplefilter("ignore")
-                f = f[f["geometry"].centroid.within(filt_geom.iloc[0])]
-        else:
-            f = f[f["geometry"].intersects(filt_geom.iloc[0])]
+        if request.get("geometry") is not None:
+            if request["mode"] == "centroid":
+                with warnings.catch_warnings():  # geopandas warns if in WGS84
+                    warnings.simplefilter("ignore")
+                    f = f[f["geometry"].centroid.within(filt_geom.iloc[0])]
+            else:
+                f = f[f["geometry"].intersects(filt_geom.iloc[0])]
 
         if request.get("mode") == "extent":
             return {
