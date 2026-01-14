@@ -37,21 +37,22 @@ def random_polygons(n, bbox, ndim=2):
     polygons = polygons * (bbox_max - bbox_min) + bbox_min
     return polygons
 
-def create_vector_file(abspath, polygons, projection="EPSG:4326", driver="GeoJSON"):
+def create_vector_file(abspath, polygons, projection="EPSG:4326", driver="GeoJSON", id_field=None):
     """Create random triangle polygons inside bbox"""
     driver = ogr.GetDriverByName(driver)
-    driver.DeleteDataSource(abspath)
     datasource = driver.CreateDataSource(abspath)
     layer = datasource.CreateLayer(
         "results", get_sr(projection), geom_type=ogr.wkbPolygon
     )
     field_definition = ogr.FieldDefn("name", ogr.OFTString)
     layer.CreateField(field_definition)
-    field_definition = ogr.FieldDefn("id", ogr.OFTInteger)
-    layer.CreateField(field_definition)
+    if id_field:
+        field_definition = ogr.FieldDefn("id", ogr.OFTInteger)
+        layer.CreateField(field_definition)
     layer_definition = layer.GetLayerDefn()
 
-    for feature_id, coords in enumerate(polygons):
+    for i, coords in enumerate(polygons):
+        feature_id = i + 10
         ring = ogr.Geometry(ogr.wkbLinearRing)
         for coord in coords:
             ring.AddPoint_2D(*coord)
@@ -61,7 +62,10 @@ def create_vector_file(abspath, polygons, projection="EPSG:4326", driver="GeoJSO
         feature = ogr.Feature(layer_definition)
         feature.SetGeometry(polygon)
         feature.SetField("name", "test")
-        feature.SetField("id", feature_id + 10)
+        if id_field:
+            feature.SetField(id_field, feature_id)
+        else:
+            feature.SetFID(feature_id)
         layer.CreateFeature(feature)
     layer.SyncToDisk()
     datasource.SyncToDisk()
@@ -91,10 +95,7 @@ class TestGeometryBlockAttrs(unittest.TestCase):
         self.assertEqual(0, len(missing))
 
 
-class TestGeometryFileSource(unittest.TestCase):
-    driver = "GeoJSON"
-    extension = ".geojson"
-    
+class TstGeometryFileSourceBase:
     @classmethod
     def setUpClass(cls):
         cls.root = setup_temp_root()
@@ -109,11 +110,9 @@ class TestGeometryFileSource(unittest.TestCase):
         create_vector_file(
             path, polygons, projection=self.projection, driver=self.driver
         )
-        return geometry.GeometryFileSource(path, id_field="id")
+        return geometry.GeometryFileSource(path)
 
     def setUp(self):
-        self.driver = "GeoJSON"
-        self.extension = ".geojson"
         self.bbox = (0, 0, 1, 1)
         self.projection = "EPSG:4326"
         self.polygons = random_polygons(10, self.bbox, ndim=2)
@@ -122,10 +121,10 @@ class TestGeometryFileSource(unittest.TestCase):
     def test_attr(self):
         self.assertEqual(self.source.url, "file://" + self.root + "/test" + self.extension)
         self.assertEqual(self.source.path, self.root + "/test" + self.extension)
-        self.assertEqual(self.source.id_field, "id")
+        self.assertEqual(self.source.id_field, None)
 
     def test_columns(self):
-        self.assertSetEqual(self.source.columns, {"id", "name", "geometry"})
+        self.assertSetEqual(self.source.columns, {"name", "geometry"})
 
     def test_get_data(self):
         result = self.source.get_data(geometry=box(*self.bbox), projection=self.projection)
@@ -229,7 +228,7 @@ class TestGeometryFileSource(unittest.TestCase):
         result = self.source.get_data(
             geometry=box(*self.bbox), projection="EPSG:4326", limit=1
         )
-        self.assertEqual(self.source.id_field, result["features"].index.name)
+        self.assertEqual("fid", result["features"].index.name)
 
     def test_properties(self):
         # all properties are produced from the file
@@ -279,17 +278,26 @@ class TestGeometryFileSource(unittest.TestCase):
         self.assertTupleEqual(expected_extent, result["extent"])
 
 
+class TestGeometryFileSourceGeoJSON(TstGeometryFileSourceBase, unittest.TestCase):
+    def setUp(self):
+        self.driver = "GeoJSON"
+        self.extension = ".geojson"
+        super().setUp()
 
-class TestGeometryFileSourceGPKG(TestGeometryFileSource):
-    driver = "GPKG"
-    extension = ".gpkg"
 
 
+class TestGeometryFileSourceGPKG(TstGeometryFileSourceBase, unittest.TestCase):
+    def setUp(self):
+        self.driver = "GPKG"
+        self.extension = ".gpkg"
+        super().setUp()
 
-class TestGeometryFileSourceSHP(TestGeometryFileSource):
-    driver = "ESRI Shapefile"
-    extension = ".shp"
 
+class TestGeometryFileSourceSHP(TstGeometryFileSourceBase, unittest.TestCase):
+    def setUp(self):
+        self.driver = "ESRI Shapefile"
+        self.extension = ".shp"
+        super().setUp()
 
 
 class TestSetOperations(unittest.TestCase):
@@ -524,9 +532,8 @@ class TestConstructive(unittest.TestCase):
     def setUp(self):
         self.bbox = (0, 0, 1, 1)
         self.projection = "EPSG:4326"
-        self.id_field = "id"
         self.source = geometry.Simplify(
-            geometry.GeometryFileSource(self.url, id_field="id"),
+            geometry.GeometryFileSource(self.url),
             tolerance=None,
             preserve_topology=False,
         )
