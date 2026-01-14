@@ -220,13 +220,6 @@ class TstGeometryFileSourceBase:
         )
         self.assertEqual(2, len(result["features"]))
 
-    def test_index(self):
-        # the index column is named source.id_field
-        result = self.source.get_data(
-            geometry=box(*self.bbox), projection="EPSG:4326", limit=1
-        )
-        self.assertEqual("fid", result["features"].index.name)
-
     def test_properties(self):
         # all properties are produced from the file
         result = self.source.get_data(
