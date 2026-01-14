@@ -111,8 +111,8 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(utils.get_uint_dtype(hi - 1), dtype)
 
     def test_get_projection(self):
-        projection_rd = str("EPSG:28992")
-        projection_wgs = str("EPSG:4326")
+        projection_rd = "EPSG:28992"
+        projection_wgs = "EPSG:4326"
         rd = osr.SpatialReference(osr.GetUserInputAsWKT(projection_rd))
         self.assertEqual(utils.get_projection(rd), projection_rd)
         wgs = osr.SpatialReference(osr.GetUserInputAsWKT(projection_wgs))
@@ -129,7 +129,7 @@ class TestUtils(unittest.TestCase):
 
     def test_get_epsg_or_wkt(self):
         # epsg
-        wkt = osr.GetUserInputAsWKT(str("EPSG:3857"))
+        wkt = osr.GetUserInputAsWKT("EPSG:3857")
         out = utils.get_epsg_or_wkt(wkt)
         self.assertEqual(out, "EPSG:3857")
         # no epsg

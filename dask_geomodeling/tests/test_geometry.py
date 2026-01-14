@@ -43,11 +43,11 @@ def create_vector_file(abspath, polygons, projection="EPSG:4326", driver="GeoJSO
     driver.DeleteDataSource(abspath)
     datasource = driver.CreateDataSource(abspath)
     layer = datasource.CreateLayer(
-        str("results"), get_sr(projection), geom_type=ogr.wkbPolygon
+        "results", get_sr(projection), geom_type=ogr.wkbPolygon
     )
-    field_definition = ogr.FieldDefn(str("name"), ogr.OFTString)
+    field_definition = ogr.FieldDefn("name", ogr.OFTString)
     layer.CreateField(field_definition)
-    field_definition = ogr.FieldDefn(str("id"), ogr.OFTInteger)
+    field_definition = ogr.FieldDefn("id", ogr.OFTInteger)
     layer.CreateField(field_definition)
     layer_definition = layer.GetLayerDefn()
 
@@ -60,8 +60,8 @@ def create_vector_file(abspath, polygons, projection="EPSG:4326", driver="GeoJSO
         polygon.AddGeometry(ring)
         feature = ogr.Feature(layer_definition)
         feature.SetGeometry(polygon)
-        feature.SetField(str("name"), str("test"))
-        feature.SetField(str("id"), feature_id + 10)
+        feature.SetField("name", "test")
+        feature.SetField("id", feature_id + 10)
         layer.CreateFeature(feature)
     layer.SyncToDisk()
     datasource.SyncToDisk()
