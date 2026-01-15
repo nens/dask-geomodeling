@@ -27,15 +27,7 @@ except ImportError:  # shapely 1.*
 from pyproj import CRS, Transformer
 from pyproj.exceptions import ProjError
 
-import fiona
-import fiona.crs
-
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
-
-try:
-    from fiona import Env as fiona_env  # NOQA
-except ImportError:
-    from fiona import drivers as fiona_env  # NOQA
 
 
 GDAL3 = gdal.VersionInfo().startswith("3")
@@ -407,7 +399,7 @@ def get_crs(user_input):
 
 def crs_to_srs(crs):
     """
-    Recover our own WKT definition of projections from a pyproj / fiona CRS
+    Recover our own WKT definition of projections from a pyproj CRS
 
     Args:
       crs (pyproj.CRS or dict): what is returned from GeoDataFrame().crs
@@ -417,10 +409,7 @@ def crs_to_srs(crs):
     """
     if crs is None:
         return
-    elif isinstance(crs, dict):  # geopandas < 0.7
-        proj4_str = fiona.crs.to_string(crs)
-        return get_epsg_or_wkt(proj4_str)
-    else:  # geopandas >= 0.7
+    else:
         return crs.to_string()
 
 

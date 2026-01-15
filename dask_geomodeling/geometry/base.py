@@ -91,7 +91,7 @@ class GeometryBlock(Block):
           >>> config.set({"geomodeling.geometry-limit": 10000})
           >>> config.set({"temporary_directory": '/my/alternative/tmp/dir'})
         """
-        from dask_geomodeling.geometry.sinks import to_file
+        from dask_geomodeling.geometry.writer import to_file
 
         return to_file(self, *args, **kwargs)
 

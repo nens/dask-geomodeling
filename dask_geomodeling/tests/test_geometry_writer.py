@@ -7,8 +7,8 @@ import pytest
 from shapely.geometry import box
 
 from dask_geomodeling import utils
-from dask_geomodeling.geometry import parallelize, sinks
-from dask_geomodeling.geometry import Classify
+from dask_geomodeling.geometry import parallelize
+from dask_geomodeling.geometry import Classify, GeometryFileWriter, to_file
 from dask_geomodeling.tests.factories import (
     MockGeometry,
     setup_temp_root,
@@ -30,9 +30,7 @@ def assert_frame_equal_ignore_index(actual, expected, sort_col):
     )
 
 
-class TestGeometryFileSink(unittest.TestCase):
-    klass = sinks.GeometryFileSink
-
+class TestGeometryFileWriter(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.root = setup_temp_root()
@@ -117,8 +115,8 @@ class TestGeometryFileSink(unittest.TestCase):
         assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
-        "gpkg" not in sinks.GeometryFileSink.supported_extensions,
-        reason="This version of Fiona/GDAL does not support geopackages.",
+        "gpkg" not in writer.GeometryFileSink.supported_extensions,
+        reason="This version of Pyogrio/GDAL does not support geopackages.",
     )
     def test_geopackage(self):
         block = self.klass(self.source, self.path, "gpkg")
@@ -145,8 +143,8 @@ class TestGeometryFileSink(unittest.TestCase):
         assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
-        "gml" not in sinks.GeometryFileSink.supported_extensions,
-        reason="This version of Fiona/GDAL does not support GML.",
+        "gml" not in writer.GeometryFileSink.supported_extensions,
+        reason="This version of Pyogrio/GDAL does not support GML.",
     )
     def test_gml(self):
         block = self.klass(self.source, self.path, "gml")
@@ -180,35 +178,6 @@ class TestGeometryFileSink(unittest.TestCase):
 
         actual = gpd.read_file(os.path.join(self.path, os.listdir(self.path)[0]))
         assert set(actual.columns) == {"geometry", "target", "int1", "int2"}
-
-    def test_merge_files(self):
-        block = self.klass(self.source, self.path, "geojson")
-        block.get_data(**self.request)
-        block.get_data(**self.request_2)
-
-        assert len(os.listdir(self.path)) == 2
-        filename = os.path.join(self.root, "combined.geojson")
-        sinks.GeometryFileSink.merge_files(self.path, filename)
-        actual = self.read_file_geojson(filename)
-
-        # merge_files drops lists for geojson files!
-        del actual["lst"]
-        del self.expected_combined["lst"]
-
-        # compare dataframes without checking the order of records / columns
-        assert_frame_equal_ignore_index(actual, self.expected_combined, "int")
-        # compare projections
-        assert actual.crs == self.expected_combined.crs
-
-    def test_merge_files_cleanup(self):
-        block = self.klass(self.source, self.path, "geojson")
-        block.get_data(**self.request)
-        block.get_data(**self.request_2)
-
-        assert len(os.listdir(self.path)) == 2
-        filename = os.path.join(self.root, "combined2.geojson")
-        sinks.GeometryFileSink.merge_files(self.path, filename, remove_source=True)
-        assert not os.path.isdir(self.path)
 
     def test_with_tiler(self):
         block = parallelize.GeometryTiler(
