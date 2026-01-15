@@ -68,28 +68,28 @@ jobs:
         shell: bash
         run: pytest dask_geomodeling
 
-TestDockerDebianTrixie:
-  name: Debian Trixie (GDAL 3.10)
-  runs-on: ubuntu-latest
-  container:
-    image: python:3.12-slim-trixie
+  TestDockerDebianTrixie:
+    name: Debian Trixie (GDAL 3.10)
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim-trixie
 
-  steps:
-    - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-    - name: Install dependencies
-      run: |
-        apt-get update && apt-get install --yes --no-install-recommends \
-          build-essential \
-          libgdal-dev
-    - name: Install python dependencies
-      shell: bash
-      run: |
-        pip install --disable-pip-version-check --upgrade setuptools uv
-        uv pip install --system numpy
-        uv pip install --system gdal[numpy]==3.10.3 --no-build-isolation
-        uv pip install --system -e .[test,cityhash]
-        uv pip list
-    - name: Run tests
-      shell: bash
-      run: pytest dask_geomodeling
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install --yes --no-install-recommends \
+            build-essential \
+            libgdal-dev
+      - name: Install python dependencies
+        shell: bash
+        run: |
+          pip install --disable-pip-version-check --upgrade setuptools uv
+          uv pip install --system numpy
+          uv pip install --system gdal[numpy]==3.10.3 --no-build-isolation
+          uv pip install --system -e .[test,cityhash]
+          uv pip list
+      - name: Run tests
+        shell: bash
+        run: pytest dask_geomodeling
