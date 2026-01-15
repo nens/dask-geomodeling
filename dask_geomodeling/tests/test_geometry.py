@@ -119,8 +119,8 @@ class TstGeometryFileSourceBase:
         self.source = self.create_vector_file_source("test", self.polygons)
 
     def test_attr(self):
-        self.assertEqual(self.source.url, "file://" + self.root + "/test" + self.extension)
-        self.assertEqual(self.source.path, self.root + "/test" + self.extension)
+        self.assertEqual(self.source.path, os.path.join(self.root, "test" + self.extension))
+        self.assertEqual(self.source.url, "file://" + self.source.path)
         self.assertEqual(self.source.id_field, None)
 
     def test_columns(self):
