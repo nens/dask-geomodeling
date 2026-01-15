@@ -68,19 +68,21 @@ class GeometryFileWriter:
     }
 
     def __init__(self, url, fields=None):
-        self.url = utils.safe_file_url(url)
         self.fields = fields
+        self.path = utils.safe_abspath(url)
+        if os.path.exists(self.path):
+            raise FileExistsError("Target '{}' already exists".format(self.path))
+        target_dir = os.path.dirname(self.path)
+        if not os.path.isdir(target_dir):
+            raise FileNotFoundError(
+                "Target directory '{}' does not exist".format(target_dir)
+            )
+        extension = os.path.splitext(self.path)[1][1:].lower()
+        self.driver = self.supported_extensions[extension]
 
     def write(self, features):
         if features is None or len(features) == 0:
             return None
-
-        path = utils.safe_abspath(self.url)
-        if os.path.exists(path):
-            raise FileExistsError("Target '{}' already exists".format(path))
-
-        extension = os.path.splitext(path)[1][1:].lower()
-        driver = self.supported_extensions[extension]
 
         # Determine the fields to write
         if self.fields is None:
@@ -92,9 +94,9 @@ class GeometryFileWriter:
         # Only for GPKG geopandas index writing works out of the box
         # for GeoJSON we set it as 'id' field (as per spec) and for others as 'fid'
         index_name = features.index.name or "fid"
-        if driver == "GeoJSON":
+        if self.driver == "GeoJSON":
             fields.setdefault("id", index_name)
-        elif driver in {"ESRI Shapefile", "GML"}:
+        elif self.driver in {"ESRI Shapefile", "GML"}:
             fields.setdefault("fid", index_name)
 
         # Modify the features, add index and map column names
@@ -116,15 +118,15 @@ class GeometryFileWriter:
                 features[col] = series.astype(series.cat.categories.dtype)
 
         # GeoJSON needs reprojection to EPSG:4326
-        if driver == "GeoJSON":
+        if self.driver == "GeoJSON":
             features.to_crs("EPSG:4326", inplace=True)
 
         # generate the file
         features.to_file(
-            path,
-            driver=driver,
+            self.path,
+            driver=self.driver,
             # Only for GPKG driver the FID writing actually works
-            index=True if driver == "GPKG" else False,
+            index=True if self.driver == "GPKG" else False,
             engine="pyogrio",
         )
 

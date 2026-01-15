@@ -4,7 +4,10 @@ Changelog of dask-geomodeling
 2.6.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Removed GeometryFileSink.
+
+- Instead of first writing multiple files and then merging it, the GeometryBlock.to_file
+  method now directly writes to a single file.
 
 
 2.6.1 (2025-12-01)
