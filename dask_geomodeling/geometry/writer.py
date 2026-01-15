@@ -168,7 +168,7 @@ def to_file(source, url, fields=None, tile_size=None, dry_run=False, **request):
       >>> config.set({"temporary_directory": '/my/alternative/tmp/dir'})
     """
     if "mode" not in request:
-        request["mode"] = "centroid"
+        request["mode"] = "centroid"       
 
     target_path = utils.safe_abspath(url)
     if os.path.exists(target_path):
