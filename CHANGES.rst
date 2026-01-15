@@ -9,6 +9,8 @@ Changelog of dask-geomodeling
 - Instead of first writing multiple files and then merging it, the GeometryBlock.to_file
   method now directly writes to a single file.
 
+- Removed support for Python 3.9 and 3.10. Other version constraints were also changed.
+
 
 2.6.1 (2025-12-01)
 ------------------
