@@ -131,10 +131,6 @@ class GeometryFileWriter:
         )
 
 
-@contextmanager
-def DryRunTempDir(*args, **kwargs):
-    yield "/tmp/dummy"
-
 
 def to_file(source, url, fields=None, tile_size=None, dry_run=False, **request):
     """Utility function to export data from a GeometryBlock to a file on disk.
