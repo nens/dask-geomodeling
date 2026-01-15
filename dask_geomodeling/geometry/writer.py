@@ -1,7 +1,7 @@
 import os
 import logging
 from contextlib import contextmanager
-
+import geopandas as gpd
 import json
 import pyogrio
 from dask_geomodeling import utils
@@ -23,8 +23,26 @@ def _to_json(value):
         return value
 
 
+def _rename_columns(gdf, fields, index_name):
+    # Modify the features, add index and map column names
+    result = gpd.GeoDataFrame(index=gdf.index, geometry=gdf.geometry, crs=gdf.crs)
+    for new_col, old_col in fields.items():
+        if old_col not in gdf.columns and old_col == index_name:
+            result[new_col] = gdf.index
+        else:
+            result[new_col] = gdf[old_col]
+    return result
+
+
 class GeometryFileWriter:
     """Helper class to write a geometry file
+
+    A note about the index: by default, the index of the input GeoDataFrame
+    is not written to the output file. If you want to write the index, you
+    need to reference its name explicitly in the ``fields`` argument.
+
+    In all cases, the FID field of the output field (when supported, e.g. for GPKG),
+    is not written as it is unsupported by pyogrio.
 
     Args:
       url (str): The target location to output the file in. If relative, it is
@@ -64,24 +82,23 @@ class GeometryFileWriter:
         extension = os.path.splitext(path)[1][1:].lower()
         driver = self.supported_extensions[extension]
 
-        if self.fields:
+        # Determine the fields to write
+        if self.fields is None:
             fields = {x: x for x in features.columns if x != "geometry"}
         else:
-            fields = self.fields
+            fields = self.fields.copy()
 
-        # add the index to the columns if necessary
-        index_name = features.index.name
-        if index_name in fields.values() and index_name not in features.columns:
-            features[index_name] = features.index
-            write_index = False
-        else:
-            write_index = True
+        # For some drivers, add default field mappings for the index
+        # Only for GPKG geopandas index writing works out of the box
+        # for GeoJSON we set it as 'id' field (as per spec) and for others as 'fid'
+        index_name = features.index.name or "fid"
+        if driver == "GeoJSON":
+            fields.setdefault("id", index_name)
+        elif driver in {"ESRI Shapefile", "GML"}:
+            fields.setdefault("fid", index_name)
 
-        # copy the dataframe
-        features = features[["geometry"] + list(fields.values())]
-
-        # rename the columns
-        features.columns = ["geometry"] + list(fields.keys())
+        # Modify the features, add index and map column names
+        features = _rename_columns(features, fields, index_name)
 
         # serialize nested fields (lists or dicts)
         for col in fields.keys():
@@ -98,12 +115,16 @@ class GeometryFileWriter:
             if str(series.dtype) == "category":
                 features[col] = series.astype(series.cat.categories.dtype)
 
+        # GeoJSON needs reprojection to EPSG:4326
+        if driver == "GeoJSON":
+            features.to_crs("EPSG:4326", inplace=True)
+
         # generate the file
         features.to_file(
             path,
             driver=driver,
-            index=write_index,
-            crs="EPSG:4326" if driver == "GeoJSON" else None,
+            # Only for GPKG driver the FID writing actually works
+            index=True if driver == "GPKG" else False,
             engine="pyogrio",
         )
 

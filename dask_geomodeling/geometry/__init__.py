@@ -8,3 +8,4 @@ from .field_operations import *  # NOQA
 from .parallelize import *  # NOQA
 from .merge import *  # NOQA
 from .text import *  # NOQA
+from .writer import *  # NOQA
