@@ -19,7 +19,7 @@ jobs:
             python: "3.10"
             numpy: "==1.23.*"
             gdal: "pygdal==3.4.1.*"
-            pins: "scipy==1.9.* dask[delayed]==2022.* pandas==2.0.* geopandas==1.0.*"
+            pins: "scipy==1.11.* dask[delayed]==2022.* pandas==2.0.* geopandas==1.0.*"
           - os: ubuntu-22.04
             python: "3.11"
             numpy: "==1.*"
