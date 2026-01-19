@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.9", "3.12"]
+        python: ["3.10", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +32,7 @@ jobs:
 
       - name: Setup Environment
         run: |
-          conda create --quiet --name test python=${{ matrix.python }} pytest numpy=1.* gdal=3.* scipy pytz dask-core toolz "pandas<2.2" "geopandas>=1" "pyproj>=2" fiona
+          conda create --quiet --name test python=${{ matrix.python }} pytest numpy gdal scipy pytz dask-core toolz pandas geopandas pyproj pyogrio
           python -V
           conda info
           conda list

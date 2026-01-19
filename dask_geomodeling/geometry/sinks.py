@@ -6,7 +6,7 @@ import logging
 from contextlib import contextmanager
 
 import json
-import fiona
+import pyogrio
 import geopandas
 import tempfile
 from dask.config import config
@@ -61,7 +61,7 @@ class GeometryFileSink(BaseSingle):
             ("gml", "GML"),
         )
         # take only drivers which Fiona reports as writable
-        if "w" in fiona.supported_drivers.get(v, "")
+        if "w" in pyogrio.list_drivers().get(v, "")
         # skip GPKG and GML on Win32 platform as it yields a segfault
         and not (sys.platform == "win32" and k in ("gpkg", "gml"))
     }
@@ -155,7 +155,7 @@ class GeometryFileSink(BaseSingle):
 
         # GeoJSON needs reprojection to EPSG:4326
         if driver == "GeoJSON" and projection.upper() != "EPSG:4326":
-            features = utils.geodataframe_transform(features, projection, "EPSG:4326")
+            features = features.to_crs(projection)
 
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)
@@ -190,32 +190,15 @@ class GeometryFileSink(BaseSingle):
             for file_path in glob.glob(source_base + ".*"):
                 move_or_copy(file_path, target_base + os.path.splitext(file_path)[1])
             return
-
-        with utils.fiona_env():
-            # first detect the driver etc
-            with fiona.collection(source_paths[0], "r") as source:
-                kwargs = {
-                    "driver": source.driver,
-                    "crs": source.crs,
-                    "schema": source.schema,
-                }
-                if source.encoding:
-                    kwargs["encoding"] = source.encoding
-
-            # fiona 10 "identifies" json which would result in double "dumping"
-            kwargs["schema"]["properties"].update({
-                pname: "str"
-                for pname, ptype in kwargs["schema"]["properties"].items()
-                if ptype == "json"
-            })
-
-            with fiona.collection(target, "w", **kwargs) as out:
-                for source_path in source_paths:
-                    with fiona.collection(source_path, "r") as source:
-                        out.writerecords(v for k, v in source.items())
-                    if remove_source:
-                        os.remove(source_path)
-
+        
+        # first detect the driver etc
+        info = pyogrio.read_info(source_paths[0])
+        for i, source_path in enumerate(source_paths):
+            df = pyogrio.read_dataframe(source_path)
+            pyogrio.write_dataframe(df, target, append=i>0, driver=info['driver'], encoding=info.get("encoding"))
+            if remove_source:
+                os.remove(source_path)
+                    
             if remove_source:
                 try:
                     os.rmdir(path)

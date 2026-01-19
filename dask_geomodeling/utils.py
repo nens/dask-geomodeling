@@ -27,15 +27,7 @@ except ImportError:  # shapely 1.*
 from pyproj import CRS, Transformer
 from pyproj.exceptions import ProjError
 
-import fiona
-import fiona.crs
-
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
-
-try:
-    from fiona import Env as fiona_env  # NOQA
-except ImportError:
-    from fiona import drivers as fiona_env  # NOQA
 
 
 GDAL3 = gdal.VersionInfo().startswith("3")
@@ -407,7 +399,7 @@ def get_crs(user_input):
 
 def crs_to_srs(crs):
     """
-    Recover our own WKT definition of projections from a pyproj / fiona CRS
+    Recover our own WKT definition of projections from a pyproj CRS
 
     Args:
       crs (pyproj.CRS or dict): what is returned from GeoDataFrame().crs
@@ -417,10 +409,7 @@ def crs_to_srs(crs):
     """
     if crs is None:
         return
-    elif isinstance(crs, dict):  # geopandas < 0.7
-        proj4_str = fiona.crs.to_string(crs)
-        return get_epsg_or_wkt(proj4_str)
-    else:  # geopandas >= 0.7
+    else:
         return crs.to_string()
 
 
@@ -539,7 +528,7 @@ def get_projection(sr):
     """ Return simple userinput string for spatial reference, if any. """
     if isinstance(sr, str):
         return sr
-    key = "GEOGCS" if sr.IsGeographic() else "PROJCS"
+    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
     name = sr.GetAuthorityName(key)
     if name is None:
         return sr.ExportToWkt()
@@ -555,7 +544,7 @@ def get_epsg_or_wkt(text):
     """
     wkt = osr.GetUserInputAsWKT(str(text))
     sr = osr.SpatialReference(wkt)
-    key = "GEOGCS" if sr.IsGeographic() else "PROJCS"
+    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
     name = sr.GetAuthorityName(key)
     if name is None:
         return wkt
@@ -745,13 +734,13 @@ def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None)
         return _finalize_rasterize_result(array, no_data_value)
 
     # create an output datasource in memory
-    driver = ogr.GetDriverByName("Memory")
-    burn_attr = "BURN_IT"
+    driver = ogr.GetDriverByName(str("Memory"))
+    burn_attr = str("BURN_IT")
     sr = get_sr(projection)
 
     # prepare in-memory ogr layer
-    ds_ogr = driver.CreateDataSource("")
-    layer = ds_ogr.CreateLayer("", sr)
+    ds_ogr = driver.CreateDataSource(str(""))
+    layer = ds_ogr.CreateLayer(str(""), sr)
     layer_definition = layer.GetLayerDefn()
     if ogr_dtype is not None:
         field_definition = ogr.FieldDefn(burn_attr, ogr_dtype)

@@ -1,7 +1,7 @@
 """
 Module containing geometry sources.
 """
-import fiona
+from pyogrio import read_info
 import geopandas as gpd
 import warnings
 
@@ -26,8 +26,8 @@ class GeometryFileSource(GeometryBlock):
         the geomodeling.root setting.
       layer (str, optional): The layer name in the source to select. If None,
         (default) the first layer is used.
-      id_field (str, optional): When the file does not contain a built-in feature
-        id (FID), use this parameter for picking a column to use as index.
+      id_field (str, optional): The field name to use as feature index.
+        Default ``"id"``.
 
     Relevant settings can be adapted as follows:
       >>> from dask import config
@@ -35,7 +35,7 @@ class GeometryFileSource(GeometryBlock):
       >>> config.set({"geomodeling.geometry-limit": 100000})
     """
 
-    def __init__(self, url, layer=None, id_field=None):
+    def __init__(self, url, layer=None, id_field="id"):
         safe_url = utils.safe_file_url(url)
         super().__init__(safe_url, layer, id_field)
 
@@ -58,9 +58,8 @@ class GeometryFileSource(GeometryBlock):
     @property
     def columns(self):
         # this is exactly how geopandas determines the columns
-        with utils.fiona_env(), fiona.open(self.path) as reader:
-            properties = reader.meta["schema"]["properties"]
-            return set(properties.keys()) | {"geometry"}
+        info = read_info(self.path, layer=self.layer)
+        return set(info["fields"].tolist()) | {"geometry"}
 
     def get_sources_and_requests(self, **request):
         # check the filters: this block does not support lookups
@@ -87,13 +86,10 @@ class GeometryFileSource(GeometryBlock):
         crs = utils.get_crs(request["projection"])
 
         # convert the requested shapely geometry object to a GeoSeries
-        if request.get("geometry") is not None:
-            filt_geom = gpd.GeoSeries([request["geometry"]], crs=crs)
-        else:
-            filt_geom = None
+        filt_geom = gpd.GeoSeries([request["geometry"]], crs=crs)
 
         # acquire the data, filtering on the filt_geom bbox
-        f = gpd.read_file(path, bbox=filt_geom, layer=request["layer"], fid_as_index=request["id_field"] is None)
+        f = gpd.GeoDataFrame.from_file(path, bbox=filt_geom, layer=request["layer"])
         if len(f) == 0:
             # return directly if there is no data
             if request.get("mode") == "extent":
@@ -104,8 +100,7 @@ class GeometryFileSource(GeometryBlock):
                     "features": gpd.GeoDataFrame([]),
                 }
 
-        if request["id_field"] is not None:
-            f.set_index(request["id_field"], inplace=True)
+        f.set_index(request["id_field"], inplace=True)
 
         # apply the non-geometry field filters first
         mask = None
@@ -121,7 +116,7 @@ class GeometryFileSource(GeometryBlock):
             f = f[mask]
 
         # convert the data to the requested crs
-        f.to_crs(request["projection"], inplace=True)
+        utils.geodataframe_transform(f, utils.crs_to_srs(f.crs), request["projection"])
 
         # compute the bounds of each geometry and filter on min_size
         min_size = request.get("min_size")
@@ -132,13 +127,12 @@ class GeometryFileSource(GeometryBlock):
             f = f[(widths > min_size) | (heights > min_size)]
 
         # only return geometries that truly intersect the requested geometry
-        if request.get("geometry") is not None:
-            if request["mode"] == "centroid":
-                with warnings.catch_warnings():  # geopandas warns if in WGS84
-                    warnings.simplefilter("ignore")
-                    f = f[f["geometry"].centroid.within(filt_geom.iloc[0])]
-            else:
-                f = f[f["geometry"].intersects(filt_geom.iloc[0])]
+        if request["mode"] == "centroid":
+            with warnings.catch_warnings():  # geopandas warns if in WGS84
+                warnings.simplefilter("ignore")
+                f = f[f["geometry"].centroid.within(filt_geom.iloc[0])]
+        else:
+            f = f[f["geometry"].intersects(filt_geom.iloc[0])]
 
         if request.get("mode") == "extent":
             return {
