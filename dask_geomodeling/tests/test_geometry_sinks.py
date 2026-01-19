@@ -97,7 +97,7 @@ class TestGeometryFileSink(unittest.TestCase):
                 df.loc[i, "lst"] = json.dumps(feature["properties"].get("lst"))
                 df.loc[i, "dct"] = json.dumps(feature["properties"].get("dct"))
 
-        return utils.geodataframe_transform(df, "EPSG:4326", "EPSG:3857")
+        return df.to_crs("EPSG:3857")
 
     def test_non_available_extension(self):
         with pytest.raises(ValueError):

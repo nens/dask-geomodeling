@@ -520,9 +520,7 @@ class AggregateRaster(GeometryBlock):
         req_srs = process_kwargs["req_srs"]
         agg_srs = process_kwargs["agg_srs"]
 
-        agg_geometries = utils.geoseries_transform(
-            features["geometry"], req_srs, agg_srs
-        )
+        agg_geometries = features["geometry"].to_crs(agg_srs)
 
         statistic, percentile = utils.parse_percentile_statistic(process_kwargs["statistic"])
         extensive = AggregateRaster.STATISTICS[statistic]["extensive"]

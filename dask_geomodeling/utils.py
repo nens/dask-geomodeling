@@ -464,46 +464,6 @@ class WKTReadingError(Exception):
     pass
 
 
-def _geopandas_set_srs(df_or_series, crs):
-    try:
-        df_or_series.set_crs(crs, inplace=True, allow_override=True)
-    except AttributeError:  # geopandas < 0.9
-        df_or_series.crs = crs
-
-
-def geoseries_transform(geoseries, src_srs, dst_srs):
-    """
-    Transform a GeoSeries to a different SRS. Returns a copy.
-
-    :param df: GeoSeries to transform
-    :param src_srs: source projection string
-    :param dst_srs: destination projection string
-
-    Note that we do not use .to_crs() for the transformation, because this is
-    much slower than OGR. Also, we ignore the .crs property (but we do set it)
-    """
-    result = geoseries.apply(shapely_transform, args=(src_srs, dst_srs))
-    _geopandas_set_srs(result, get_crs(dst_srs))
-    return result
-
-
-def geodataframe_transform(df, src_srs, dst_srs):
-    """
-    Transform the geometry column of a GeoDataFrame to a different SRS.
-
-    :param df: GeoDataFrame to transform (will be changed inplace)
-    :param src_srs: source projection string
-    :param dst_srs: destination projection string
-
-    Note that we do not use .to_crs() for the transformation, because this is
-    much slower than OGR. Also, we ignore the .crs property (but we do set it)
-    """
-    geoseries = geoseries_transform(df.geometry, src_srs, dst_srs)
-    df.set_geometry(geoseries)
-    _geopandas_set_srs(df, geoseries.crs)
-    return df
-
-
 def transform_min_size(min_size, geometry, src_srs, dst_srs):
     """
     Return min_size converted from source crs to a target crs.
