@@ -27,7 +27,7 @@ class GeometryFileSource(GeometryBlock):
       layer (str, optional): The layer name in the source to select. If None,
         (default) the first layer is used.
       id_field (str, optional): When the file does not contain a built-in feature
-        id (FID), use this parameter for picking a column to use as index.`.
+        id (FID), use this parameter for picking a column to use as index.
 
     Relevant settings can be adapted as follows:
       >>> from dask import config
