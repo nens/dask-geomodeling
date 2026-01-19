@@ -31,6 +31,18 @@ def _to_json(value):
         return value
 
 
+
+def _rename_columns(gdf, fields, index_name):
+    # Modify the features, add index and map column names
+    result = geopandas.GeoDataFrame(index=gdf.index, geometry=gdf.geometry, crs=gdf.crs)
+    for new_col, old_col in fields.items():
+        if old_col not in gdf.columns and old_col == index_name:
+            result[new_col] = gdf.index
+        else:
+            result[new_col] = gdf[old_col]
+    return result
+
+
 class GeometryFileSink(BaseSingle):
     """Write geometry data to files in a specified directory
 
@@ -127,16 +139,8 @@ class GeometryFileSink(BaseSingle):
         # the target file path is a deterministic hash of the request
         filename = ".".join([process_kwargs["hash"], extension])
 
-        # add the index to the columns if necessary
-        index_name = features.index.name
-        if index_name in fields.values() and index_name not in features.columns:
-            features[index_name] = features.index
-
-        # copy the dataframe
-        features = features[["geometry"] + list(fields.values())]
-
-        # rename the columns
-        features.columns = ["geometry"] + list(fields.keys())
+        # rename columns and add the index to the columns if necessary
+        features = _rename_columns(features, fields, features.index.name)
 
         # serialize nested fields (lists or dicts)
         for col in fields.keys():
