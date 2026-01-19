@@ -29,27 +29,30 @@ except ImportError:
     from pandas.util.testing import assert_series_equal
 
 
-def create_geojson(abspath, polygons=10, bbox=None, ndim=2, projection="EPSG:4326"):
+def random_polygons(n, bbox, ndim=2):
+    """Generate n random polygons inside bbox"""
+    polygons = np.random.random((n, 3, ndim))
+    bbox_min = np.asarray(bbox[:ndim])
+    bbox_max = np.asarray(bbox[-ndim:])
+    polygons = polygons * (bbox_max - bbox_min) + bbox_min
+    return polygons
+
+def create_vector_file(abspath, polygons, projection="EPSG:4326", driver="GeoJSON", id_field=None):
     """Create random triangle polygons inside bbox"""
-    driver = ogr.GetDriverByName(str("GeoJSON"))
-    driver.DeleteDataSource(abspath)
+    driver = ogr.GetDriverByName(driver)
     datasource = driver.CreateDataSource(abspath)
     layer = datasource.CreateLayer(
-        str("results"), get_sr(projection), geom_type=ogr.wkbPolygon
+        "results", get_sr(projection), geom_type=ogr.wkbPolygon
     )
-    field_definition = ogr.FieldDefn(str("name"), ogr.OFTString)
+    field_definition = ogr.FieldDefn("name", ogr.OFTString)
     layer.CreateField(field_definition)
-    field_definition = ogr.FieldDefn(str("id"), ogr.OFTInteger)
-    layer.CreateField(field_definition)
+    if id_field:
+        field_definition = ogr.FieldDefn(id_field, ogr.OFTInteger)
+        layer.CreateField(field_definition)
     layer_definition = layer.GetLayerDefn()
 
-    if np.isscalar(polygons):
-        polygons = np.random.random((polygons, 3, ndim))
-        bbox_min = np.asarray(bbox[:ndim])
-        bbox_max = np.asarray(bbox[-ndim:])
-        polygons = polygons * (bbox_max - bbox_min) + bbox_min
-
-    for feature_id, coords in enumerate(polygons):
+    for i, coords in enumerate(polygons):
+        feature_id = i + 10
         ring = ogr.Geometry(ogr.wkbLinearRing)
         for coord in coords:
             ring.AddPoint_2D(*coord)
@@ -58,13 +61,14 @@ def create_geojson(abspath, polygons=10, bbox=None, ndim=2, projection="EPSG:432
         polygon.AddGeometry(ring)
         feature = ogr.Feature(layer_definition)
         feature.SetGeometry(polygon)
-        feature.SetField(str("name"), str("test"))
-        feature.SetField(str("id"), feature_id + 10)
+        feature.SetField("name", "test")
+        if id_field:
+            feature.SetField(id_field, feature_id)
+        else:
+            feature.SetFID(feature_id)
         layer.CreateFeature(feature)
     layer.SyncToDisk()
     datasource.SyncToDisk()
-
-    return polygons
 
 
 class TestGeometryBlockAttrs(unittest.TestCase):
@@ -91,56 +95,52 @@ class TestGeometryBlockAttrs(unittest.TestCase):
         self.assertEqual(0, len(missing))
 
 
-class TestGeometryFileSource(unittest.TestCase):
+class TstGeometryFileSourceBase:
     @classmethod
     def setUpClass(cls):
         cls.root = setup_temp_root()
-
-        # paths
-        cls.relpath = "test.json"
-        cls.abspath = os.path.join(cls.root, "test.json")
-        cls.url = "file://" + cls.abspath
 
     @classmethod
     def tearDownClass(cls):
         teardown_temp_root(cls.root)
 
+    def create_vector_file_source(self, filename, polygons):
+        # Call create_vector_file, return GeometryFileSource
+        path = os.path.join(self.root, filename + self.extension)
+        create_vector_file(
+            path, polygons, projection=self.projection, driver=self.driver
+        )
+        return geometry.GeometryFileSource(path)
+
     def setUp(self):
         self.bbox = (0, 0, 1, 1)
         self.projection = "EPSG:4326"
-        self.polygons = create_geojson(
-            self.abspath, bbox=(0, 0, 1, 1), polygons=10, ndim=2, projection="EPSG:4326"
-        )
-        self.id_field = "id"
-        self.source = geometry.GeometryFileSource(self.url, id_field="id")
+        self.polygons = random_polygons(10, self.bbox, ndim=2)
+        self.source = self.create_vector_file_source("test", self.polygons)
 
     def test_attr(self):
-        self.assertEqual(self.source.url, self.url)
-        self.assertEqual(self.source.path, self.abspath)
-        self.assertEqual(self.source.id_field, self.id_field)
+        self.assertEqual(self.source.path, os.path.join(self.root, "test" + self.extension))
+        self.assertEqual(self.source.url, "file://" + self.source.path)
+        self.assertEqual(self.source.id_field, None)
 
     def test_columns(self):
-        self.assertSetEqual(self.source.columns, {"id", "name", "geometry"})
+        self.assertSetEqual(self.source.columns, {"name", "geometry"})
 
     def test_get_data(self):
-        result = self.source.get_data(geometry=box(*self.bbox), projection="EPSG:4326")
+        result = self.source.get_data(geometry=box(*self.bbox), projection=self.projection)
         self.assertEqual(self.projection, result["projection"])
         self.assertEqual(10, len(result["features"]))
 
     def test_get_data_centroid_mode(self):
         triangle = [[[0.8, 0.8], [2.0, 0.8], [2.0, 2.0]]]
-        self.polygons = create_geojson(
-            self.abspath,
-            bbox=self.bbox,
-            polygons=triangle,
-            ndim=2,
-            projection="EPSG:4326",
+        source = self.create_vector_file_source(
+            "test_get_data_centroid_mode", triangle
         )
-        result = self.source.get_data(
-            geometry=box(*self.bbox), projection="EPSG:4326", mode="centroid"
+        result = source.get_data(
+            geometry=box(0, 0, 1, 1), projection=self.projection, mode="centroid"
         )
-        self.assertTrue(Polygon(*self.polygons).intersection(box(*self.bbox)))
-        self.assertFalse(Polygon(*self.polygons).centroid.within(box(*self.bbox)))
+        self.assertTrue(Polygon(*triangle).intersection(box(0, 0, 1, 1)))
+        self.assertFalse(Polygon(*triangle).centroid.within(box(0, 0, 1, 1)))
         self.assertEqual(self.projection, result["projection"])
         self.assertEqual(0, len(result["features"]))
 
@@ -150,10 +150,7 @@ class TestGeometryFileSource(unittest.TestCase):
         result = self.source.get_data(geometry=box(*bbox3857), projection="EPSG:3857")
         self.assertEqual("EPSG:3857", result["projection"])
         actual = result["features"].crs
-        if isinstance(actual, dict):  # pre-geopandas 0.7
-            self.assertEqual("epsg:3857", actual["init"])
-        else:  # geopandas >=0.7
-            self.assertEqual("EPSG:3857", actual.to_string())
+        self.assertEqual("EPSG:3857", actual.to_string())
         self.assertEqual(10, len(result["features"]))
 
     def test_limit(self):
@@ -171,65 +168,57 @@ class TestGeometryFileSource(unittest.TestCase):
             [(0.0, 2.0), (2.0, 2.0), (2.0, 0.0), (1.1, 0.0), (1.01, 1.1), (0.0, 1.1)]
         )
 
-        create_geojson(
-            self.abspath,
+        source = self.create_vector_file_source(
+            "test_bbox",
             polygons=(square, outside, edge, corner),
-            projection="EPSG:4326",
         )
 
         # square and edge
-        result = self.source.get_data(
-            geometry=box(0.0, 0.0, 1.0, 1.0), projection="EPSG:4326"
+        result = source.get_data(
+            geometry=box(0.0, 0.0, 1.0, 1.0), projection=self.projection
         )
         self.assertEqual(2, len(result["features"]))
 
         # only square
-        result = self.source.get_data(
-            geometry=box(0.0, 0.0, 0.9, 1.0), projection="EPSG:4326"
+        result = source.get_data(
+            geometry=box(0.0, 0.0, 0.9, 1.0), projection=self.projection
         )
         self.assertEqual(1, len(result["features"]))
 
         # point request, check all 4 corners
         for x, y in [(0.5, 0.5), (0.5, 0.6), (0.6, 0.5), (0.6, 0.6)]:
-            result = self.source.get_data(
-                geometry=box(x, y, x, y), projection="EPSG:4326"
+            result = source.get_data(
+                geometry=box(x, y, x, y), projection=self.projection
             )
             self.assertEqual(1, len(result["features"]))
 
         # point request, check just outside all 4 edges
         for x, y in [(0.49, 0.55), (0.61, 0.6), (0.55, 0.49), (0.6, 0.61)]:
-            result = self.source.get_data(
-                geometry=box(x, y, x, y), projection="EPSG:4326"
+            result = source.get_data(
+                geometry=box(x, y, x, y), projection=self.projection
             )
             self.assertEqual(0, len(result["features"]))
 
     def test_size_filter(self):
         full = (0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)
         small = (0.0, 0.0), (0.0, 0.1), (0.0, 0.1), (0.1, 0.0)
-        create_geojson(self.abspath, (full, small))
+        source = self.create_vector_file_source("test_size_filter", (full, small))
 
-        result = self.source.get_data(
-            geometry=box(*self.bbox), projection="EPSG:4326", min_size=1.1
+        result = source.get_data(
+            geometry=box(0, 0, 1, 1), projection=self.projection, min_size=1.1
         )
         self.assertEqual(0, len(result["features"]))
 
-        result = self.source.get_data(
-            geometry=box(*self.bbox), projection="EPSG:4326", min_size=0.9
+        result = source.get_data(
+            geometry=box(0, 0, 1, 1), projection=self.projection, min_size=0.9
         )
         self.assertEqual(1, len(result["features"]))
 
         # no filter
-        result = self.source.get_data(
-            geometry=box(*self.bbox), projection="EPSG:4326", min_size=0
+        result = source.get_data(
+            geometry=box(0, 0, 1, 1), projection=self.projection, min_size=0
         )
         self.assertEqual(2, len(result["features"]))
-
-    def test_index(self):
-        # the index column is named source.id_field
-        result = self.source.get_data(
-            geometry=box(*self.bbox), projection="EPSG:4326", limit=1
-        )
-        self.assertEqual(self.source.id_field, result["features"].index.name)
 
     def test_properties(self):
         # all properties are produced from the file
@@ -267,16 +256,62 @@ class TestGeometryFileSource(unittest.TestCase):
 
         # extent matches the one obtained from the normal 'intersects' request
         result = self.source.get_data(
-            mode="extent", geometry=box(*self.bbox), projection="EPSG:4326"
+            mode="extent", projection="EPSG:4326"
         )
         self.assertEqual("EPSG:4326", result["projection"])
         self.assertTupleEqual(expected_extent, result["extent"])
 
         # limit does not influence the extent
         result = self.source.get_data(
-            mode="extent", geometry=box(*self.bbox), projection="EPSG:4326", limit=1
+            mode="extent", projection="EPSG:4326", limit=1
         )
         self.assertTupleEqual(expected_extent, result["extent"])
+
+    def test_extend_mode_reproject(self):
+        result = self.source.get_data(mode="extent", projection="EPSG:3857")
+
+        self.assertEqual("EPSG:3857", result["projection"])
+        # Because of the random polygons, just check the extent looks like webmercator
+        assert result["extent"][2] > 10000.0
+        assert result["extent"][3] > 10000.0
+
+
+class TestGeometryFileSourceGeoJSON(TstGeometryFileSourceBase, unittest.TestCase):
+    def setUp(self):
+        self.driver = "GeoJSON"
+        self.extension = ".geojson"
+        super().setUp()
+
+    def test_custom_id_field(self):
+        path = os.path.join(self.root, "test_custom_id_field" + self.extension)
+        create_vector_file(
+            path, self.polygons, projection=self.projection, driver=self.driver, id_field="custom"
+        )
+        source = geometry.GeometryFileSource(path, id_field="custom")
+
+        # id_field attr should be same
+        assert source.id_field == "custom"
+
+        # returned data index should be correct
+        result = source.get_data(
+            geometry=box(*self.bbox), projection="EPSG:4326", limit=1
+        )
+        self.assertEqual(10, result["features"].index[0])
+        self.assertEqual("custom", result["features"].index.name)
+
+
+class TestGeometryFileSourceGPKG(TstGeometryFileSourceBase, unittest.TestCase):
+    def setUp(self):
+        self.driver = "GPKG"
+        self.extension = ".gpkg"
+        super().setUp()
+
+
+class TestGeometryFileSourceSHP(TstGeometryFileSourceBase, unittest.TestCase):
+    def setUp(self):
+        self.driver = "ESRI Shapefile"
+        self.extension = ".shp"
+        super().setUp()
 
 
 class TestSetOperations(unittest.TestCase):
@@ -511,9 +546,8 @@ class TestConstructive(unittest.TestCase):
     def setUp(self):
         self.bbox = (0, 0, 1, 1)
         self.projection = "EPSG:4326"
-        self.id_field = "id"
         self.source = geometry.Simplify(
-            geometry.GeometryFileSource(self.url, id_field="id"),
+            geometry.GeometryFileSource(self.url),
             tolerance=None,
             preserve_topology=False,
         )
@@ -521,7 +555,7 @@ class TestConstructive(unittest.TestCase):
     def test_min_size_simplify(self):
         trapezoid1 = (0.0, 0.0), (0.49, 1.0), (0.51, 1.0), (1.0, 0.0)
         trapezoid2 = (0.0, 0.0), (0.4, 1.0), (0.6, 1.0), (1.0, 0.0)
-        create_geojson(self.abspath, (trapezoid1, trapezoid2))
+        create_vector_file(self.abspath, (trapezoid1, trapezoid2))
 
         # min_size = None does not simplify
         result = self.source.get_data(
@@ -549,6 +583,7 @@ class TestConstructive(unittest.TestCase):
         geoms = result["features"].geometry.values
         self.assertEqual(4, len(geoms[0].exterior.coords))
         self.assertEqual(4, len(geoms[1].exterior.coords))
+
 
 
 class BufferTestCase(unittest.TestCase):

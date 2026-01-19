@@ -135,7 +135,7 @@ class MockRaster(RasterBlock):
             result = np.pad(
                 result,
                 ((_y1 - y1, y2 - _y2), (_x1 - x1, x2 - _x2)),
-                mode=str("constant"),
+                mode="constant",
                 constant_values=fillvalue,
             )
             if result.shape != (height, width):

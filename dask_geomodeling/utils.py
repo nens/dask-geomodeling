@@ -539,7 +539,7 @@ def get_projection(sr):
     """ Return simple userinput string for spatial reference, if any. """
     if isinstance(sr, str):
         return sr
-    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
+    key = "GEOGCS" if sr.IsGeographic() else "PROJCS"
     name = sr.GetAuthorityName(key)
     if name is None:
         return sr.ExportToWkt()
@@ -555,7 +555,7 @@ def get_epsg_or_wkt(text):
     """
     wkt = osr.GetUserInputAsWKT(str(text))
     sr = osr.SpatialReference(wkt)
-    key = str("GEOGCS") if sr.IsGeographic() else str("PROJCS")
+    key = "GEOGCS" if sr.IsGeographic() else "PROJCS"
     name = sr.GetAuthorityName(key)
     if name is None:
         return wkt
@@ -745,13 +745,13 @@ def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None)
         return _finalize_rasterize_result(array, no_data_value)
 
     # create an output datasource in memory
-    driver = ogr.GetDriverByName(str("Memory"))
-    burn_attr = str("BURN_IT")
+    driver = ogr.GetDriverByName("Memory")
+    burn_attr = "BURN_IT"
     sr = get_sr(projection)
 
     # prepare in-memory ogr layer
-    ds_ogr = driver.CreateDataSource(str(""))
-    layer = ds_ogr.CreateLayer(str(""), sr)
+    ds_ogr = driver.CreateDataSource("")
+    layer = ds_ogr.CreateLayer("", sr)
     layer_definition = layer.GetLayerDefn()
     if ogr_dtype is not None:
         field_definition = ogr.FieldDefn(burn_attr, ogr_dtype)
