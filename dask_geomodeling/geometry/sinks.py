@@ -31,7 +31,6 @@ def _to_json(value):
         return value
 
 
-
 def _rename_columns(gdf, fields, index_name):
     # Modify the features, add index and map column names
     result = geopandas.GeoDataFrame(index=gdf.index, geometry=gdf.geometry, crs=gdf.crs)
@@ -194,15 +193,21 @@ class GeometryFileSink(BaseSingle):
             for file_path in glob.glob(source_base + ".*"):
                 move_or_copy(file_path, target_base + os.path.splitext(file_path)[1])
             return
-        
+
         # first detect the driver etc
         info = pyogrio.read_info(source_paths[0])
         for i, source_path in enumerate(source_paths):
             df = pyogrio.read_dataframe(source_path)
-            pyogrio.write_dataframe(df, target, append=i>0, driver=info['driver'], encoding=info.get("encoding"))
+            pyogrio.write_dataframe(
+                df,
+                target,
+                append=i > 0,
+                driver=info["driver"],
+                encoding=info.get("encoding"),
+            )
             if remove_source:
                 os.remove(source_path)
-                    
+
             if remove_source:
                 try:
                     os.rmdir(path)
