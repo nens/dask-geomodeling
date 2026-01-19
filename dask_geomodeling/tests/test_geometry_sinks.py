@@ -111,7 +111,10 @@ class TestGeometryFileSink(unittest.TestCase):
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, self.expected.to_crs("EPSG:4326"), "int", precision=0.000001)
 
-
+    @pytest.mark.skipif(
+        "gpkg" not in sinks.GeometryFileSink.supported_extensions,
+        reason="This version of pyogrio/GDAL does not support Geopackage.",
+    )
     def test_geopackage(self):
         block = self.klass(self.source, self.path, "gpkg")
         block.get_data(**self.request)
