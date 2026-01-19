@@ -6,7 +6,7 @@ import logging
 from contextlib import contextmanager
 
 import json
-import fiona
+import pyogrio
 import geopandas
 import tempfile
 from dask.config import config
@@ -29,6 +29,17 @@ def _to_json(value):
             return "<unable to export>"  # cannot output this value
     else:
         return value
+
+
+def _rename_columns(gdf, fields, index_name):
+    # Modify the features, add index and map column names
+    result = geopandas.GeoDataFrame(index=gdf.index, geometry=gdf.geometry, crs=gdf.crs)
+    for new_col, old_col in fields.items():
+        if old_col not in gdf.columns and old_col == index_name:
+            result[new_col] = gdf.index
+        else:
+            result[new_col] = gdf[old_col]
+    return result
 
 
 class GeometryFileSink(BaseSingle):
@@ -61,7 +72,7 @@ class GeometryFileSink(BaseSingle):
             ("gml", "GML"),
         )
         # take only drivers which Fiona reports as writable
-        if "w" in fiona.supported_drivers.get(v, "")
+        if "w" in pyogrio.list_drivers().get(v, "")
         # skip GPKG and GML on Win32 platform as it yields a segfault
         and not (sys.platform == "win32" and k in ("gpkg", "gml"))
     }
@@ -127,16 +138,8 @@ class GeometryFileSink(BaseSingle):
         # the target file path is a deterministic hash of the request
         filename = ".".join([process_kwargs["hash"], extension])
 
-        # add the index to the columns if necessary
-        index_name = features.index.name
-        if index_name in fields.values() and index_name not in features.columns:
-            features[index_name] = features.index
-
-        # copy the dataframe
-        features = features[["geometry"] + list(fields.values())]
-
-        # rename the columns
-        features.columns = ["geometry"] + list(fields.keys())
+        # rename columns and add the index to the columns if necessary
+        features = _rename_columns(features, fields, features.index.name)
 
         # serialize nested fields (lists or dicts)
         for col in fields.keys():
@@ -155,7 +158,7 @@ class GeometryFileSink(BaseSingle):
 
         # GeoJSON needs reprojection to EPSG:4326
         if driver == "GeoJSON" and projection.upper() != "EPSG:4326":
-            features = utils.geodataframe_transform(features, projection, "EPSG:4326")
+            features = features.to_crs("EPSG:4326")
 
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)
@@ -191,30 +194,19 @@ class GeometryFileSink(BaseSingle):
                 move_or_copy(file_path, target_base + os.path.splitext(file_path)[1])
             return
 
-        with utils.fiona_env():
-            # first detect the driver etc
-            with fiona.collection(source_paths[0], "r") as source:
-                kwargs = {
-                    "driver": source.driver,
-                    "crs": source.crs,
-                    "schema": source.schema,
-                }
-                if source.encoding:
-                    kwargs["encoding"] = source.encoding
-
-            # fiona 10 "identifies" json which would result in double "dumping"
-            kwargs["schema"]["properties"].update({
-                pname: "str"
-                for pname, ptype in kwargs["schema"]["properties"].items()
-                if ptype == "json"
-            })
-
-            with fiona.collection(target, "w", **kwargs) as out:
-                for source_path in source_paths:
-                    with fiona.collection(source_path, "r") as source:
-                        out.writerecords(v for k, v in source.items())
-                    if remove_source:
-                        os.remove(source_path)
+        # first detect the driver etc
+        info = pyogrio.read_info(source_paths[0])
+        for i, source_path in enumerate(source_paths):
+            df = pyogrio.read_dataframe(source_path)
+            pyogrio.write_dataframe(
+                df,
+                target,
+                append=i > 0,
+                driver=info["driver"],
+                encoding=info.get("encoding"),
+            )
+            if remove_source:
+                os.remove(source_path)
 
             if remove_source:
                 try:

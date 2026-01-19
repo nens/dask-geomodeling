@@ -27,15 +27,7 @@ except ImportError:  # shapely 1.*
 from pyproj import CRS, Transformer
 from pyproj.exceptions import ProjError
 
-import fiona
-import fiona.crs
-
 POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
-
-try:
-    from fiona import Env as fiona_env  # NOQA
-except ImportError:
-    from fiona import drivers as fiona_env  # NOQA
 
 
 GDAL3 = gdal.VersionInfo().startswith("3")
@@ -407,7 +399,7 @@ def get_crs(user_input):
 
 def crs_to_srs(crs):
     """
-    Recover our own WKT definition of projections from a pyproj / fiona CRS
+    Recover our own WKT definition of projections from a pyproj CRS
 
     Args:
       crs (pyproj.CRS or dict): what is returned from GeoDataFrame().crs
@@ -417,10 +409,7 @@ def crs_to_srs(crs):
     """
     if crs is None:
         return
-    elif isinstance(crs, dict):  # geopandas < 0.7
-        proj4_str = fiona.crs.to_string(crs)
-        return get_epsg_or_wkt(proj4_str)
-    else:  # geopandas >= 0.7
+    else:
         return crs.to_string()
 
 
@@ -473,46 +462,6 @@ def shapely_from_wkt(wkt):
 
 class WKTReadingError(Exception):
     pass
-
-
-def _geopandas_set_srs(df_or_series, crs):
-    try:
-        df_or_series.set_crs(crs, inplace=True, allow_override=True)
-    except AttributeError:  # geopandas < 0.9
-        df_or_series.crs = crs
-
-
-def geoseries_transform(geoseries, src_srs, dst_srs):
-    """
-    Transform a GeoSeries to a different SRS. Returns a copy.
-
-    :param df: GeoSeries to transform
-    :param src_srs: source projection string
-    :param dst_srs: destination projection string
-
-    Note that we do not use .to_crs() for the transformation, because this is
-    much slower than OGR. Also, we ignore the .crs property (but we do set it)
-    """
-    result = geoseries.apply(shapely_transform, args=(src_srs, dst_srs))
-    _geopandas_set_srs(result, get_crs(dst_srs))
-    return result
-
-
-def geodataframe_transform(df, src_srs, dst_srs):
-    """
-    Transform the geometry column of a GeoDataFrame to a different SRS.
-
-    :param df: GeoDataFrame to transform (will be changed inplace)
-    :param src_srs: source projection string
-    :param dst_srs: destination projection string
-
-    Note that we do not use .to_crs() for the transformation, because this is
-    much slower than OGR. Also, we ignore the .crs property (but we do set it)
-    """
-    geoseries = geoseries_transform(df.geometry, src_srs, dst_srs)
-    df.set_geometry(geoseries)
-    _geopandas_set_srs(df, geoseries.crs)
-    return df
 
 
 def transform_min_size(min_size, geometry, src_srs, dst_srs):
@@ -778,7 +727,7 @@ def rasterize_geoseries(geoseries, bbox, projection, height, width, values=None)
     if dtype == np.uint8:  # this is our boolean dtype
         options = []
     else:
-        options = [str("ATTRIBUTE=") + burn_attr]
+        options = ["ATTRIBUTE=" + burn_attr]
 
     with Dataset(array, **dataset_kwargs) as dataset:
         gdal.RasterizeLayer(dataset, (1,), layer, options=options)

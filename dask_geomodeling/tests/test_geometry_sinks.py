@@ -5,8 +5,7 @@ import json
 import geopandas as gpd
 import pytest
 from shapely.geometry import box
-
-from dask_geomodeling import utils
+from geopandas.testing import assert_geodataframe_equal
 from dask_geomodeling.geometry import parallelize, sinks
 from dask_geomodeling.geometry import Classify
 from dask_geomodeling.tests.factories import (
@@ -15,14 +14,12 @@ from dask_geomodeling.tests.factories import (
     teardown_temp_root,
 )
 
-try:
-    from pandas.testing import assert_frame_equal
-except ImportError:
-    from pandas.util.testing import assert_frame_equal
 
-
-def assert_frame_equal_ignore_index(actual, expected, sort_col):
-    assert_frame_equal(
+def assert_frame_equal_ignore_index(actual, expected, sort_col, precision=None):
+    if precision:
+        actual.geometry = actual.geometry.set_precision(precision)
+        expected.geometry = expected.geometry.set_precision(precision)
+    assert_geodataframe_equal(
         actual.set_index(sort_col).sort_index(),
         expected.set_index(sort_col).sort_index(),
         check_like=True,
@@ -89,7 +86,7 @@ class TestGeometryFileSink(unittest.TestCase):
         - dicts are deserialized differently
         - the projection is always EPSG:4326
         """
-        df = gpd.read_file(path)
+        df = gpd.read_file(path, fid_as_index=True)
 
         with open(path) as f:
             data = json.load(f)
@@ -97,7 +94,7 @@ class TestGeometryFileSink(unittest.TestCase):
                 df.loc[i, "lst"] = json.dumps(feature["properties"].get("lst"))
                 df.loc[i, "dct"] = json.dumps(feature["properties"].get("dct"))
 
-        return utils.geodataframe_transform(df, "EPSG:4326", "EPSG:3857")
+        return df
 
     def test_non_available_extension(self):
         with pytest.raises(ValueError):
@@ -112,48 +109,42 @@ class TestGeometryFileSink(unittest.TestCase):
         actual = self.read_file_geojson(path)
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal_ignore_index(actual, self.expected, "int")
-        # compare projections
-        assert actual.crs == self.expected.crs
+        assert_frame_equal_ignore_index(actual, self.expected.to_crs("EPSG:4326"), "int", precision=0.000001)
 
     @pytest.mark.skipif(
         "gpkg" not in sinks.GeometryFileSink.supported_extensions,
-        reason="This version of Fiona/GDAL does not support geopackages.",
+        reason="This version of pyogrio/GDAL does not support Geopackage.",
     )
     def test_geopackage(self):
         block = self.klass(self.source, self.path, "gpkg")
         block.get_data(**self.request)
 
         filename = [x for x in os.listdir(self.path) if x.endswith(".gpkg")][0]
-        actual = gpd.read_file(os.path.join(self.path, filename))
+        actual = gpd.read_file(os.path.join(self.path, filename), fid_as_index=True)
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, self.expected, "int")
-        # compare projections
-        assert actual.crs == self.expected.crs
 
     def test_shapefile(self):
         block = self.klass(self.source, self.path, "shp")
         block.get_data(**self.request)
 
         filename = [x for x in os.listdir(self.path) if x.endswith(".shp")][0]
-        actual = gpd.read_file(os.path.join(self.path, filename))
+        actual = gpd.read_file(os.path.join(self.path, filename), fid_as_index=True)
 
         # compare dataframes without checking the order of records / columns
         assert_frame_equal_ignore_index(actual, self.expected, "int")
-        # compare projections
-        assert actual.crs == self.expected.crs
 
     @pytest.mark.skipif(
         "gml" not in sinks.GeometryFileSink.supported_extensions,
-        reason="This version of Fiona/GDAL does not support GML.",
+        reason="This version of pyogrio/GDAL does not support GML.",
     )
     def test_gml(self):
         block = self.klass(self.source, self.path, "gml")
         block.get_data(**self.request)
 
         filename = [x for x in os.listdir(self.path) if x.endswith(".gml")][0]
-        actual = gpd.read_file(os.path.join(self.path, filename))
+        actual = gpd.read_file(os.path.join(self.path, filename), fid_as_index=True)
 
         # GML writer adds an 'fid' column sometimes
         for key in ("fid", "gml_id"):
@@ -196,9 +187,7 @@ class TestGeometryFileSink(unittest.TestCase):
         del self.expected_combined["lst"]
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal_ignore_index(actual, self.expected_combined, "int")
-        # compare projections
-        assert actual.crs == self.expected_combined.crs
+        assert_frame_equal_ignore_index(actual, self.expected_combined.to_crs("EPSG:4326"), "int", precision=0.000001)
 
     def test_merge_files_cleanup(self):
         block = self.klass(self.source, self.path, "geojson")
@@ -244,7 +233,7 @@ class TestGeometryFileSink(unittest.TestCase):
         actual = self.read_file_geojson(self.path + ".geojson")
 
         # compare dataframes without checking the order of records / columns
-        assert_frame_equal_ignore_index(actual, self.expected, "int")
+        assert_frame_equal_ignore_index(actual, self.expected.to_crs("EPSG:4326"), "int", precision=0.000001)
 
     def test_to_file_shapefile(self):
         self.source.to_file(self.path + ".shp", **self.request)

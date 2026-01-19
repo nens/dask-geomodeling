@@ -12,6 +12,11 @@ Changelog of dask-geomodeling
   especially useful for 'extent' mode requests (you can now get the complete extent
   of the file in any projection).
 
+- Removed support for Python before 3.10, dask before 2022, pandas before 2.x,
+  geopandas before 1.x, numpy before 1.23, and scipy before 1.11.
+
+- Replaced Fiona with Pyogrio.
+
 
 2.6.1 (2025-12-01)
 ------------------
