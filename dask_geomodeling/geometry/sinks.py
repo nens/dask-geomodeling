@@ -159,7 +159,7 @@ class GeometryFileSink(BaseSingle):
 
         # GeoJSON needs reprojection to EPSG:4326
         if driver == "GeoJSON" and projection.upper() != "EPSG:4326":
-            features = features.to_crs(projection)
+            features = features.to_crs("EPSG:4326")
 
         # generate the file
         features.to_file(os.path.join(path, filename), driver=driver)
