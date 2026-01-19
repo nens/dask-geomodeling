@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.6.2 (unreleased)
+2.7.0 (2026-01-19)
 ------------------
 
 - GeometryFileSource now uses GDAL's own detection of id columns (for GeoJSON)
