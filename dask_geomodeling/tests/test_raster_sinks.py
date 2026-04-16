@@ -172,6 +172,7 @@ def test_to_file(source, root, request_kwargs):
     assert ds is not None
     assert ds.RasterXSize == 4
     assert ds.RasterYSize == 4
+    assert ds.GetRasterBand(1).ReadAsArray().shape == (4, 4)
 
 
 def test_rasterblock_to_file(source, root, request_kwargs):

@@ -1,12 +1,10 @@
 import glob
 import os
 import logging
-import tempfile
 
 import numpy as np
 from osgeo import gdal, gdal_array
 from dask.base import tokenize
-from dask.config import config
 from dask_geomodeling import utils
 
 from .base import BaseSingle, RasterBlock
@@ -165,17 +163,17 @@ def to_file(source, url, tile_size, **request):
     Relevant settings can be adapted as follows:
       >>> from dask import config
       >>> config.set({"geomodeling.root": '/my/output/data/path'})
-      >>> config.set({"temporary_directory": '/my/alternative/tmp/dir'})
     """
     request["mode"] = "vals"
 
     path = utils.safe_abspath(url)
 
-    with tempfile.TemporaryDirectory(
-        dir=config.get("temporary_directory", None)
-    ) as tmpdir:
-        sink = RasterFileSink(source, tmpdir)
-        tiler = RasterTiler(sink, tile_size)
-        tiler.get_data(**request)
+    if os.path.isdir(path):
+        path = os.path.join(path, "output.vrt")
+    tiles_dir = os.path.join(os.path.split(path)[0], "tiles")
 
-        RasterFileSink.merge_files(tmpdir, path)
+    sink = RasterFileSink(source, tiles_dir)
+    tiler = RasterTiler(sink, tile_size)
+    tiler.get_data(**request)
+
+    RasterFileSink.merge_files(tiles_dir, path)
