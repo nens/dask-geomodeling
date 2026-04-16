@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 import logging
+import shapely
 from contextlib import contextmanager
 
 import json
@@ -257,6 +258,10 @@ def to_file(source, url, fields=None, tile_size=None, dry_run=False, **request):
     """
     if "mode" not in request:
         request["mode"] = "centroid"
+    if "geometry" not in request:
+        # For tiling we need to know the extent beforehand
+        result = source.get_data(mode="extent", projection=request["projection"])
+        request["geometry"] = shapely.box(*result["extent"])
 
     path = utils.safe_abspath(url)
     extension = os.path.splitext(path)[1]

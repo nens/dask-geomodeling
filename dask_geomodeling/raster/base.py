@@ -14,7 +14,7 @@ class RasterBlock(Block):
 
     - ``period``: a tuple of datetimes (or None if empty)
     - ``timedelta``: a datetime.timedelta (or None if nonequidistant / nontemporal)
-    - ``extent``: a tuple ``(x1, y1, x2, y2)``
+    - ``extent``: a tuple ``(x1, y1, x2, y2)`` in WGS84 coordinates
     - ``dtype``: a numpy dtype object
     - ``fillvalue``: a number
     - ``geometry``: OGR Geometry

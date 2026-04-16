@@ -110,13 +110,12 @@ class RasterFileSink(BaseSingle):
         dataset.SetGeoTransform(geo_transform)
 
         sr = utils.get_sr(projection)
-        dataset.SetProjection(sr.ExportToWkt())
+        dataset.SetSpatialRef(sr)
 
         band = dataset.GetRasterBand(1)
         if no_data_value is not None:
             band.SetNoDataValue(float(no_data_value))
         band.WriteArray(band_data)
-        band.FlushCache()
 
         return None
 
@@ -165,6 +164,31 @@ def to_file(source, url, tile_size, **request):
       >>> config.set({"geomodeling.root": '/my/output/data/path'})
     """
     request["mode"] = "vals"
+    if "projection" not in request:
+        if source.projection is None:
+            raise ValueError(
+                "Cannot determine the projection from the source raster. "
+                "Please provide a 'projection' argument."
+            )
+        request["projection"] = source.projection
+    if "bbox" not in request:
+        if source.geometry is None:
+            raise ValueError(
+                "Cannot determine the extent from the source raster. "
+                "Please provide a 'bbox' argument."
+            )
+        x1, x2, y1, y2 = source.geometry.GetEnvelope()
+        request["bbox"] = x1, y1, x2, y2
+    if "width" not in request or "height" not in request:
+        if source.geo_transform is None:
+            raise ValueError(
+                "Cannot determine the pixel size from the source raster. "
+                "Please provide 'width' and 'height' arguments."
+            )
+        geo_transform = source.geo_transform
+        x1, y1, x2, y2 = request["bbox"]
+        request["width"] = int(round((x2 - x1) / abs(float(geo_transform[1]))))
+        request["height"] = int(round((y2 - y1) / abs(float(geo_transform[5]))))
 
     path = utils.safe_abspath(url)
 

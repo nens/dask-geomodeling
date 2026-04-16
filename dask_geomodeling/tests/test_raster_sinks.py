@@ -1,9 +1,11 @@
 import os
 import numpy as np
 import pytest
+from unittest.mock import PropertyMock, patch
 from datetime import datetime, timedelta
 from osgeo import gdal
 import shutil
+from dask_geomodeling.core.graphs import Block
 from dask_geomodeling.raster.sinks import RasterFileSink, to_file
 from dask_geomodeling.raster.parallelize import RasterTiler
 from dask_geomodeling.tests.factories import MockRaster, setup_temp_root, teardown_temp_root
@@ -174,6 +176,23 @@ def test_to_file(source, root, request_kwargs):
     assert ds.RasterYSize == 4
     assert ds.GetRasterBand(1).ReadAsArray().shape == (4, 4)
 
+
+@patch.object(Block, "get_data")
+@patch.object(RasterFileSink, "merge_files")
+def test_to_file_auto_defaults(merge_files ,get_data, source, root, request_kwargs):
+    """to_file should derive projection, bbox, width, height from source."""
+    target = os.path.join(root, "to_file_auto.vrt")
+    to_file(
+        source, target, tile_size=50,
+        start=request_kwargs["start"],
+        stop=request_kwargs["stop"],
+    )
+
+    request = get_data.call_args[1]  # kwargs passed to get_data
+    assert request["projection"] == "EPSG:3857"
+    assert request["bbox"] == (0, 0, 100, 100)
+    assert request["width"] == 100
+    assert request["height"] == 100
 
 def test_rasterblock_to_file(source, root, request_kwargs):
     """RasterBlock.to_file convenience method."""
