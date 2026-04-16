@@ -7,6 +7,9 @@ Changelog of dask-geomodeling
 - Added RasterBlock.to_file to stream rasters to disk. The result is a VRT file and
   a folder of tiles.
 
+- The GeometryBlock.to_file now automatically determines the 'geometry' to write if
+  not given.
+
 
 2.7.0 (2026-01-19)
 ------------------
