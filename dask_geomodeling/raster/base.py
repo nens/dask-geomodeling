@@ -48,6 +48,30 @@ class RasterBlock(Block):
 
     DEFAULT_ORIGIN = Datetime(1970, 1, 1, 0, 0)
 
+    def to_file(self, *args, **kwargs):
+        """Utility function to export data from this block to a file on disk.
+
+        Args:
+          url (str): The target VRT file path.
+          tile_size (int or list): The tile size in pixels. The export is
+            split into tiles of this size which are merged into a VRT.
+          bbox (tuple): bounding box ``(x1, y1, x2, y2)``
+          projection (str): The projection as a WKT string or EPSG code.
+          width (int): The output width in pixels.
+          height (int): The output height in pixels.
+          start (datetime): start date as UTC datetime
+          stop (datetime): stop date as UTC datetime
+          **request: see RasterBlock request specification
+
+        Relevant settings can be adapted as follows:
+          >>> from dask import config
+          >>> config.set({"geomodeling.root": '/my/output/data/path'})
+          >>> config.set({"temporary_directory": '/my/alternative/tmp/dir'})
+        """
+        from dask_geomodeling.raster.sinks import to_file
+
+        return to_file(self, *args, **kwargs)
+
     def __len__(self):
         """ Return number of temporal bands. """
         # all empty

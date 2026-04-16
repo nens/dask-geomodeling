@@ -1,15 +1,18 @@
 import glob
 import os
 import logging
+import tempfile
 
 import numpy as np
 from osgeo import gdal, gdal_array
 from dask.base import tokenize
+from dask.config import config
 from dask_geomodeling import utils
 
 from .base import BaseSingle, RasterBlock
+from .parallelize import RasterTiler
 
-__all__ = ["RasterFileSink"]
+__all__ = ["RasterFileSink", "to_file"]
 
 logger = logging.getLogger(__name__)
 
@@ -138,3 +141,41 @@ class RasterFileSink(BaseSingle):
             raise IOError("No source .tif files found in '{}'".format(path))
 
         gdal.BuildVRT(target, source_paths)
+
+
+def to_file(source, url, tile_size, **request):
+    """Utility function to export data from a RasterBlock to a file on disk.
+
+    The raster is exported as tiled GeoTIFFs which are merged into a VRT
+    at ``url``.
+
+    Args:
+      source (RasterBlock): the block the data is coming from
+      url (str): The target VRT file path.
+      tile_size (int or list): The tile size in pixels. The export is split
+        into tiles of this size which are merged into a VRT.
+      bbox (tuple): bounding box ``(x1, y1, x2, y2)``
+      projection (str): The projection as a WKT string or EPSG code.
+      width (int): The output width in pixels.
+      height (int): The output height in pixels.
+      start (datetime): start date as UTC datetime
+      stop (datetime): stop date as UTC datetime
+      **request: see RasterBlock request specification
+
+    Relevant settings can be adapted as follows:
+      >>> from dask import config
+      >>> config.set({"geomodeling.root": '/my/output/data/path'})
+      >>> config.set({"temporary_directory": '/my/alternative/tmp/dir'})
+    """
+    request["mode"] = "vals"
+
+    path = utils.safe_abspath(url)
+
+    with tempfile.TemporaryDirectory(
+        dir=config.get("temporary_directory", None)
+    ) as tmpdir:
+        sink = RasterFileSink(source, tmpdir)
+        tiler = RasterTiler(sink, tile_size)
+        tiler.get_data(**request)
+
+        RasterFileSink.merge_files(tmpdir, path)

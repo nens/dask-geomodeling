@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime, timedelta
 from osgeo import gdal
 import shutil
-from dask_geomodeling.raster.sinks import RasterFileSink
+from dask_geomodeling.raster.sinks import RasterFileSink, to_file
 from dask_geomodeling.raster.parallelize import RasterTiler
 from dask_geomodeling.tests.factories import MockRaster, setup_temp_root, teardown_temp_root
 
@@ -159,3 +159,27 @@ def test_merge_files_no_sources(root):
     target = os.path.join(root, "no_sources.vrt")
     with pytest.raises(IOError):
         RasterFileSink.merge_files(path, target)
+
+
+def test_to_file(source, root, request_kwargs):
+    """to_file should create a VRT at the target path."""
+    target = os.path.join(root, "to_file_output.vrt")
+    kwargs = {k: v for k, v in request_kwargs.items() if k != "mode"}
+    to_file(source, target, tile_size=2, **kwargs)
+    assert os.path.exists(target)
+
+    ds = gdal.Open(target)
+    assert ds is not None
+    assert ds.RasterXSize == 4
+    assert ds.RasterYSize == 4
+
+
+def test_rasterblock_to_file(source, root, request_kwargs):
+    """RasterBlock.to_file convenience method."""
+    target = os.path.join(root, "block_to_file.vrt")
+    kwargs = {k: v for k, v in request_kwargs.items() if k != "mode"}
+    source.to_file(target, tile_size=2, **kwargs)
+    assert os.path.exists(target)
+
+    ds = gdal.Open(target)
+    assert ds is not None
