@@ -66,8 +66,9 @@ class RasterFileSink(BaseSingle):
 
         if values.ndim != 3 or values.shape[0] != 1:
             raise ValueError(
-                "Expected a single-band raster (shape (1, H, W)), "
-                "got shape {}".format(values.shape)
+                "Expected a single-band raster (shape (1, H, W)), got shape {}".format(
+                    values.shape
+                )
             )
 
         band_data = values[0]
@@ -81,9 +82,7 @@ class RasterFileSink(BaseSingle):
         # Map numpy dtype to GDAL type
         gdal_type = gdal_array.NumericTypeCodeToGDALTypeCode(band_data.dtype)
         if gdal_type is None:
-            raise ValueError(
-                "Unsupported dtype '{}' for GDAL".format(band_data.dtype)
-            )
+            raise ValueError("Unsupported dtype '{}' for GDAL".format(band_data.dtype))
 
         path = utils.safe_abspath(process_kwargs["url"])
         os.makedirs(path, exist_ok=True)
@@ -106,7 +105,9 @@ class RasterFileSink(BaseSingle):
         projection = process_kwargs["projection"]
 
         driver = gdal.GetDriverByName("GTiff")
-        dataset = driver.Create(filepath, width, height, 1, gdal_type)
+        dataset = driver.Create(
+            filepath, width, height, 1, gdal_type, ["COMPRESS=DEFLATE", "TILED=YES"]
+        )
         dataset.SetGeoTransform(geo_transform)
 
         sr = utils.get_sr(projection)
