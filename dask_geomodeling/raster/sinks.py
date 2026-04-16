@@ -1,0 +1,140 @@
+import glob
+import os
+import logging
+
+import numpy as np
+from osgeo import gdal, gdal_array
+from dask.base import tokenize
+from dask_geomodeling import utils
+
+from .base import BaseSingle, RasterBlock
+
+__all__ = ["RasterFileSink"]
+
+logger = logging.getLogger(__name__)
+
+
+class RasterFileSink(BaseSingle):
+    """Write raster data to GeoTIFF files in a specified directory.
+
+    Use RasterFileSink.merge_files to merge tiles into a VRT file.
+
+    Args:
+      source (RasterBlock): The raster block the data is coming from.
+      url (str): The target directory to put the files in. If relative, it is
+        taken relative to the geomodeling.root setting.
+
+    Relevant settings can be adapted as follows:
+      >>> from dask import config
+      >>> config.set({"geomodeling.root": '/my/output/data/path'})
+    """
+
+    def __init__(self, source, url):
+        if not isinstance(source, RasterBlock):
+            raise TypeError("'{}' object is not allowed".format(type(source)))
+        safe_url = utils.safe_file_url(url)
+        super().__init__(source, safe_url)
+
+    @property
+    def url(self):
+        return self.args[1]
+
+    def get_sources_and_requests(self, **request):
+        if request["mode"] != "vals":
+            return [(self.store, request), ({}, None)]
+
+        process_kwargs = {
+            "url": self.url,
+            "hash": tokenize(request)[:7],
+            "bbox": request["bbox"],
+            "projection": request["projection"],
+        }
+        return [(self.store, request), (process_kwargs, None)]
+
+    @staticmethod
+    def process(data, process_kwargs):
+        if not process_kwargs:
+            # non-vals mode: forward data as-is
+            return data
+
+        if data is None or "values" not in data:
+            return None
+
+        values = data["values"]
+        no_data_value = data["no_data_value"]
+
+        if values.ndim != 3 or values.shape[0] != 1:
+            raise ValueError(
+                "Expected a single-band raster (shape (1, H, W)), "
+                "got shape {}".format(values.shape)
+            )
+
+        band_data = values[0]
+
+        # Skip saving if all values are nodata
+        if no_data_value is not None and np.all(band_data == no_data_value):
+            return None
+
+        height, width = band_data.shape
+
+        # Map numpy dtype to GDAL type
+        gdal_type = gdal_array.NumericTypeCodeToGDALTypeCode(band_data.dtype)
+        if gdal_type is None:
+            raise ValueError(
+                "Unsupported dtype '{}' for GDAL".format(band_data.dtype)
+            )
+
+        path = utils.safe_abspath(process_kwargs["url"])
+        os.makedirs(path, exist_ok=True)
+
+        filename = process_kwargs["hash"] + ".tif"
+        filepath = os.path.join(path, filename)
+
+        # Derive geo_transform from bbox
+        bbox = process_kwargs["bbox"]
+        x1, y1, x2, y2 = bbox
+        geo_transform = (
+            x1,
+            (x2 - x1) / width,
+            0,
+            y2,
+            0,
+            -(y2 - y1) / height,
+        )
+
+        projection = process_kwargs["projection"]
+
+        driver = gdal.GetDriverByName("GTiff")
+        dataset = driver.Create(filepath, width, height, 1, gdal_type)
+        dataset.SetGeoTransform(geo_transform)
+
+        sr = utils.get_sr(projection)
+        dataset.SetProjection(sr.ExportToWkt())
+
+        band = dataset.GetRasterBand(1)
+        if no_data_value is not None:
+            band.SetNoDataValue(float(no_data_value))
+        band.WriteArray(band_data)
+        band.FlushCache()
+
+        return None
+
+    @staticmethod
+    def merge_files(path, target):
+        """Merge GeoTIFF files (the output of this Block) into a VRT file.
+
+        Args:
+          path (str): The source directory containing .tif files.
+          target (str): The target .vrt file path.
+        """
+        path = utils.safe_abspath(path)
+        target = utils.safe_abspath(target)
+
+        if os.path.exists(target):
+            raise IOError("Target '{}' already exists".format(target))
+
+        source_paths = sorted(glob.glob(os.path.join(path, "*.tif")))
+        if len(source_paths) == 0:
+            raise IOError("No source .tif files found in '{}'".format(path))
+
+        gdal.BuildVRT(target, source_paths)
