@@ -256,3 +256,12 @@ class TestGeometryFileSink(unittest.TestCase):
         actual = gpd.read_file(self.path + ".shp")
         # because we lose the index in the saving process, just check the len
         assert len(actual) == 2
+
+    def test_to_file_auto_geometry(self):
+        """to_file should derive geometry from source extent when not given."""
+        self.source.to_file(
+            self.path + ".geojson",
+            projection="EPSG:3857",
+        )
+        actual = gpd.read_file(self.path + ".geojson")
+        assert len(actual) == 2
