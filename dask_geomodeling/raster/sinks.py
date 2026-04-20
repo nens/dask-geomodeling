@@ -134,7 +134,7 @@ class RasterFileSink(BaseSingle):
         if os.path.exists(target):
             raise IOError("Target '{}' already exists".format(target))
 
-        source_paths = sorted(glob.glob(os.path.join(path, "*.tif")))
+        source_paths = glob.glob(os.path.join(path, "*.tif"))
         if len(source_paths) == 0:
             raise IOError("No source .tif files found in '{}'".format(path))
 
