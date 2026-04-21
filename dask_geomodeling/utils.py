@@ -1018,8 +1018,6 @@ def _translate_removed_freq_aliases(freq: str) -> str:
 
     Handles both simple aliases like 'M' -> 'ME' and prefixed ones like '2M' -> '2ME'.
     """
-    import re
-    # Match optional numeric prefix + alias
     match = re.match(r'^(\d*)(.+)$', freq)
     if match:
         prefix, alias = match.groups()
