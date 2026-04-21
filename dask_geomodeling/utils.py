@@ -33,9 +33,30 @@ POLYGON = "POLYGON (({0} {1},{2} {1},{2} {3},{0} {3},{0} {1}))"
 GDAL3 = gdal.VersionInfo().startswith("3")
 try:
     IS_PANDAS_SINCE_2_2 = Version(pd.__version__) >= Version("2.2.0")
+    IS_PANDAS_SINCE_3 = Version(pd.__version__) >= Version("3.0.0")
 except TypeError:  # for doc-build, version is mocked
     IS_PANDAS_SINCE_2_2 = True
+    IS_PANDAS_SINCE_3 = True
 PANDAS_2_2_NEW_FREQS = {"ME", "BME", "SME", "CBME", "QE", "BQE", "YE", "BYE"}
+# Mapping of frequency aliases removed in pandas 3.0.
+# All entries below come from the pandas 3.0.0 release notes:
+# https://pandas.pydata.org/docs/whatsnew/v3.0.0.html#removal-of-prior-version-deprecations-changes
+#
+# GH#57986 – end-of-period offsets renamed (M→ME, BM→BME, etc.)
+# GH#57699, GH#57793 – annual aliases (A→YE, BA→BYE, AS→YS, BAS→BYS)
+# GH#59143 – hour aliases (H→h, BH→bh, CBH→cbh)
+# GH#57627 – sub-hour aliases (T→min, S→s, L→ms, U→us, N→ns)
+PANDAS_3_REMOVED_ALIASES = {
+    # End-of-period offsets (GH#57986)
+    "M": "ME", "BM": "BME", "SM": "SME", "CBM": "CBME",
+    "Q": "QE", "BQ": "BQE", "Y": "YE", "BY": "BYE",
+    # Annual aliases (GH#57699, GH#57793)
+    "A": "YE", "BA": "BYE", "AS": "YS", "BAS": "BYS",
+    # Hour aliases (GH#59143)
+    "H": "h", "BH": "bh", "CBH": "cbh",
+    # Sub-hour aliases (GH#57627)
+    "T": "min", "S": "s", "L": "ms", "U": "us", "N": "ns",
+}
 
 def get_index(values, no_data_value):
     """ Return an index to access for data values in values. """
@@ -936,6 +957,25 @@ def find_neigbours(array, value, direction="nearest"):
     
     return np.clip(indices, 0, array.size - 1)
 
+def offset_to_timedelta(freq):
+    """Convert a pandas frequency string to a python timedelta, or None.
+
+    Returns None for non-equidistant frequencies like MonthEnd.
+
+    Args:
+        freq (str): pandas frequency string
+
+    Returns:
+        datetime.timedelta or None
+    """
+    try:
+        offset = to_offset(freq)
+        td = pd.Timedelta(offset.nanos, unit="ns")
+        return td.to_pytimedelta()
+    except (ValueError, AttributeError):
+        return None  # e.g. MonthEnd is non-equidistant
+
+
 def normalize_offset(freq) -> str:
     """Convert pandas frequency strings to compatible with the current pandas.
 
@@ -953,12 +993,34 @@ def normalize_offset(freq) -> str:
     """
     if freq is None:
         return None
-    if not IS_PANDAS_SINCE_2_2 and any(freq.endswith(x) for x in PANDAS_2_2_NEW_FREQS):
-        return freq[:-1]  # chop off the 'E'
-    elif not IS_PANDAS_SINCE_2_2:
-        offset = to_offset(freq)
-    else:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FutureWarning)
-            offset = to_offset(freq)
-    return offset.freqstr
+
+    # pandas < 2.2: new-style "ME"/"YE"/etc. suffixes aren't recognized yet,
+    # so strip the trailing "E" to get the old-style alias.
+    if not IS_PANDAS_SINCE_2_2:
+        if any(freq.endswith(x) for x in PANDAS_2_2_NEW_FREQS):
+            return freq[:-1]
+        return to_offset(freq).freqstr
+
+    # pandas >= 3.0: old-style aliases ("M", "H", "S", etc.) have been removed,
+    # so translate them to the new form before calling to_offset.
+    if IS_PANDAS_SINCE_3:
+        freq = _translate_removed_freq_aliases(freq)
+        return to_offset(freq).freqstr
+
+    # pandas 2.2.x: old-style aliases still work but emit FutureWarning.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        return to_offset(freq).freqstr
+
+
+def _translate_removed_freq_aliases(freq: str) -> str:
+    """Translate frequency aliases removed in pandas 3.0 to their replacements.
+
+    Handles both simple aliases like 'M' -> 'ME' and prefixed ones like '2M' -> '2ME'.
+    """
+    match = re.match(r'^(\d*)(.+)$', freq)
+    if match:
+        prefix, alias = match.groups()
+        if alias in PANDAS_3_REMOVED_ALIASES:
+            return prefix + PANDAS_3_REMOVED_ALIASES[alias]
+    return freq

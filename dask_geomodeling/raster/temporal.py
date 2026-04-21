@@ -17,6 +17,7 @@ from dask_geomodeling.utils import (
     dtype_for_statistic,
     find_neigbours,
     normalize_offset,
+    offset_to_timedelta,
 )
 
 from .base import RasterBlock, BaseSingle
@@ -604,10 +605,7 @@ class TemporalAggregate(BaseSingle):
     def timedelta(self):
         if self.frequency is None:
             return None
-        try:
-            return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
-        except ValueError:
-            return  # e.g. Month is non-equidistant
+        return offset_to_timedelta(self.frequency)
 
     @property
     def temporal(self):
@@ -1128,10 +1126,7 @@ class Resample(BaseSingle):
 
     @property
     def timedelta(self):
-        try:
-            return pd.Timedelta(to_offset(self.frequency)).to_pytimedelta()
-        except ValueError:
-            return  # e.g. Month is non-equidistant
+        return offset_to_timedelta(self.frequency)
 
     def get_sources_and_requests(self, **request):
         process_kwargs = {

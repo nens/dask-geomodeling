@@ -13,12 +13,29 @@ from dask_geomodeling.tests.factories import (
     setup_temp_root,
     teardown_temp_root,
 )
+from dask_geomodeling.utils import IS_PANDAS_SINCE_3
+
+
+def _coerce_string_cols_to_object(gdf):
+    """Coerce pandas 3 'str' dtype columns to 'object' dtype.
+
+    geopandas' read_file still returns 'object' dtype for string columns,
+    while pandas 3 infers 'str' dtype for in-memory string data. Coercing
+    to object keeps both sides comparable.
+    """
+    for col in gdf.columns:
+        if gdf[col].dtype.name == "str":
+            gdf[col] = gdf[col].astype(object)
+    return gdf
 
 
 def assert_frame_equal_ignore_index(actual, expected, sort_col, precision=None):
     if precision:
         actual.geometry = actual.geometry.set_precision(precision)
         expected.geometry = expected.geometry.set_precision(precision)
+    if IS_PANDAS_SINCE_3:
+        actual = _coerce_string_cols_to_object(actual)
+        expected = _coerce_string_cols_to_object(expected)
     assert_geodataframe_equal(
         actual.set_index(sort_col).sort_index(),
         expected.set_index(sort_col).sort_index(),

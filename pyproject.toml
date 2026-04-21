@@ -22,7 +22,7 @@ classifiers = [
 ]
 dependencies = [
     "dask[delayed]>=2022",
-    "pandas>=2,<3",
+    "pandas>=2",
     "geopandas>=1",
     "pytz",
     "numpy>=1.23",

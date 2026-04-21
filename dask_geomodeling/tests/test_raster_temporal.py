@@ -53,12 +53,12 @@ td = Timedelta
     ("h", "left", "left", "Europe/Amsterdam", (dt(2000, 1, 1), dt(2000, 1, 3))),
     ("h", "left", "left", "America/New_York", (dt(2000, 1, 1), dt(2000, 1, 3))),
     (None, "left", "left", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
-    # pandas MonthEnd ("M") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
-    ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-    ("M", "left", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
-    ("M", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
-    ("M", "right", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
-    ("M", None, None, "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),  # (right, right)
+    # pandas MonthEnd ("ME") bin is 1999-12-31 00:00 UTC to 2000-01-31 00:00 UTC
+    ("ME", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ("ME", "left", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+    ("ME", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
+    ("ME", "right", "right", "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),
+    ("ME", None, None, "UTC", (dt(2000, 1, 31), dt(2000, 1, 31))),  # (right, right)
     # pandas MonthStart ("MS") bin is 2000-01-01 00:00 UTC to 2000-02-01 00:00 UTC
     ("MS", "left", "left", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1))),
     ("MS", "left", "right", "UTC", (dt(2000, 2, 1), dt(2000, 2, 1))),
@@ -71,7 +71,7 @@ td = Timedelta
     # closed=right moves "monday" into the weekend because it is on 00:00
     ("B", "right", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
     ("B", "right", "right", "UTC", (dt(2000, 1, 3), dt(2000, 1, 3))),
-    # Aliases deprecated since pandas 2.2 still work
+    # Aliases deprecated since pandas 2.2 still work (normalized by normalize_offset)
     ("H", "left", "left", "UTC", (dt(2000, 1, 1, 0), dt(2000, 1, 3, 0))),
     ("M", "left", "left", "UTC", (dt(1999, 12, 31), dt(1999, 12, 31))),
 ])
@@ -614,8 +614,10 @@ class TestCumulative(unittest.TestCase):
         # Source period in Azores (GMT -1) timezone is [1999-12-31 23:00, 2000-01-01 01:00]
         # this affects the binning for daily frequency. With backwards direction, the period
         # will be [2000-01-01, 2000-01-02] Azores midnight. We add one hour to convert to UTC.
-        ("H", "backward", "Atlantic/Azores", (dt(2000, 1, 1), dt(2000, 1, 1, 2))),
+        ("h", "backward", "Atlantic/Azores", (dt(2000, 1, 1), dt(2000, 1, 1, 2))),
         ("D", "backward", "Atlantic/Azores", (dt(2000, 1, 1, 1), dt(2000, 1, 2, 1))),
+        # Deprecated alias still works (translated by normalize_offset)
+        ("H", "backward", "UTC", (dt(2000, 1, 1), dt(2000, 1, 1, 2))),
     ],
 )
 def test_resample_period(freq, direction, timezone, expected, source):
@@ -631,11 +633,16 @@ def test_resample_period_empty(empty_source):
 @pytest.mark.parametrize(
     "freq,expected,",
     [
-        ("H", Timedelta(hours=1)),
+        ("h", Timedelta(hours=1)),
         ("D", Timedelta(days=1)),
-        ("15T", Timedelta(minutes=15)),
-        ("S", Timedelta(seconds=1)),
+        ("15min", Timedelta(minutes=15)),
+        ("s", Timedelta(seconds=1)),
         ("MS", None),
+        ("ME", None),
+        ("YE", None),
+        # Deprecated aliases still work (translated by normalize_offset)
+        ("H", Timedelta(hours=1)),
+        ("S", Timedelta(seconds=1)),
         ("M", None),
         ("A", None),
     ],

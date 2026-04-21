@@ -8,7 +8,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
-from dask_geomodeling.utils import Extent, get_sr, shapely_transform
+from dask_geomodeling.utils import Extent, IS_PANDAS_SINCE_3, get_sr, shapely_transform
 from dask_geomodeling.tests.factories import (
     setup_temp_root,
     teardown_temp_root,
@@ -841,7 +841,7 @@ class TestWhere(unittest.TestCase):
         view = self.source.set("result", series)
 
         result = view.get_data(**self.request)
-        expected = pd.Series(["Hola!", "Hola!", "Hola!", "Hola!", "Hola!", float("nan")])
+        expected = pd.Series(["Hola!", "Hola!", "Hola!", "Hola!", "Hola!", float("nan")], dtype=object)
         self.assertTrue(result["features"]["result"].equals(expected))
 
     def test_mask_with_other_column(self):
@@ -1133,7 +1133,8 @@ class TestFieldOperations(unittest.TestCase):
         actual = field_operations.Classify(
             self.source["col_source"], bins=[0, 0.5, 1.0], labels=["A", "B", "C", "D"]
         ).get_data(**self.request)
-        self.assertEqual(actual.dtype.name, "object")
+        expected_dtype = "str" if IS_PANDAS_SINCE_3 else "object"
+        self.assertEqual(actual.dtype.name, expected_dtype)
 
     def test_classify_from_columns_left(self):
         source_with_bins = self.source.set("bin_1", 0, "bin_2", 1.2, "bin_3", 5.0)
@@ -1573,7 +1574,8 @@ class TestText(unittest.TestCase):
         )
         view = text.ParseTextColumn(source, "description", self.key_mapping)
         data = view.get_data(**self.request)["features"]
-        self.assertEqual("object", str(data["model_name"].dtype))
+        expected_dtype = "str" if IS_PANDAS_SINCE_3 else "object"
+        self.assertEqual(str(data["model_name"].dtype), expected_dtype)
         for col in self.expected:
             assert data.loc[1, col] == self.expected[col]
             assert data.loc[2, col] == self.expected[col]
@@ -1627,7 +1629,8 @@ class TestText(unittest.TestCase):
             self.source, "description", {"modelname": "description"}
         )
         data = view.get_data(**self.request)["features"]
-        self.assertEqual("object", str(data["description"].dtype))
+        expected_dtype = "str" if IS_PANDAS_SINCE_3 else "object"
+        self.assertEqual(str(data["description"].dtype), expected_dtype)
         assert data.loc[1, "description"] == "rotterdam 01"
 
     def test_parser_into_same_column_non_existing(self):
