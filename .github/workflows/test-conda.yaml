@@ -32,7 +32,7 @@ jobs:
 
       - name: Setup Environment
         run: |
-          conda create --quiet --name test python=${{ matrix.python }} pytest numpy gdal scipy pytz dask-core toolz pandas==2.* geopandas pyproj pyogrio
+          conda create --quiet --name test python=${{ matrix.python }} pytest numpy gdal scipy pytz dask-core toolz pandas geopandas pyproj pyogrio
           python -V
           conda info
           conda list
