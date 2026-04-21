@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.7.1 (unreleased)
+2.8.0 (2026-04-21)
 ------------------
 
 - Added RasterBlock.to_file to stream rasters to disk. The result is a VRT file and
