@@ -10,6 +10,7 @@ Changelog of dask-geomodeling
 - The GeometryBlock.to_file now automatically determines the 'geometry' to write if
   not given.
 
+- Pandas 3.* compatibility fixes.
 
 2.7.0 (2026-01-19)
 ------------------
