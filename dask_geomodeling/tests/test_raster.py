@@ -1047,7 +1047,7 @@ class TestGroup(TestCombine, unittest.TestCase):
         self.assertEqual(meta, ["", "Testmeta for band 0"])
 
         data = view.get_data(mode="vals", width=1, height=1, **request)
-        self.assertEqual(data["values"].tolist(), [[[255]], [[1]]])
+        self.assertEqual(data["values"].tolist(), [[[view.fillvalue]], [[1]]])
 
     def test_stop_in_gap(self):
         view = self.klass(self.storage1, self.storage6)
@@ -1065,25 +1065,42 @@ class TestGroup(TestCombine, unittest.TestCase):
         self.assertEqual(meta, ["Testmeta for band 2", ""])
 
         data = view.get_data(mode="vals", width=1, height=1, **request)
-        self.assertEqual(data["values"].tolist(), [[[1]], [[255]]])
+        self.assertEqual(data["values"].tolist(), [[[1]], [[view.fillvalue]]])
 
-    # def test_only_gap(self):
-        # view = self.klass(self.storage1, self.storage6)
-        # request = dict(
-            # start=Datetime(2000, 1, 1, 0, 15),  # the gap
-            # stop=Datetime(2000, 1, 1, 0, 15),  # also the gap
-        # )
-        # _requests = view.get_sources_and_requests(mode="meta", **request)
-        # self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
+    def test_only_gap(self):
+        view = self.klass(self.storage1, self.storage6)
+        request = dict(
+            start=Datetime(2000, 1, 1, 0, 15),  # the gap
+            stop=Datetime(2000, 1, 1, 0, 15),  # also the gap
+        )
+        _requests = view.get_sources_and_requests(mode="meta", **request)
+        self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
 
-        # time = view.get_data(mode="time", **request)["time"]
-        # self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15)])
+        time = view.get_data(mode="time", **request)["time"]
+        self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15)])
 
-        # meta = view.get_data(mode="meta", **request)["meta"]
-        # self.assertEqual(meta, [""])
+        meta = view.get_data(mode="meta", **request)["meta"]
+        self.assertEqual(meta, [""])
 
-        # data = view.get_data(mode="vals", width=1, height=1, **request)
-        # self.assertEqual(data["values"].tolist(), [[[255]]])
+        data = view.get_data(mode="vals", width=1, height=1, **request)
+        self.assertEqual(data["values"].tolist(), [[[view.fillvalue]]])
+
+    def test_only_gap_no_stop(self):
+        view = self.klass(self.storage1, self.storage6)
+        request = dict(
+            start=Datetime(2000, 1, 1, 0, 15),  # the gap
+        )
+        _requests = view.get_sources_and_requests(mode="meta", **request)
+        self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
+
+        time = view.get_data(mode="time", **request)["time"]
+        self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15)])
+
+        meta = view.get_data(mode="meta", **request)["meta"]
+        self.assertEqual(meta, [""])
+
+        data = view.get_data(mode="vals", width=1, height=1, **request)
+        self.assertEqual(data["values"].tolist(), [[[view.fillvalue]]])
 
 
 class TestSnap(unittest.TestCase):

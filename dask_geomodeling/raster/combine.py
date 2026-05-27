@@ -161,14 +161,14 @@ class Group(BaseCombine):
       RasterBlock that combines all input rasters
     """
 
-    def get_stores(self, start, stop):
-        """ Return all relevant stores for given start and stop. """
+    def get_relevant_sources(self, start, stop):
+        """ Return all relevant sources for given start and stop. """
         # check stores and select those stores that contain data
         stores = [s for s in self.args if s.period is not None]
 
         # there could be no store with data at all
         if not stores:
-            return stores
+            return []
 
         # convenience
         starts, stops = zip(*(s.period for s in stores))
@@ -190,7 +190,7 @@ class Group(BaseCombine):
             zipped = zip(stops + starts, stores + stores)
             return [s for d, s in zipped if d == closest]
 
-        # start and stop given, return all relevant stores
+        # start and stop given, return all intersecting stores
         zipped = zip(starts, stops, stores)
         return [s for a, b, s in zipped if not (stop < a or start > b)]
 
@@ -199,17 +199,15 @@ class Group(BaseCombine):
         stop = request.get("stop", None)
         mode = request["mode"]
 
-        sources = self.get_stores(start, stop)
-
-        # just pass on the source and request if we have no source
-        if not sources:
-            return [(dict(combine_mode="simple"), None)]
-
         # plan for merging
-        timedelta = self.get_aligned_timedelta(sources)
-        mixed_time = timedelta is None or start is None or stop is None
+        timedelta = self.timedelta
+        mixed_time = timedelta is None or start is None
 
         if mixed_time:  # merge by time
+            sources = self.get_relevant_sources(start, stop)
+            if not sources:
+                # with mixed time, no source means no result
+                return [(dict(combine_mode="simple"), None)]
             requests = []
             time_requests = []
             for source in sources:
@@ -230,8 +228,7 @@ class Group(BaseCombine):
         else:  # merge by bands
             td_sec = timedelta.total_seconds()
             period = self.period
-            origin = sources[0].period[0]  # any will do; they are aligned
-
+            origin = period[0]
             if start <= period[0]:
                 start = period[0]
             else:
@@ -239,7 +236,9 @@ class Group(BaseCombine):
                 start_delta = (origin - start).total_seconds() % td_sec
                 start += Timedelta(seconds=start_delta)
 
-            if stop >= period[1]:
+            if stop is None:
+                stop = start
+            elif stop >= period[1]:
                 stop = period[1]
             else:
                 # floor stop to the closest integer timedelta
@@ -260,6 +259,7 @@ class Group(BaseCombine):
                     )
                 ]
 
+            sources = self.get_relevant_sources(start, stop)
             requests = []
             bands = []
             for source in sources:
@@ -273,18 +273,18 @@ class Group(BaseCombine):
                 this_request = request.copy()
                 this_request.update(start=this_start, stop=this_stop)
                 requests.append((source, this_request))
-
             process_kwargs = dict(
                 combine_mode="by_bands",
                 mode=mode,
                 bands=bands,
-                last_band=int((stop - start).total_seconds() // td_sec) + 1,
             )
-
-        # in case of a 'vals' request, keep track of the dtype
+            nbands = int((stop - start).total_seconds() // td_sec) + 1
+            if mode == "meta":
+                process_kwargs["nbands"] = nbands
+            if mode == "vals":
+                process_kwargs["shape"] = nbands, request["height"], request["width"]
         if mode == "vals":
             process_kwargs["dtype"] = self.dtype
-
         return [(process_kwargs, None)] + requests
 
     @staticmethod
@@ -361,14 +361,12 @@ class Group(BaseCombine):
         return {"meta": meta_result}
 
     @staticmethod
-    def _merge_vals_by_bands(multi, bands, dtype, last_band):
+    def _merge_vals_by_bands(multi, bands, dtype, shape):
         """ Merge chunks using slices. """
         # analyze band structure
-        starts, stops = zip(*bands)
         fillvalue = get_dtype_max(dtype)
 
         # initialize values array
-        shape = (last_band,) + multi[0]["values"].shape[1:]
         values = np.full(shape, fillvalue, dtype=dtype)
 
         # populate values array
@@ -382,13 +380,10 @@ class Group(BaseCombine):
         return {"values": values, "no_data_value": fillvalue}
 
     @staticmethod
-    def _merge_meta_by_bands(multi, bands, last_band):
+    def _merge_meta_by_bands(multi, bands, nbands):
         """ Merge metadata by bands. """
-        # analyze band structure
-        starts, stops = zip(*bands)
-
         # initialize metadata list
-        meta_result = [""] * last_band
+        meta_result = [""] * nbands
 
         # populate metadata list
         for data, (a, b) in zip(multi, bands):
@@ -404,7 +399,6 @@ class Group(BaseCombine):
         # plan for merging
         combine_mode = process_kwargs["combine_mode"]
         mode = process_kwargs.get("mode", None)
-
         if combine_mode == "simple":
             return None
         elif combine_mode == "by_time" and mode == "time":
@@ -447,16 +441,14 @@ class Group(BaseCombine):
                 multi.append(data)
                 bands.append(_bands)
 
-            if len(multi) == 0:
-                return None
-
-            last_band = process_kwargs["last_band"]
             if mode == "vals":
                 dtype = process_kwargs["dtype"]
+                shape = process_kwargs["shape"]
                 return Group._merge_vals_by_bands(
-                    multi=multi, bands=bands, dtype=dtype, last_band=last_band)
+                    multi=multi, bands=bands, dtype=dtype, shape=shape)
             elif mode == "meta":
+                nbands = process_kwargs["nbands"]
                 return Group._merge_meta_by_bands(
-                    multi=multi, bands=bands, last_band=last_band)
+                    multi=multi, bands=bands, nbands=nbands)
         else:
             raise ValueError("Unknown combine_mode / mode combination")

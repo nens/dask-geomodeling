@@ -4,7 +4,9 @@ Changelog of dask-geomodeling
 2.8.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Made raster.combine.Group behave like a single raster source if its sources
+have an aligned timestructure, even when parts of the group's period are not
+covered by any of the source's periods.
 
 
 2.8.0 (2026-04-21)
