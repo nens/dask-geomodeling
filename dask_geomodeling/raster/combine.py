@@ -201,9 +201,7 @@ class Group(BaseCombine):
 
         # plan for merging
         timedelta = self.timedelta
-        mixed_time = timedelta is None or start is None
-
-        if mixed_time:  # merge by time
+        if timedelta is None:  # merge by time
             sources = self.get_relevant_sources(start, stop)
             if not sources:
                 # with mixed time, no source means no result
@@ -229,7 +227,9 @@ class Group(BaseCombine):
             td_sec = timedelta.total_seconds()
             period = self.period
             origin = period[0]
-            if start <= period[0]:
+            if start is None:
+                start = period[1]
+            elif start <= period[0]:
                 start = period[0]
             else:
                 # ceil start to the closest integer timedelta
