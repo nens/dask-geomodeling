@@ -848,6 +848,9 @@ class TestGroup(TestCombine, unittest.TestCase):
             origin=Datetime(2000, 1, 1), timedelta=Timedelta(minutes=5), bands=3
         )
         self.storage4 = MockRaster(origin=None)
+        self.storage6 = MockRaster(
+            origin=Datetime(2000, 1, 1, 0, 20), timedelta=Timedelta(minutes=5), bands=1
+        )
 
         self.nodatastorage = MockRaster(
             origin=Datetime(2000, 1, 1),
@@ -1027,6 +1030,77 @@ class TestGroup(TestCombine, unittest.TestCase):
         view = self.klass(storage1, storage2)
         result = view.get_data(**self.vals_request)
         assert_equal(result["values"], 2)
+
+    def test_start_in_gap(self):
+        view = self.klass(self.storage1, self.storage6)
+        request = dict(
+            start=Datetime(2000, 1, 1, 0, 15),  # the gap
+            stop=Datetime(2000, 1, 1, 0, 20),
+        )
+        _requests = view.get_sources_and_requests(mode="meta", **request)
+        self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
+
+        time = view.get_data(mode="time", **request)["time"]
+        self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15), Datetime(2000, 1, 1, 0, 20)])
+
+        meta = view.get_data(mode="meta", **request)["meta"]
+        self.assertEqual(meta, ["", "Testmeta for band 0"])
+
+        data = view.get_data(mode="vals", width=1, height=1, **request)
+        self.assertEqual(data["values"].tolist(), [[[view.fillvalue]], [[1]]])
+
+    def test_stop_in_gap(self):
+        view = self.klass(self.storage1, self.storage6)
+        request = dict(
+            start=Datetime(2000, 1, 1, 0, 10),
+            stop=Datetime(2000, 1, 1, 0, 15),  # the gap
+        )
+        _requests = view.get_sources_and_requests(mode="meta", **request)
+        self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
+
+        time = view.get_data(mode="time", **request)["time"]
+        self.assertEqual(time, [Datetime(2000, 1, 1, 0, 10), Datetime(2000, 1, 1, 0, 15)])
+
+        meta = view.get_data(mode="meta", **request)["meta"]
+        self.assertEqual(meta, ["Testmeta for band 2", ""])
+
+        data = view.get_data(mode="vals", width=1, height=1, **request)
+        self.assertEqual(data["values"].tolist(), [[[1]], [[view.fillvalue]]])
+
+    def test_only_gap(self):
+        view = self.klass(self.storage1, self.storage6)
+        request = dict(
+            start=Datetime(2000, 1, 1, 0, 15),  # the gap
+            stop=Datetime(2000, 1, 1, 0, 15),  # also the gap
+        )
+        _requests = view.get_sources_and_requests(mode="meta", **request)
+        self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
+
+        time = view.get_data(mode="time", **request)["time"]
+        self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15)])
+
+        meta = view.get_data(mode="meta", **request)["meta"]
+        self.assertEqual(meta, [""])
+
+        data = view.get_data(mode="vals", width=1, height=1, **request)
+        self.assertEqual(data["values"].tolist(), [[[view.fillvalue]]])
+
+    def test_only_gap_no_stop(self):
+        view = self.klass(self.storage1, self.storage6)
+        request = dict(
+            start=Datetime(2000, 1, 1, 0, 15),  # the gap
+        )
+        _requests = view.get_sources_and_requests(mode="meta", **request)
+        self.assertEqual(_requests[0][0]["combine_mode"], "by_bands")
+
+        time = view.get_data(mode="time", **request)["time"]
+        self.assertEqual(time, [Datetime(2000, 1, 1, 0, 15)])
+
+        meta = view.get_data(mode="meta", **request)["meta"]
+        self.assertEqual(meta, [""])
+
+        data = view.get_data(mode="vals", width=1, height=1, **request)
+        self.assertEqual(data["values"].tolist(), [[[view.fillvalue]]])
 
 
 class TestSnap(unittest.TestCase):
@@ -1562,7 +1636,7 @@ class TestRasterize(unittest.TestCase):
         properties = [{"id": x, "value": x / 3} for x in (51, 212, 512)]
         self.geometry_source = MockGeometry(squares, properties)
         self.view = raster.Rasterize(self.geometry_source, "id")
-    
+
     def test_attrs(self):
         self.assertFalse(self.view.temporal)
 
