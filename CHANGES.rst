@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.8.1 (unreleased)
+2.8.1 (2026-06-01)
 ------------------
 
 - Made raster.combine.Group behave like a single raster source if its sources
