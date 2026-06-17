@@ -199,6 +199,16 @@ class Group(BaseCombine):
         stop = request.get("stop", None)
         mode = request["mode"]
 
+        # no result for empty group
+        if self.period is None:
+            return [(dict(combine_mode="simple"), None)]
+
+        # no result if request interval outside combined period
+        if start is not None and stop is not None and (
+            start > self.period[1] or stop < self.period[0]
+        ):
+            return [(dict(combine_mode="simple"), None)]
+
         # plan for merging
         timedelta = self.timedelta
         if timedelta is None:  # merge by time
@@ -229,7 +239,7 @@ class Group(BaseCombine):
             origin = period[0]
             if start is None:
                 start = period[1]
-            elif start <= period[0]:
+            elif start < period[0]:
                 start = period[0]
             else:
                 # ceil start to the closest integer timedelta
@@ -238,7 +248,7 @@ class Group(BaseCombine):
 
             if stop is None:
                 stop = start
-            elif stop >= period[1]:
+            elif stop > period[1]:
                 stop = period[1]
             else:
                 # floor stop to the closest integer timedelta

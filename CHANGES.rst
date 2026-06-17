@@ -4,15 +4,16 @@ Changelog of dask-geomodeling
 2.8.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix issue with new raster.combine.Group when request interval does not
+  temporally overlap with data.
 
 
 2.8.1 (2026-06-01)
 ------------------
 
 - Made raster.combine.Group behave like a single raster source if its sources
-have an aligned timestructure, even when parts of the group's period are not
-covered by any of the source's periods.
+  have an aligned timestructure, even when parts of the group's period are not
+  covered by any of the source's periods.
 
 
 2.8.0 (2026-04-21)
