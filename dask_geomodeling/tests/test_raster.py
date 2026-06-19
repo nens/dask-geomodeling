@@ -1104,21 +1104,23 @@ class TestGroup(TestCombine, unittest.TestCase):
 
     def test_only_gap_no_request_period_overlap(self):
         view = self.klass(self.storage1)
-        request = dict(
-            start=Datetime(2000, 1, 1, 0, 20),  # after period
-            stop=Datetime(2000, 1, 1, 0, 25),  # even more after period
-        )
-        _requests = view.get_sources_and_requests(mode="meta", **request)
-        self.assertEqual(_requests[0][0]["combine_mode"], "simple")
+        for hours in (-1, 1):  # request will be completely before or after view period
+            shift = Timedelta(hours=hours)
+            request = dict(
+                start=view.period[0] + shift,
+                stop=view.period[1] + shift,
+            )
+            _requests = view.get_sources_and_requests(mode="meta", **request)
+            self.assertEqual(_requests[0][0]["combine_mode"], "simple")
 
-        time = view.get_data(mode="time", **request)
-        assert time is None
+            time = view.get_data(mode="time", **request)
+            assert time is None
 
-        meta = view.get_data(mode="meta", **request)
-        assert meta is None
+            meta = view.get_data(mode="meta", **request)
+            assert meta is None
 
-        data = view.get_data(mode="vals", width=1, height=1, **request)
-        assert data is None
+            data = view.get_data(mode="vals", width=1, height=1, **request)
+            assert data is None
 
 
 class TestSnap(unittest.TestCase):
