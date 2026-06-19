@@ -1,7 +1,7 @@
 Changelog of dask-geomodeling
 ===================================================
 
-2.8.2 (unreleased)
+2.8.2 (2026-06-19)
 ------------------
 
 - Fix issue with new raster.combine.Group when request interval does not
